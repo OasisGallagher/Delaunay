@@ -110,8 +110,7 @@ namespace Delaunay
 			}
 
 			List<Vertex> up = new List<Vertex>(), low = new List<Vertex>();
-			List<HalfEdge> crossedEdges;
-			crossedEdges = CollectCrossedTriangles(up, low, src, dest, cutTriangle);
+			List<HalfEdge> crossedEdges = CollectCrossedTriangles(up, low, src, dest, cutTriangle);
 
 			crossedEdges.ForEach(edge =>
 			{
@@ -126,9 +125,6 @@ namespace Delaunay
 					Triangle.Release(edge.Pair.Face, true);
 				}
 			});
-
-			Utility.Verify(low.Count != 0, "Empty low container");
-			Utility.Verify(up.Count != 0, "Empty up container");
 
 			TriangulatePseudopolygonDelaunay(low, dest, src);
 			TriangulatePseudopolygonDelaunay(up, src, dest);
@@ -161,15 +157,15 @@ namespace Delaunay
 				DrawConvexHull();
 			}
 
-			for (int i = 1; i < routine.Count; ++i)
+			for (int i = 1; i < containerTriangleSearchPath.Count; ++i)
 			{
-				Debug.DrawLine(routine[i - 1] + EditorConstants.kEdgeGizmosOffset * 2, 
-					routine[i] + EditorConstants.kEdgeGizmosOffset * 2, Color.magenta
+				Debug.DrawLine(containerTriangleSearchPath[i - 1] + EditorConstants.kEdgeGizmosOffset * 2, 
+					containerTriangleSearchPath[i] + EditorConstants.kEdgeGizmosOffset * 2, Color.magenta
 				);
 			}
 		}
 
-		List<Vector3> routine = new List<Vector3>();
+		List<Vector3> containerTriangleSearchPath = new List<Vector3>();
 
 		List<HalfEdge> CollectCrossedTriangles(List<Vertex> up, List<Vertex> low, Vertex src, Vertex dest, HalfEdge start)
 		{
@@ -373,11 +369,11 @@ namespace Delaunay
 		Triangle FindFacetContainsVertex(out int hitEdgeIndex, Vertex vertex)
 		{
 			hitEdgeIndex = 0;
-			routine.Clear();
+			containerTriangleSearchPath.Clear();
 
 			for (Triangle triangle = Facets[0]; triangle != null; )
 			{
-				routine.Add(triangle.Center);
+				containerTriangleSearchPath.Add(triangle.Center);
 				if (triangle.HasVertex(vertex))
 				{
 					Utility.Verify(false, "Duplicate vertex ", vertex);
