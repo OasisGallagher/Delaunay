@@ -12,12 +12,10 @@ namespace Delaunay
 
 	public class DelaunayMesh
 	{
-		public List<Vertex> Points = new List<Vertex>();
-
 		public List<Triangle> Facets = new List<Triangle>();
 
-		List<Vertex> corners = new List<Vertex>();
-		List<Vertex> convexHull = new List<Vertex>();
+		List<Vector3> borderCorners = new List<Vector3>();
+		List<Vector3> convexHull = new List<Vector3>();
 
 		Triangle superTriangle;
 
@@ -36,15 +34,10 @@ namespace Delaunay
 			float right = bound.xMax + padding;
 			float bottom = bound.yMin - padding;
 
-			Vector3 leftTop = new Vector3(left, 0, top);
-			corners.Add(new Vertex(leftTop));
-			Vector3 rightTop = new Vector3(right, 0, top);
-			corners.Add(new Vertex(rightTop));
-
-			Vector3 leftBottom = new Vector3(left, 0, bottom);
-			corners.Add(new Vertex(leftBottom));
-			Vector3 rightBottom = new Vector3(right, 0, bottom);
-			corners.Add(new Vertex(rightBottom));
+			borderCorners.Add(new Vector3(right, 0, top));	// Right top.
+			borderCorners.Add(new Vector3(left, 0, top));	// Left top.
+			borderCorners.Add(new Vector3(left, 0, bottom));// Left bottom.
+			borderCorners.Add(new Vector3(right, 0, bottom));// Right bottom.
 
 			float max = Mathf.Max(bound.xMax, bound.yMax);
 
@@ -55,26 +48,9 @@ namespace Delaunay
 			Rebuild();
 		}
 
-		public void AddPoint(Vector3 point)
-		{
-			Points.Add(new Vertex(point));
-			Rebuild();
-		}
-
 		public void Rebuild()
 		{
 			SetUpBounds();
-
-			for (int i = 0; i < corners.Count; ++i)
-			{
-				bool appended = Append(corners[i]);
-				Utility.Verify(appended);
-			}
-
-			AddConstraintEdge(corners[0], corners[1]);
-			AddConstraintEdge(corners[1], corners[2]);
-			//AddConstraintEdge(corners[2], corners[3]);
-			//AddConstraintEdge(corners[3], corners[0]);
 
 			Vector3 boxCenter = new Vector3(-4, stAPosition.y, 5);
 			Vector3[] box = 
@@ -85,51 +61,44 @@ namespace Delaunay
 				boxCenter + new Vector3(4, 0, -1),
 			};
 
-			AddConstraintEdge(corners[0], corners[3]);
-
-			List<Vertex> set = new List<Vertex>();
-
-			for (int i = 0; i < Points.Count; ++i)
-			{
-				if (Append(Points[i]))
-				{
-					set.Add(Points[i]);
-				}
-			}
+			//AddObject(box);
+			AddObject(borderCorners);
 
 			RemoveBounds();
 
-			Points = new List<Vertex>(set);
-
-			for (int i = 0; i < corners.Count; ++i) { set.Add(corners[i]); }
-
-			convexHull = ConvexHullComputer.Compute(set);
+			List<Vector3> positions = new List<Vector3>();
+			HalfEdgeContainer.Vertices.ForEach(vertex => { positions.Add(vertex.Position); });
+			convexHull = ConvexHullComputer.Compute(positions);
 		}
 
-		public void AddConstraintEdge(Vertex src, Vertex dest)
+		public void AddConstraintEdge(Vector3 src, Vector3 dest)
 		{
-			for (; src != dest; )
+			Vertex vSrc = new Vertex(src), vDest = new Vertex(dest);
+			Append(vSrc);
+			Append(vDest);
+
+			for (; vSrc != vDest; )
 			{
-				src = AddConstraintAt(src, dest);
+				vSrc = AddConstraintAt(vSrc, vDest);
 			}
 		}
 
-		public void OnDrawGizmos(bool showConvexHull)
+		public void OnDrawGizmos(bool showFindBoundTrianglePath, bool showConvexHull)
 		{
 			Facets.ForEach(facet =>
 			{
-				if (facet.gameObject.activeSelf)
+				if (!facet.gameObject.activeSelf) { return; }
+
+				facet.AllEdges.ForEach(edge =>
 				{
-					facet.AllEdges.ForEach(edge =>
-					{
-						Vector3 offset = EditorConstants.kEdgeGizmosOffset;
-						if (edge.Constraint) offset += new Vector3(0, 0.3f, 0);
-						Debug.DrawLine(edge.Src.Position + offset,
-							edge.Dest.Position + offset,
-							edge.Constraint ? Color.red : Color.white
-						);
-					});
-				}
+					//if (!edge.Forward) { return; }
+					
+					Vector3 offset = EditorConstants.kEdgeGizmosOffset;
+					Debug.DrawLine(edge.Src.Position + offset,
+						edge.Dest.Position + offset,
+						edge.Constraint ? Color.red : Color.white
+					);
+				});
 			});
 
 			if (showConvexHull)
@@ -137,11 +106,22 @@ namespace Delaunay
 				DrawConvexHull();
 			}
 
-			for (int i = 1; i < findBoundTrianglePath.Count; ++i)
+			if (showFindBoundTrianglePath)
 			{
-				Debug.DrawLine(findBoundTrianglePath[i - 1] + EditorConstants.kEdgeGizmosOffset * 2, 
-					findBoundTrianglePath[i] + EditorConstants.kEdgeGizmosOffset * 2, Color.magenta
-				);
+				DrawFindBoundTrianglePath();
+			}
+		}
+
+		void AddObject(IEnumerable<Vector3> container)
+		{
+			IEnumerator<Vector3> e = container.GetEnumerator();
+			if (!e.MoveNext()) { return; }
+			Vector3 lastPosition = e.Current;
+
+			for (; e.MoveNext(); )
+			{
+				AddConstraintEdge(lastPosition, e.Current);
+				lastPosition = e.Current;
 			}
 		}
 
@@ -290,13 +270,16 @@ namespace Delaunay
 					src.Position, dest.Position
 				);
 
-				bool bothEnds = edge == cycle[0] || edge == cycle.Back();
-
-				if(crossState == LineCrossState.Collinear 
-					|| (!bothEnds && crossState == LineCrossState.CrossOnSegment))
+				if (crossState == LineCrossState.Collinear
+					|| (crossState == LineCrossState.CrossOnSegment && !Utility.Equals2D(point, edge.Src.Position) && !Utility.Equals2D(point, edge.Dest.Position)))
 				{
 					answer.crossState = crossState;
 					answer.edge = edge;
+					if (crossState == LineCrossState.Collinear && dest.Position == edge.Src.Position)
+					{
+						answer.edge = answer.edge.Pair;
+					}
+
 					return true;
 				}
 			}
@@ -310,18 +293,28 @@ namespace Delaunay
 
 			for (int i = 1; i < convexHull.Count; ++i)
 			{
-				Vector3 prev = convexHull[i - 1].Position;
-				Vector3 current = convexHull[i].Position;
+				Vector3 prev = convexHull[i - 1];
+				Vector3 current = convexHull[i];
 				prev.y = current.y = EditorConstants.kConvexHullGizmosHeight;
 				Debug.DrawLine(prev, current, Color.green);
 			}
 
 			if (convexHull.Count >= 2)
 			{
-				Vector3 prev = convexHull[(convexHull.Count - 1) % convexHull.Count].Position;
-				Vector3 current = convexHull[0].Position;
+				Vector3 prev = convexHull[(convexHull.Count - 1) % convexHull.Count];
+				Vector3 current = convexHull[0];
 				prev.y = current.y = EditorConstants.kConvexHullGizmosHeight;
 				Debug.DrawLine(prev, current, Color.green);
+			}
+		}
+
+		void DrawFindBoundTrianglePath()
+		{
+			for (int i = 1; i < findBoundTrianglePath.Count; ++i)
+			{
+				Debug.DrawLine(findBoundTrianglePath[i - 1] + EditorConstants.kEdgeGizmosOffset * 2,
+					findBoundTrianglePath[i] + EditorConstants.kEdgeGizmosOffset * 2, Color.magenta
+				);
 			}
 		}
 
@@ -394,7 +387,6 @@ namespace Delaunay
 				findBoundTrianglePath.Add(triangle.Center);
 				if (triangle.HasVertex(vertex))
 				{
-					Utility.Verify(false, "Duplicate vertex ", vertex);
 					return null;
 				}
 

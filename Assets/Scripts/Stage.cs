@@ -4,7 +4,8 @@ namespace Delaunay
 {
 	public class Stage : MonoBehaviour
 	{
-		public bool ShowConvexHull = true;
+		public bool ShowConvexHull = false;
+		public bool ShowFindBoundTrianglePath = false;
 
 		DelaunayMesh delaunayMesh;
 		RaycastHit hit;
@@ -24,16 +25,15 @@ namespace Delaunay
 
 		void Update()
 		{
-			if (Input.GetMouseButtonUp(0) && EditorParameter.plant
-				&& Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100))
-			{
-				delaunayMesh.AddPoint(hit.point);
-			}
+			//if (Input.GetMouseButtonUp(0) && EditorParameter.plant
+			//	&& Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100))
+			//{
+			//}
 		}
 
 		void OnDrawGizmos()
 		{
-			if (delaunayMesh != null) { delaunayMesh.OnDrawGizmos(ShowConvexHull); }
+			if (delaunayMesh != null) { delaunayMesh.OnDrawGizmos(ShowFindBoundTrianglePath, ShowConvexHull); }
 		}
 
 		void OnGUI()

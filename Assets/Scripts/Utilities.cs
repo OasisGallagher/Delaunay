@@ -174,79 +174,79 @@ namespace Delaunay
 	{
 		class VertexStack
 		{
-			List<Vertex> container = new List<Vertex>();
-			public Vertex Pop()
+			List<Vector3> container = new List<Vector3>();
+			public Vector3 Pop()
 			{
-				Vertex result = container[container.Count - 1];
+				Vector3 result = container[container.Count - 1];
 				container.RemoveAt(container.Count - 1);
 				return result;
 			}
 
-			public void Push(Vertex u)
+			public void Push(Vector3 u)
 			{
 				container.Add(u);
 			}
 
-			public Vertex Peek(int index = 0)
+			public Vector3 Peek(int index = 0)
 			{
 				return container[container.Count - 1 - index];
 			}
 
-			public List<Vertex> Container { get { return new List<Vertex>(container); } }
+			public List<Vector3> Container { get { return new List<Vector3>(container); } }
 		}
 
-		static Vertex PopLowestVertex(List<Vertex> vertices)
+		static Vector3 PopLowestVertex(List<Vector3> vertices)
 		{
-			float minZ = vertices[0].Position.z;
+			float minZ = vertices[0].z;
 			int index = 0;
 			for (int i = 1; i < vertices.Count; ++i)
 			{
-				if (vertices[i].Position.z < minZ)
+				if (vertices[i].z < minZ)
 				{
 					index = i;
-					minZ = vertices[i].Position.z;
+					minZ = vertices[i].z;
 				}
 			}
 
-			Vertex result = vertices[index];
+			Vector3 result = vertices[index];
 			vertices[index] = vertices[vertices.Count - 1];
 			vertices.RemoveAt(vertices.Count - 1);
 			return result;
 		}
 
-		class VertexComparer : IComparer<Vertex>
+		class VertexComparer : IComparer<Vector3>
 		{
-			Vertex start = null;
-			public VertexComparer(Vertex o)
+			Vector3 start = Vector3.zero;
+			public VertexComparer(Vector3 o)
 			{
 				start = o;
 			}
 
-			int IComparer<Vertex>.Compare(Vertex lhs, Vertex rhs)
+			int IComparer<Vector3>.Compare(Vector3 lhs, Vector3 rhs)
 			{
-				bool b1 = Utility.Cross2D(lhs.Position - start.Position, new Vector3(1, 0, 0)) > 0;
-				bool b2 = Utility.Cross2D(rhs.Position - start.Position, new Vector3(1, 0, 0)) > 0;
+				bool b1 = Utility.Cross2D(lhs - start, new Vector3(1, 0, 0)) > 0;
+				bool b2 = Utility.Cross2D(rhs - start, new Vector3(1, 0, 0)) > 0;
 
 				if (b1 != b2) { return b2 ? -1 : 1; }
 
-				float c = Utility.Cross2D(lhs.Position - start.Position, rhs.Position - start.Position);
+				float c = Utility.Cross2D(lhs - start, rhs - start);
 				if (!Mathf.Approximately(c, 0)) { return c > 0 ? -1 : 1; }
 
 				// 对于极角相等的两个点, 按照到start的距离递减的顺序排列.
 				// 从而在Unique中删除.
-				Vector3 drhs = rhs.Position - start.Position;
-				Vector3 dlhs = lhs.Position - start.Position;
+				Vector3 drhs = rhs - start;
+				Vector3 dlhs = lhs - start;
 				drhs.y = dlhs.y = 0f;
 
 				return Math.Sign(drhs.sqrMagnitude - dlhs.sqrMagnitude);
 			}
 		}
 
-		public static List<Vertex> Compute(List<Vertex> vertices)
+		public static List<Vector3> Compute(List<Vector3> vertices)
 		{
 			if (vertices.Count <= 3) { return vertices; }
 
-			Vertex p0 = PopLowestVertex(vertices);
+			Vector3 p0 = PopLowestVertex(vertices);
 			vertices.Sort(new VertexComparer(p0));
 
 			VertexStack stack = new VertexStack();
@@ -256,17 +256,14 @@ namespace Delaunay
 
 			for (int i = 2; i < vertices.Count; ++i)
 			{
-				Vertex pi = vertices[i];
+				Vector3 pi = vertices[i];
 				for (; ; )
 				{
 					Utility.Verify(stack.Container.Count > 0);
 
-					Vertex top = stack.Peek(), next2top = stack.Peek(1);
+					Vector3 top = stack.Peek(), next2top = stack.Peek(1);
 					// next2top -> top -> pi is a non-left turn.
-					float cr = Utility.Cross2D(
-						next2top.Position - top.Position,
-						pi.Position - top.Position
-					);
+					float cr = Utility.Cross2D(next2top - top, pi - top);
 
 					if (cr < 0) { break; }
 
@@ -297,7 +294,7 @@ namespace Delaunay
 
 		public static readonly Vector3 kTriangleMeshOffset = new Vector3(0, 0.1f, 0);
 		public static readonly Vector3 kHalfEdgeGizmosOffset = new Vector3(0, 0.3f, 0);
-		public static readonly Vector3 kEdgeGizmosOffset = new Vector3(0, 0.2f, 0);
+		public static readonly Vector3 kEdgeGizmosOffset = new Vector3(0, 0.3f, 0);
 		public static readonly int[] kTriangleIndices = new int[] { 0, 2, 1 };
 		public static readonly Vector2[] kUV = new Vector2[] { Vector2.zero, Vector2.zero, Vector2.zero };
 

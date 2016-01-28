@@ -36,6 +36,11 @@ namespace Delaunay
 			container.TryGetValue(vertex, out answer);
 			return answer ?? new List<HalfEdge>();
 		}
+
+		public static List<Vertex> Vertices
+		{
+			get { return new List<Vertex>(container.Keys); }
+		}
 	}
 
 	public class HalfEdge
@@ -113,6 +118,15 @@ namespace Delaunay
 		public List<HalfEdge> Cycle
 		{
 			get { return GetEdgeCycle(); }
+		}
+
+		public bool Forward
+		{
+			get
+			{
+				return !Mathf.Approximately(Src.Position.x, Dest.Position.x)
+					? Src.Position.x < Dest.Position.x : Src.Position.z < Src.Position.z;
+			}
 		}
 
 		public override string ToString()
