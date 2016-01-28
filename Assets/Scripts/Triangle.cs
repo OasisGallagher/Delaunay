@@ -87,6 +87,20 @@ namespace Delaunay
 			UpdateWalkableMaterial();
 		}
 
+		public HalfEdge GetOpposite(Vertex from)
+		{
+			foreach (HalfEdge edge in AllEdges)
+			{
+				if (!Utility.Equals2D(from.Position, edge.Src.Position)
+					&& !Utility.Equals2D(from.Position, edge.Dest.Position))
+				{
+					return edge.Pair;
+				}
+			}
+
+			return null;
+		}
+
 		public bool Walkable
 		{
 			get { return walkable; }
@@ -175,7 +189,7 @@ namespace Delaunay
 			if (t0 > 0) { return -1; }
 
 			if (Mathf.Approximately(t0, 0)
-				&& Utility.InDiagonalRectangle(t.Position, B.Position, A.Position))
+				&& Utility.DiagonalRectContains(t.Position, B.Position, A.Position))
 			{
 				return 1;
 			}
@@ -184,7 +198,7 @@ namespace Delaunay
 			if (t1 > 0) { return -2; }
 
 			if (Mathf.Approximately(t1, 0)
-				&& Utility.InDiagonalRectangle(t.Position, C.Position, B.Position))
+				&& Utility.DiagonalRectContains(t.Position, C.Position, B.Position))
 			{
 				return 2;
 			}
@@ -193,7 +207,7 @@ namespace Delaunay
 			if (t2 > 0) { return -3; }
 
 			if (Mathf.Approximately(t2, 0)
-				&& Utility.InDiagonalRectangle(t.Position, A.Position, C.Position))
+				&& Utility.DiagonalRectContains(t.Position, A.Position, C.Position))
 			{
 				return 3;
 			}

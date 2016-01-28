@@ -7,7 +7,7 @@ namespace Delaunay
 	public enum LineCrossState
 	{
 		Parallel,
-		Colinear,
+		Collinear,
 		CrossOnSegment,
 		CrossOnExtLine,
 	}
@@ -37,50 +37,49 @@ namespace Delaunay
 			return (direction == 1) ? triangle.AB : (direction == 2 ? triangle.BC : triangle.CA);
 		}
 
-		public static Vector2? SegmentCross(Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
+		public static LineCrossState SegmentCross(out Vector2 answer, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
 		{
 			Vector3 r = pd - p;
 			Vector3 s = qd - q;
 			float crs = Cross2D(r, s);
 
+			answer = Vector2.zero;
+
+			float t = Cross2D(q - p, s);
 			if (Mathf.Approximately(0, crs))
 			{
-				return null;
+				return Mathf.Approximately(0, t) ? LineCrossState.Collinear : LineCrossState.Parallel;
 			}
 
-			float t = Cross2D(q - p, s) / crs;
-			float u = Cross2D(q - p, r) / crs;
+			answer.Set(t / crs, Cross2D(q - p, r) / crs);
 
-			return new Vector2(t, u);
+			return (InRange(answer.x) && InRange(answer.y))
+			   ? LineCrossState.CrossOnSegment : LineCrossState.CrossOnExtLine;
 		}
 
 		public static LineCrossState GetLineCrossPoint(out Vector3 point, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
 		{
-			Vector2? answer = SegmentCross(p, pd, q, qd);
 			point = Vector3.zero;
 
-			if (!answer.HasValue)
+			Vector2 segCrossAnswer = Vector2.zero;
+			LineCrossState crossState = SegmentCross(out segCrossAnswer, p, pd, q, qd);
+
+			if (crossState == LineCrossState.Parallel || crossState == LineCrossState.Collinear)
 			{
-				return LineCrossState.Parallel;
+				return crossState;
 			}
 
-			if (Mathf.Approximately(0, answer.Value.x) || Mathf.Approximately(0, answer.Value.y))
-			{
-				return LineCrossState.Colinear;
-			}
-
-			point = p + answer.Value.x * (pd - p);
-			return (InRange(answer.Value.x) && InRange(answer.Value.y))
-				? LineCrossState.CrossOnSegment : LineCrossState.CrossOnExtLine;
+			point = p + segCrossAnswer.x * (pd - p);
+			return crossState;
 		}
 
 		public static bool PointOnSegment(Vector3 point, Vector3 segSrc, Vector3 segDest)
 		{
-			if (!InDiagonalRectangle(point, segSrc, segDest)) { return false; }
+			if (!DiagonalRectContains(point, segSrc, segDest)) { return false; }
 			return Mathf.Approximately(0, Cross2D(point - segSrc, segDest - segSrc));
 		}
 
-		public static bool InDiagonalRectangle(Vector3 point, Vector3 tl, Vector3 rb)
+		public static bool DiagonalRectContains(Vector3 point, Vector3 tl, Vector3 rb)
 		{
 			float xMin = tl.x, xMax = rb.x;
 			if (xMin > xMax) { float tmp = xMin; xMin = xMax; xMax = tmp; }
@@ -88,7 +87,7 @@ namespace Delaunay
 			float zMin = tl.z, zMax = rb.z;
 			if (zMin > zMax) { float tmp = zMin; zMin = zMax; zMax = tmp; }
 
-			return point.x > xMin && point.x < xMax && point.z > zMin && point.z < zMax;
+			return point.x >= xMin && point.x <= xMax && point.z >= zMin && point.z <= zMax;
 		}
 
 		public static float Cross2D(Vector3 a, Vector3 b)
@@ -117,7 +116,7 @@ namespace Delaunay
 
 		public static bool InRange(float f, float a = 0f, float b = 1f)
 		{
-			return f > a && f < b;
+			return f >= a && f <= b;
 		}
 
 		public static bool PointInCircumCircle(Vertex a, Vertex b, Vertex c, Vertex v)

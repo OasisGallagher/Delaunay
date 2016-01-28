@@ -4,6 +4,12 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	class CrossResult
+	{
+		public HalfEdge edge;
+		public LineCrossState crossState = LineCrossState.Parallel;
+	}
+
 	public class DelaunayMesh
 	{
 		public List<Vertex> Points = new List<Vertex>();
@@ -18,6 +24,8 @@ namespace Delaunay
 		Vector3 stAPosition;
 		Vector3 stBPosition;
 		Vector3 stCPosition;
+
+		List<Vector3> findBoundTrianglePath = new List<Vector3>();
 
 		public DelaunayMesh(Rect bound)
 		{
@@ -63,8 +71,8 @@ namespace Delaunay
 				Utility.Verify(appended);
 			}
 
-			//AddConstraintEdge(corners[0], corners[1]);
-			//AddConstraintEdge(corners[1], corners[2]);
+			AddConstraintEdge(corners[0], corners[1]);
+			AddConstraintEdge(corners[1], corners[2]);
 			//AddConstraintEdge(corners[2], corners[3]);
 			//AddConstraintEdge(corners[3], corners[0]);
 
@@ -100,38 +108,10 @@ namespace Delaunay
 
 		public void AddConstraintEdge(Vertex src, Vertex dest)
 		{
-			// Find the triangle t that contains src and is cut by src=>dest.
-			HalfEdge cutTriangle = FindCutTriangle(src, dest);
-
-			if (!Utility.Verify(cutTriangle != null,
-				"Can not find facet contains {0} and is cut but {0}=>{1}", src, dest))
+			for (; src != dest; )
 			{
-				return;
+				src = AddConstraintAt(src, dest);
 			}
-
-			List<Vertex> up = new List<Vertex>(), low = new List<Vertex>();
-			List<HalfEdge> crossedEdges = CollectCrossedTriangles(up, low, src, dest, cutTriangle);
-
-			crossedEdges.ForEach(edge =>
-			{
-				if (edge.Face != null)
-				{
-					Facets.Remove(edge.Face);
-					Triangle.Release(edge.Face, true);
-				}
-				if (edge.Pair.Face != null)
-				{
-					Facets.Remove(edge.Pair.Face);
-					Triangle.Release(edge.Pair.Face, true);
-				}
-			});
-
-			TriangulatePseudopolygonDelaunay(low, dest, src);
-			TriangulatePseudopolygonDelaunay(up, src, dest);
-
-			HalfEdge constraintEdge = HalfEdgeContainer.GetRays(src).Find(edge => { return edge.Dest == dest; });
-			Utility.Verify(constraintEdge != null);
-			constraintEdge.Constraint = true;
 		}
 
 		public void OnDrawGizmos(bool showConvexHull)
@@ -157,38 +137,71 @@ namespace Delaunay
 				DrawConvexHull();
 			}
 
-			for (int i = 1; i < containerTriangleSearchPath.Count; ++i)
+			for (int i = 1; i < findBoundTrianglePath.Count; ++i)
 			{
-				Debug.DrawLine(containerTriangleSearchPath[i - 1] + EditorConstants.kEdgeGizmosOffset * 2, 
-					containerTriangleSearchPath[i] + EditorConstants.kEdgeGizmosOffset * 2, Color.magenta
+				Debug.DrawLine(findBoundTrianglePath[i - 1] + EditorConstants.kEdgeGizmosOffset * 2, 
+					findBoundTrianglePath[i] + EditorConstants.kEdgeGizmosOffset * 2, Color.magenta
 				);
 			}
 		}
 
-		List<Vector3> containerTriangleSearchPath = new List<Vector3>();
-
-		List<HalfEdge> CollectCrossedTriangles(List<Vertex> up, List<Vertex> low, Vertex src, Vertex dest, HalfEdge start)
+		Vertex AddConstraintAt(Vertex src, Vertex dest)
 		{
+			CrossResult crossResult = new CrossResult();
+			foreach (HalfEdge ray in HalfEdgeContainer.GetRays(src))
+			{
+				if (FindCrossedEdge(crossResult, ray, src, dest)) { break; }
+			}
+
+			Utility.Verify(crossResult.crossState != LineCrossState.Parallel);
+
+			if (crossResult.crossState == LineCrossState.Collinear)
+			{
+				crossResult.edge.Constraint = true;
+				return crossResult.edge.Dest;
+			}
+
+			Utility.Verify(crossResult.crossState == LineCrossState.CrossOnSegment);
+
+			List<Vertex> up = new List<Vertex>();
+			List<Vertex> low = new List<Vertex>();
 			List<HalfEdge> crossedEdges = new List<HalfEdge>();
 
+			Vertex newSrc = CollectCrossedTriangles(crossedEdges, up, low, src, dest, crossResult.edge);
+			crossedEdges.ForEach(edge =>
+			{
+				if (edge.Face != null)
+				{
+					Facets.Remove(edge.Face);
+					Triangle.Release(edge.Face, true);
+				}
+				if (edge.Pair.Face != null)
+				{
+					Facets.Remove(edge.Pair.Face);
+					Triangle.Release(edge.Pair.Face, true);
+				}
+			});
+
+			TriangulatePseudopolygonDelaunay(low, dest, src);
+			TriangulatePseudopolygonDelaunay(up, src, dest);
+
+			HalfEdge constraintEdge = HalfEdgeContainer.GetRays(src).Find(edge => { return edge.Dest == dest; });
+			Utility.Verify(constraintEdge != null);
+			constraintEdge.Constraint = true;
+
+			return newSrc;
+		}
+
+		Vertex CollectCrossedTriangles(List<HalfEdge> crossedTriangles, List<Vertex> up, List<Vertex> low, Vertex src, Vertex dest, HalfEdge start)
+		{
 			Vector3 srcDest = dest.Position - src.Position;
 
 			Vertex v = src;
 			for (; !start.Face.Contains(dest); )
 			{
-				crossedEdges.Add(start);
+				crossedTriangles.Add(start);
 
-				HalfEdge opposedTriangle = null;
-
-				foreach (HalfEdge edge in start.Face.AllEdges)
-				{
-					if (!Utility.Equals2D(v.Position, edge.Src.Position)
-						&& !Utility.Equals2D(v.Position, edge.Dest.Position))
-					{
-						opposedTriangle = edge.Pair;
-						break;
-					}
-				}
+				HalfEdge opposedTriangle = start.Face.GetOpposite(v);
 
 				Utility.Verify(opposedTriangle != null);
 
@@ -213,10 +226,17 @@ namespace Delaunay
 
 				if (!activeContainer.Contains(opposedTriangle.Src)) { activeContainer.Add(opposedTriangle.Src); }
 
+				if (Utility.PointOnSegment(opposedVertex.Position, src.Position, dest.Position))
+				{
+					// MODIFY src here.
+					src = opposedVertex;
+					break;
+				}
+
 				start = opposedTriangle;
 			}
 
-			return crossedEdges;
+			return src;
 		}
 
 		void TriangulatePseudopolygonDelaunay(List<Vertex> vertices, Vertex src, Vertex dest)
@@ -259,31 +279,29 @@ namespace Delaunay
 			}
 		}
 
-		HalfEdge FindCutTriangle(Vertex src, Vertex dest)
+		bool FindCrossedEdge(CrossResult answer, HalfEdge ray, Vertex src, Vertex dest)
 		{
-			HalfEdge t = null;
-			foreach (HalfEdge ray in HalfEdgeContainer.GetRays(src))
+			List<HalfEdge> cycle = ray.Cycle;
+			foreach (HalfEdge edge in cycle)
 			{
-				foreach (HalfEdge edge in ray.Cycle)
+				Vector3 point;
+				LineCrossState crossState = Utility.GetLineCrossPoint(out point,
+					edge.Src.Position, edge.Dest.Position,
+					src.Position, dest.Position
+				);
+
+				bool bothEnds = edge == cycle[0] || edge == cycle.Back();
+
+				if(crossState == LineCrossState.Collinear 
+					|| (!bothEnds && crossState == LineCrossState.CrossOnSegment))
 				{
-					Vector3 point;
-					LineCrossState crossState = Utility.GetLineCrossPoint(out point,
-						edge.Src.Position, edge.Dest.Position,
-						src.Position, dest.Position
-					);
-
-					// TODO: Colinear case.
-					if (crossState == LineCrossState.CrossOnSegment)
-					{
-						t = edge;
-						break;
-					}
+					answer.crossState = crossState;
+					answer.edge = edge;
+					return true;
 				}
-
-				if (t != null) { break; }
 			}
 
-			return t;
+			return false;
 		}
 
 		void DrawConvexHull()
@@ -369,11 +387,11 @@ namespace Delaunay
 		Triangle FindFacetContainsVertex(out int hitEdgeIndex, Vertex vertex)
 		{
 			hitEdgeIndex = 0;
-			containerTriangleSearchPath.Clear();
+			findBoundTrianglePath.Clear();
 
 			for (Triangle triangle = Facets[0]; triangle != null; )
 			{
-				containerTriangleSearchPath.Add(triangle.Center);
+				findBoundTrianglePath.Add(triangle.Center);
 				if (triangle.HasVertex(vertex))
 				{
 					Utility.Verify(false, "Duplicate vertex ", vertex);
