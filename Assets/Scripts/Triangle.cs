@@ -25,9 +25,9 @@ namespace Delaunay
 
 		public static Triangle Create(Vertex a, Vertex b, Vertex c)
 		{
-			HalfEdge ab = HalfEdge.Create(a, b);
-			HalfEdge bc = HalfEdge.Create(b, c);
-			HalfEdge ca = HalfEdge.Create(c, a);
+			HalfEdge ab = HalfEdge.Fetch(a, b);
+			HalfEdge bc = HalfEdge.Fetch(b, c);
+			HalfEdge ca = HalfEdge.Fetch(c, a);
 
 			ab.Next = bc;
 			bc.Next = ca;
@@ -174,13 +174,7 @@ namespace Delaunay
 
 		public bool Contains(Vertex t)
 		{
-			float t1 = Utility.Cross2D(C.Position, t.Position, B.Position);
-			float t2 = Utility.Cross2D(A.Position, t.Position, C.Position);
-
-			if ((t1 * t2) < 0) { return false; }
-
-			float t3 = Utility.Cross2D(B.Position, t.Position, A.Position);
-			return t1 * t3 >= 0;
+			return Utility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, t.Position);
 		}
 
 		public int GetVertexDirection(Vertex t)

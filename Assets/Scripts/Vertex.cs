@@ -17,10 +17,34 @@ namespace Delaunay
 
 		public static Vertex Create(Vector3 position)
 		{
-			List<Vertex> vertices = HalfEdgeManager.SortedVertices;
-			Vertex answer = new Vertex(position);
-			int index = vertices.BinarySearch(answer, EditorConstants.kVertexComparer);
-			return index >= 0 ? vertices[index] : answer;
+			Utility.Verify(FindExistingVertex(position) == null, "Duplicate vertex at position " + position);
+			Vertex ans = new Vertex(position);
+			GeomManager.Add(ans);
+			return ans;
+		}
+
+		static Vertex FindExistingVertex(Vector3 position)
+		{
+			List<Vertex> vertices = GeomManager.SortedVertices;
+
+			int low = 0, high = vertices.Count - 1, mid = 0;
+			for (; low <= high; )
+			{
+				mid = low + (high - low) / 2;
+				int comp = Utility.CompareTo2D(position, vertices[mid].Position);
+
+				if (comp == 0) { return vertices[mid]; }
+				if (comp < 0)
+				{
+					high = mid - 1;
+				}
+				else
+				{
+					low = mid + 1;
+				}
+			}
+
+			return null;
 		}
 
 		Vertex(Vector3 position)

@@ -6,7 +6,7 @@ using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.V
 
 namespace Delaunay
 {
-	public static class HalfEdgeManager
+	public static class GeomManager
 	{
 		static HalfEdgeContainer container = new HalfEdgeContainer(EditorConstants.kVertexComparer);
 
@@ -19,6 +19,12 @@ namespace Delaunay
 			}
 
 			list.Add(edge);
+		}
+
+		public static void Add(Vertex vertex)
+		{
+			Utility.Verify(!container.ContainsKey(vertex));
+			container.Add(vertex, new List<HalfEdge>());
 		}
 
 		public static void Remove(HalfEdge edge)
@@ -46,9 +52,9 @@ namespace Delaunay
 
 	public class HalfEdge
 	{
-		public static HalfEdge Create(Vertex src, Vertex dest)
+		public static HalfEdge Fetch(Vertex src, Vertex dest)
 		{
-			HalfEdge self = HalfEdgeManager.GetRays(src).Find(item => { return item.Dest == dest; });
+			HalfEdge self = GeomManager.GetRays(src).Find(item => { return item.Dest == dest; });
 
 			if (self == null)
 			{
@@ -64,8 +70,8 @@ namespace Delaunay
 				src.Edge = self;
 				dest.Edge = other;
 
-				HalfEdgeManager.Add(self);
-				HalfEdgeManager.Add(other);
+				GeomManager.Add(self);
+				GeomManager.Add(other);
 			}
 
 			return self;
@@ -73,8 +79,8 @@ namespace Delaunay
 
 		public static void Release(HalfEdge edge)
 		{
-			HalfEdgeManager.Remove(edge.Pair);
-			HalfEdgeManager.Remove(edge);
+			GeomManager.Remove(edge.Pair);
+			GeomManager.Remove(edge);
 		}
 
 		public int ID { get; private set; }

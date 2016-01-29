@@ -16,9 +16,7 @@ namespace Delaunay
 	{
 		public int Compare(Vertex lhs, Vertex rhs)
 		{
-			int answer = lhs.Position.x.CompareTo(rhs.Position.x);
-			if (answer == 0) { answer = lhs.Position.z.CompareTo(rhs.Position.z); }
-			return answer;
+			return Utility.CompareTo2D(lhs.Position, rhs.Position);
 		}
 	}
 
@@ -124,9 +122,30 @@ namespace Delaunay
 			return a == b;
 		}
 
+		public static int CompareTo2D(Vector3 a, Vector3 b)
+		{
+			int answer = a.x.CompareTo(b.x);
+			if (answer == 0) { answer = a.z.CompareTo(b.z); }
+			return answer;
+		}
+
 		public static bool InRange(float f, float a = 0f, float b = 1f)
 		{
 			return f >= a && f <= b;
+		}
+
+		public static bool PolygonContains(IList<Vector3> positions, Vector3 point)
+		{
+			for (int i = 1; i <= positions.Count; ++i)
+			{
+				Vector3 currentPosition = (i < positions.Count) ? positions[i] : positions[0];
+				if (Utility.Cross2D(point - positions[i - 1], currentPosition, positions[i - 1]) > 0)
+				{
+					return false;
+				}
+			}
+
+			return true;
 		}
 
 		public static bool PointInCircumCircle(Vertex a, Vertex b, Vertex c, Vertex v)
@@ -165,7 +184,7 @@ namespace Delaunay
 			if (!condition)
 			{
 				Debug.LogError(string.Format(message ?? "Condition failed", arguments));
-				Debug.DebugBreak();
+				Debug.Break();
 			}
 
 			return condition;
