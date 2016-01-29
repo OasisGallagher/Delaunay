@@ -60,18 +60,25 @@ namespace Delaunay
 				new Vector3(4, 0, -1),
 			};
 
-			Vector3[] box1 = new Vector3[localBox.Length];
-			AddObject(localBox.transform(box1, item => { return item + new Vector3(-2, stAPosition.y, 5); }), true);
+			//Vector3[] box = new Vector3[localBox.Length];
+			//AddObject(localBox.transform(box, item => { return item + new Vector3(-2, stAPosition.y, 5); }), true);
 
-			Vector3[] box2 = new Vector3[localBox.Length];
-			AddObject(localBox.transform(box2, item => { return item + new Vector3(2, stAPosition.y, 1); }), true);
+			Vector3[] localCircle = new Vector3[8];
+			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
+			for (int i = 0; i < localCircle.Length; ++i)
+			{
+				localCircle[i].Set(Mathf.Cos(i * deltaRadian), 0, Mathf.Sin(i * deltaRadian));
+			}
+
+			Vector3[] circle = new Vector3[localCircle.Length];
+			AddObject(localCircle.transform(circle, item => { return item * 2f + new Vector3(3, stAPosition.y, -2); }), true);
 
 			AddObject(borderCorners, false);
 
 			RemoveBounds();
 
 			List<Vector3> positions = new List<Vector3>();
-			HalfEdgeManager.SortedVertices.ForEach(vertex => { positions.Add(vertex.Position); });
+			GeomManager.SortedVertices.ForEach(vertex => { positions.Add(vertex.Position); });
 			convexHull = ConvexHullComputer.Compute(positions);
 		}
 
@@ -135,16 +142,18 @@ namespace Delaunay
 			Append(src);
 			Append(dest);
 
-			for (; src != dest; )
+			const int maxLoopCount = 32;
+			for (int i = 0; src != dest; )
 			{
 				src = AddConstraintAt(src, dest);
+				Utility.Verify(++i < maxLoopCount, "Max loop count exceed");
 			}
 		}
 
 		Vertex AddConstraintAt(Vertex src, Vertex dest)
 		{
 			CrossResult crossResult = new CrossResult();
-			foreach (HalfEdge ray in HalfEdgeManager.GetRays(src))
+			foreach (HalfEdge ray in GeomManager.GetRays(src))
 			{
 				if (FindCrossedEdge(crossResult, ray, src, dest)) { break; }
 			}
@@ -181,7 +190,7 @@ namespace Delaunay
 			TriangulatePseudopolygonDelaunay(low, dest, src);
 			TriangulatePseudopolygonDelaunay(up, src, dest);
 
-			HalfEdge constraintEdge = HalfEdgeManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
+			HalfEdge constraintEdge = GeomManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
 			Utility.Verify(constraintEdge != null);
 			constraintEdge.Constraint = true;
 
@@ -195,6 +204,7 @@ namespace Delaunay
 			Vertex v = src;
 			for (; !start.Face.Contains(dest); )
 			{
+				Utility.Verify(!start.Constraint, "Crossed constraint edge");
 				crossedTriangles.Add(start);
 
 				HalfEdge opposedTriangle = start.Face.GetOpposite(v);
@@ -290,7 +300,8 @@ namespace Delaunay
 				{
 					answer.crossState = crossState;
 					answer.edge = edge;
-					if (crossState == LineCrossState.Collinear && dest.Position == edge.Src.Position)
+					if (crossState == LineCrossState.Collinear 
+						&& (Utility.Equals2D(dest.Position, edge.Src.Position) || Utility.Equals2D(src.Position, edge.Dest.Position)))
 					{
 						answer.edge = answer.edge.Pair;
 					}
@@ -304,14 +315,17 @@ namespace Delaunay
 
 		void MarkObstacle(List<Vertex> vertices)
 		{
-			for (int i = 0; i < vertices.Count; ++i)
+			List<Vector3> positions = new List<Vector3>();
+			vertices.ForEach(item => { positions.Add(item.Position); });
+
+			for (int i = 0; i < Facets.Count; ++i)
 			{
-				Vertex current = vertices[i];
-				Vertex next = vertices[(i + 1) % vertices.Count];
-				HalfEdge edge = HalfEdgeManager.GetRays(current).Find(item => { return item.Dest == next; });
-				if (edge != null && edge.Face != null)
+				Triangle current = Facets[i];
+				if (Utility.PolygonContains(positions, current.A.Position)
+					&& Utility.PolygonContains(positions, current.B.Position)
+					&& Utility.PolygonContains(positions, current.C.Position))
 				{
-					edge.Face.Walkable = false;
+					current.Walkable = false;
 				}
 			}
 		}
@@ -438,9 +452,9 @@ namespace Delaunay
 			Triangle bc = Triangle.Create(old);
 			Triangle ca = Triangle.Create(old);
 
-			HalfEdge av = HalfEdge.Create(old.A, v);
-			HalfEdge bv = HalfEdge.Create(old.B, v);
-			HalfEdge cv = HalfEdge.Create(old.C, v);
+			HalfEdge av = HalfEdge.Fetch(old.A, v);
+			HalfEdge bv = HalfEdge.Fetch(old.B, v);
+			HalfEdge cv = HalfEdge.Fetch(old.C, v);
 
 			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
 
@@ -491,9 +505,9 @@ namespace Delaunay
 
 			Vertex opositeVertex = hitEdge.Next.Dest;
 
-			HalfEdge ov = HalfEdge.Create(opositeVertex, v);
-			HalfEdge v1 = HalfEdge.Create(v, hitEdge.Dest);
-			HalfEdge v2 = HalfEdge.Create(v, hitEdge.Pair.Dest);
+			HalfEdge ov = HalfEdge.Fetch(opositeVertex, v);
+			HalfEdge v1 = HalfEdge.Fetch(v, hitEdge.Dest);
+			HalfEdge v2 = HalfEdge.Fetch(v, hitEdge.Pair.Dest);
 
 			HalfEdge sp2Edge0 = hitEdge.Next.Next;
 			HalfEdge sp2Edge1 = v2.Pair;
@@ -524,7 +538,7 @@ namespace Delaunay
 			{
 				Vertex p = hitEdge.Pair.Next.Dest;
 
-				HalfEdge vp = HalfEdge.Create(v, p);
+				HalfEdge vp = HalfEdge.Fetch(v, p);
 
 				oposite1 = Triangle.Create(other);
 				oposite2 = Triangle.Create(other);
@@ -593,7 +607,7 @@ namespace Delaunay
 
 				if (!a.PointInCircumCircle(halfEdge.Pair.Next.Dest)) { continue; }
 
-				HalfEdge ab = HalfEdge.Create(halfEdge.Next.Dest, halfEdge.Pair.Next.Dest);
+				HalfEdge ab = HalfEdge.Fetch(halfEdge.Next.Dest, halfEdge.Pair.Next.Dest);
 
 				HalfEdge bEdges0 = halfEdge.Pair.Next.Next;
 				HalfEdge bEdges1 = halfEdge.Next;
