@@ -39,8 +39,6 @@ namespace Delaunay
 			borderCorners.Add(new Vector3(left, 0, bottom));// Left bottom.
 			borderCorners.Add(new Vector3(right, 0, bottom));// Right bottom.
 
-			borderCorners.Add(new Vector3(right, 0, top));
-
 			float max = Mathf.Max(bound.xMax, bound.yMax);
 
 			stAPosition = new Vector3(0, 0, 4 * max);
@@ -60,7 +58,6 @@ namespace Delaunay
 				new Vector3(-4, 0, 1),
 				new Vector3(-4, 0, -1),
 				new Vector3(4, 0, -1),
-				new Vector3(4, 0, 1),
 			};
 
 			Vector3[] box1 = new Vector3[localBox.Length];
@@ -110,17 +107,22 @@ namespace Delaunay
 			IEnumerator<Vector3> e = container.GetEnumerator();
 			if (!e.MoveNext()) { return; }
 
-			Vertex lastVertex = Vertex.Create(e.Current);
+			Vertex prevVertex = Vertex.Create(e.Current);
+			Vertex firstVertex = prevVertex;
+
 			List<Vertex> vertices = new List<Vertex>();
 
 			for (; e.MoveNext(); )
 			{
-				vertices.Add(lastVertex);
+				vertices.Add(prevVertex);
 
 				Vertex currentVertex = Vertex.Create(e.Current);
-				AddConstraintEdge(lastVertex, currentVertex);
-				lastVertex = currentVertex;
+				AddConstraintEdge(prevVertex, currentVertex);
+				prevVertex = currentVertex;
 			}
+
+			vertices.Add(prevVertex);
+			AddConstraintEdge(prevVertex, firstVertex);
 
 			if (obstacle)
 			{
