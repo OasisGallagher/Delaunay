@@ -2,12 +2,13 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.Vertex, System.Collections.Generic.List<Delaunay.HalfEdge>>;
 
 namespace Delaunay
 {
-	public static class HalfEdgeContainer
+	public static class HalfEdgeManager
 	{
-		static Dictionary<Vertex, List<HalfEdge>> container = new Dictionary<Vertex, List<HalfEdge>>();
+		static HalfEdgeContainer container = new HalfEdgeContainer(EditorConstants.kVertexComparer);
 
 		public static void Add(HalfEdge edge)
 		{
@@ -37,7 +38,7 @@ namespace Delaunay
 			return answer ?? new List<HalfEdge>();
 		}
 
-		public static List<Vertex> Vertices
+		public static List<Vertex> SortedVertices
 		{
 			get { return new List<Vertex>(container.Keys); }
 		}
@@ -47,7 +48,7 @@ namespace Delaunay
 	{
 		public static HalfEdge Create(Vertex src, Vertex dest)
 		{
-			HalfEdge self = HalfEdgeContainer.GetRays(src).Find(item => { return item.Dest == dest; });
+			HalfEdge self = HalfEdgeManager.GetRays(src).Find(item => { return item.Dest == dest; });
 
 			if (self == null)
 			{
@@ -63,8 +64,8 @@ namespace Delaunay
 				src.Edge = self;
 				dest.Edge = other;
 
-				HalfEdgeContainer.Add(self);
-				HalfEdgeContainer.Add(other);
+				HalfEdgeManager.Add(self);
+				HalfEdgeManager.Add(other);
 			}
 
 			return self;
@@ -72,8 +73,8 @@ namespace Delaunay
 
 		public static void Release(HalfEdge edge)
 		{
-			HalfEdgeContainer.Remove(edge.Pair);
-			HalfEdgeContainer.Remove(edge);
+			HalfEdgeManager.Remove(edge.Pair);
+			HalfEdgeManager.Remove(edge);
 		}
 
 		public int ID { get; private set; }
@@ -118,15 +119,6 @@ namespace Delaunay
 		public List<HalfEdge> Cycle
 		{
 			get { return GetEdgeCycle(); }
-		}
-
-		public bool Forward
-		{
-			get
-			{
-				return !Mathf.Approximately(Src.Position.x, Dest.Position.x)
-					? Src.Position.x < Dest.Position.x : Src.Position.z < Src.Position.z;
-			}
 		}
 
 		public override string ToString()

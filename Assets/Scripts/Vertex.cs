@@ -15,42 +15,34 @@ namespace Delaunay
 
 		public Vector3 Position;
 
-		public Vertex(Vector3 position)
+		public static Vertex Create(Vector3 position)
+		{
+			List<Vertex> vertices = HalfEdgeManager.SortedVertices;
+			Vertex answer = new Vertex(position);
+			int index = vertices.BinarySearch(answer, EditorConstants.kVertexComparer);
+			return index >= 0 ? vertices[index] : answer;
+		}
+
+		Vertex(Vector3 position)
 		{
 			ID = vertexID++;
 			this.Position = position;
 		}
-
-		// Error-prone
-		/*public List<HalfEdge> Rays
-		{
-			get
-			{
-				if (Edge == null) { return new List<HalfEdge>(); }
-				return GetRays();
-			}
-		}*/
 
 		public override string ToString()
 		{
 			return ID + "@" + Position;
 		}
 
-		/*List<HalfEdge> GetRays()
+		public override bool Equals(object obj)
 		{
-			List<HalfEdge> answer = new List<HalfEdge> { Edge };
-			for (HalfEdge current = Edge; (current = current.Pair.Next) != Edge && current != null; )
-			{
-				answer.Add(current);
-				if (answer.Count >= EditorConstants.kDebugInvalidCycle)
-				{
-					Debug.LogError("Too may rays");
-					break;
-				}
-			}
+			return obj is Vertex && Utility.Equals2D((obj as Vertex).Position, Position);
+		}
 
-			return answer;
-		}*/
+		public override int GetHashCode()
+		{
+			return base.GetHashCode();
+		}
 
 		static int vertexID = 0;
 	}

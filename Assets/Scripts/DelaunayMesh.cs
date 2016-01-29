@@ -27,7 +27,7 @@ namespace Delaunay
 
 		public DelaunayMesh(Rect bound)
 		{
-			const float padding = -2; // 0.2f;
+			const float padding = 1f;
 
 			float left = bound.xMin - padding;
 			float top = bound.yMax + padding;
@@ -38,6 +38,8 @@ namespace Delaunay
 			borderCorners.Add(new Vector3(left, 0, top));	// Left top.
 			borderCorners.Add(new Vector3(left, 0, bottom));// Left bottom.
 			borderCorners.Add(new Vector3(right, 0, bottom));// Right bottom.
+
+			borderCorners.Add(new Vector3(right, 0, top));
 
 			float max = Mathf.Max(bound.xMax, bound.yMax);
 
@@ -52,35 +54,28 @@ namespace Delaunay
 		{
 			SetUpBounds();
 
-			Vector3 boxCenter = new Vector3(-4, stAPosition.y, 5);
-			Vector3[] box = 
+			Vector3[] localBox = 
 			{
-				boxCenter + new Vector3(-4, 0, 1),
-				boxCenter + new Vector3(4, 0, 1),
-				boxCenter + new Vector3(-4, 0, -1),
-				boxCenter + new Vector3(4, 0, -1),
+				new Vector3(4, 0, 1),
+				new Vector3(-4, 0, 1),
+				new Vector3(-4, 0, -1),
+				new Vector3(4, 0, -1),
+				new Vector3(4, 0, 1),
 			};
 
-			//AddObject(box);
-			AddObject(borderCorners);
+			Vector3[] box1 = new Vector3[localBox.Length];
+			AddObject(localBox.transform(box1, item => { return item + new Vector3(-2, stAPosition.y, 5); }), true);
+
+			Vector3[] box2 = new Vector3[localBox.Length];
+			AddObject(localBox.transform(box2, item => { return item + new Vector3(2, stAPosition.y, 1); }), true);
+
+			AddObject(borderCorners, false);
 
 			RemoveBounds();
 
 			List<Vector3> positions = new List<Vector3>();
-			HalfEdgeContainer.Vertices.ForEach(vertex => { positions.Add(vertex.Position); });
+			HalfEdgeManager.SortedVertices.ForEach(vertex => { positions.Add(vertex.Position); });
 			convexHull = ConvexHullComputer.Compute(positions);
-		}
-
-		public void AddConstraintEdge(Vector3 src, Vector3 dest)
-		{
-			Vertex vSrc = new Vertex(src), vDest = new Vertex(dest);
-			Append(vSrc);
-			Append(vDest);
-
-			for (; vSrc != vDest; )
-			{
-				vSrc = AddConstraintAt(vSrc, vDest);
-			}
 		}
 
 		public void OnDrawGizmos(bool showFindBoundTrianglePath, bool showConvexHull)
@@ -91,8 +86,6 @@ namespace Delaunay
 
 				facet.AllEdges.ForEach(edge =>
 				{
-					//if (!edge.Forward) { return; }
-					
 					Vector3 offset = EditorConstants.kEdgeGizmosOffset;
 					Debug.DrawLine(edge.Src.Position + offset,
 						edge.Dest.Position + offset,
@@ -112,23 +105,44 @@ namespace Delaunay
 			}
 		}
 
-		void AddObject(IEnumerable<Vector3> container)
+		void AddObject(IEnumerable<Vector3> container, bool obstacle)
 		{
 			IEnumerator<Vector3> e = container.GetEnumerator();
 			if (!e.MoveNext()) { return; }
-			Vector3 lastPosition = e.Current;
+
+			Vertex lastVertex = Vertex.Create(e.Current);
+			List<Vertex> vertices = new List<Vertex>();
 
 			for (; e.MoveNext(); )
 			{
-				AddConstraintEdge(lastPosition, e.Current);
-				lastPosition = e.Current;
+				vertices.Add(lastVertex);
+
+				Vertex currentVertex = Vertex.Create(e.Current);
+				AddConstraintEdge(lastVertex, currentVertex);
+				lastVertex = currentVertex;
+			}
+
+			if (obstacle)
+			{
+				MarkObstacle(vertices);
+			}
+		}
+
+		void AddConstraintEdge(Vertex src, Vertex dest)
+		{
+			Append(src);
+			Append(dest);
+
+			for (; src != dest; )
+			{
+				src = AddConstraintAt(src, dest);
 			}
 		}
 
 		Vertex AddConstraintAt(Vertex src, Vertex dest)
 		{
 			CrossResult crossResult = new CrossResult();
-			foreach (HalfEdge ray in HalfEdgeContainer.GetRays(src))
+			foreach (HalfEdge ray in HalfEdgeManager.GetRays(src))
 			{
 				if (FindCrossedEdge(crossResult, ray, src, dest)) { break; }
 			}
@@ -165,7 +179,7 @@ namespace Delaunay
 			TriangulatePseudopolygonDelaunay(low, dest, src);
 			TriangulatePseudopolygonDelaunay(up, src, dest);
 
-			HalfEdge constraintEdge = HalfEdgeContainer.GetRays(src).Find(edge => { return edge.Dest == dest; });
+			HalfEdge constraintEdge = HalfEdgeManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
 			Utility.Verify(constraintEdge != null);
 			constraintEdge.Constraint = true;
 
@@ -208,7 +222,6 @@ namespace Delaunay
 
 				if (Utility.PointOnSegment(opposedVertex.Position, src.Position, dest.Position))
 				{
-					// MODIFY src here.
 					src = opposedVertex;
 					break;
 				}
@@ -287,6 +300,20 @@ namespace Delaunay
 			return false;
 		}
 
+		void MarkObstacle(List<Vertex> vertices)
+		{
+			for (int i = 0; i < vertices.Count; ++i)
+			{
+				Vertex current = vertices[i];
+				Vertex next = vertices[(i + 1) % vertices.Count];
+				HalfEdge edge = HalfEdgeManager.GetRays(current).Find(item => { return item.Dest == next; });
+				if (edge != null && edge.Face != null)
+				{
+					edge.Face.Walkable = false;
+				}
+			}
+		}
+
 		void DrawConvexHull()
 		{
 			if (convexHull == null) { return; }
@@ -313,7 +340,7 @@ namespace Delaunay
 			for (int i = 1; i < findBoundTrianglePath.Count; ++i)
 			{
 				Debug.DrawLine(findBoundTrianglePath[i - 1] + EditorConstants.kEdgeGizmosOffset * 2,
-					findBoundTrianglePath[i] + EditorConstants.kEdgeGizmosOffset * 2, Color.magenta
+					findBoundTrianglePath[i] + EditorConstants.kEdgeGizmosOffset * 2, Color.yellow
 				);
 			}
 		}
@@ -358,7 +385,7 @@ namespace Delaunay
 
 			Facets.Clear();
 
-			superTriangle = Triangle.Create(new Vertex(stAPosition), new Vertex(stBPosition), new Vertex(stCPosition));
+			superTriangle = Triangle.Create(Vertex.Create(stAPosition), Vertex.Create(stBPosition), Vertex.Create(stCPosition));
 
 			Facets.Add(superTriangle);
 		}

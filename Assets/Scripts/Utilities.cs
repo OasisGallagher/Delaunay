@@ -12,6 +12,16 @@ namespace Delaunay
 		CrossOnExtLine,
 	}
 
+	public class VertexComparer : IComparer<Vertex>
+	{
+		public int Compare(Vertex lhs, Vertex rhs)
+		{
+			int answer = lhs.Position.x.CompareTo(rhs.Position.x);
+			if (answer == 0) { answer = lhs.Position.z.CompareTo(rhs.Position.z); }
+			return answer;
+		}
+	}
+
 	public static class Utility
 	{
 		public static void FixVertexHalfEdge(Vertex vertex)
@@ -164,9 +174,19 @@ namespace Delaunay
 
 	public static class Extentions
 	{
-		public static T Back<T>(this List<T> target)
+		public static T back<T>(this IList<T> target)
 		{
 			return target[target.Count - 1];
+		}
+
+		public static IList<T2> transform<T1, T2>(this IList<T1> src, IList<T2> dest, Func<T1, T2> func)
+		{
+			for (int i = 0; i < dest.Count; ++i)
+			{
+				dest[i] = func(src[i]);
+			}
+
+			return dest;
 		}
 	}
 
@@ -214,10 +234,10 @@ namespace Delaunay
 			return result;
 		}
 
-		class VertexComparer : IComparer<Vector3>
+		class ConvexHullVertexComparer : IComparer<Vector3>
 		{
 			Vector3 start = Vector3.zero;
-			public VertexComparer(Vector3 o)
+			public ConvexHullVertexComparer(Vector3 o)
 			{
 				start = o;
 			}
@@ -247,7 +267,7 @@ namespace Delaunay
 			if (vertices.Count <= 3) { return vertices; }
 
 			Vector3 p0 = PopLowestVertex(vertices);
-			vertices.Sort(new VertexComparer(p0));
+			vertices.Sort(new ConvexHullVertexComparer(p0));
 
 			VertexStack stack = new VertexStack();
 			stack.Push(p0);
@@ -297,6 +317,8 @@ namespace Delaunay
 		public static readonly Vector3 kEdgeGizmosOffset = new Vector3(0, 0.3f, 0);
 		public static readonly int[] kTriangleIndices = new int[] { 0, 2, 1 };
 		public static readonly Vector2[] kUV = new Vector2[] { Vector2.zero, Vector2.zero, Vector2.zero };
+
+		public static readonly VertexComparer kVertexComparer = new VertexComparer();
 
 		public static readonly Material kWalkableMaterial = (Material)Resources.Load("Materials/Walkable");
 		public static readonly Material kBlockMaterial = (Material)Resources.Load("Materials/Block");
