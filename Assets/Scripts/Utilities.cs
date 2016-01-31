@@ -139,7 +139,7 @@ namespace Delaunay
 			for (int i = 1; i <= positions.Count; ++i)
 			{
 				Vector3 currentPosition = (i < positions.Count) ? positions[i] : positions[0];
-				if (Utility.Cross2D(point - positions[i - 1], currentPosition, positions[i - 1]) > 0)
+				if (Utility.Cross2D(point, currentPosition, positions[i - 1]) > 0)
 				{
 					return false;
 				}
@@ -183,8 +183,8 @@ namespace Delaunay
 		{
 			if (!condition)
 			{
-				Debug.LogError(string.Format(message ?? "Condition failed", arguments));
-				Debug.Break();
+				throw new Exception(string.Format(message ?? "Condition failed", arguments));
+				//Debug.Break();
 			}
 
 			return condition;
@@ -325,12 +325,12 @@ namespace Delaunay
 	{
 		public const float kPanelWidth = 60;
 		public const float kConvexHullGizmosHeight = 0.7f;
-		public const float kTriangleGizmosHeight = 0.1f;
 		public const float kNeighborTriangleGizmosHeight = 0.5f;
 
 		public const int kMaxStackCapacity = 4096;
 		public const int kDebugInvalidCycle = 32;
 
+		public static readonly Vector3 kTriangleGizmosOffset = new Vector3(0, 0.4f, 0);
 		public static readonly Vector3 kTriangleMeshOffset = new Vector3(0, 0.1f, 0);
 		public static readonly Vector3 kHalfEdgeGizmosOffset = new Vector3(0, 0.3f, 0);
 		public static readonly Vector3 kEdgeGizmosOffset = new Vector3(0, 0.3f, 0);

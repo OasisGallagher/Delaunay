@@ -1,6 +1,4 @@
-﻿#define ENABLE_MESH
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,10 +11,10 @@ namespace Delaunay
 		public static Triangle Create(Triangle src)
 		{
 			GameObject go = new GameObject();
-#if ENABLE_MESH
+
 			go.AddComponent<MeshFilter>();
 			go.AddComponent<MeshRenderer>();
-#endif
+
 			Triangle answer = go.AddComponent<Triangle>();
 
 			answer.CopyFrom(src);
@@ -34,10 +32,10 @@ namespace Delaunay
 			ca.Next = ab;
 
 			GameObject go = new GameObject();
-#if ENABLE_MESH
+
 			go.AddComponent<MeshFilter>();
 			go.AddComponent<MeshRenderer>();
-#endif
+
 			Triangle answer = go.AddComponent<Triangle>();
 
 			ab.Face = bc.Face = ca.Face = answer;
@@ -70,7 +68,7 @@ namespace Delaunay
 		{
 			Vector3 position = Edge.Dest.Position;
 			gameObject.transform.position = position;
-#if ENABLE_MESH
+
 			MeshFilter meshFilter = gameObject.GetComponent<MeshFilter>();
 
 			meshFilter.mesh.vertices = new Vector3[] {
@@ -83,8 +81,24 @@ namespace Delaunay
 			meshFilter.mesh.RecalculateNormals();
 
 			meshFilter.mesh.uv = EditorConstants.kUV;
-#endif
+
 			UpdateWalkableMaterial();
+		}
+
+		void OnDrawGizmosSelected()
+		{
+			Color oldColor = Gizmos.color;
+
+			Gizmos.color = Color.red;
+			Gizmos.DrawSphere(A.Position + Vector3.up * 0.6f, 0.3f);
+
+			Gizmos.color = Color.green;
+			Gizmos.DrawSphere(B.Position + Vector3.up * 0.6f, 0.3f);
+
+			Gizmos.color = Color.blue;
+			Gizmos.DrawSphere(C.Position + Vector3.up * 0.6f, 0.3f);
+
+			Gizmos.color = oldColor;
 		}
 
 		public HalfEdge GetOpposite(Vertex from)
@@ -211,7 +225,7 @@ namespace Delaunay
 
 		public override string ToString()
 		{
-			return A.ToString() + " => " + B.ToString() + " => " + C.ToString();
+			return gameObject.name + "_" + A.ToString() + " => " + B.ToString() + " => " + C.ToString();
 		}
 
 		public bool HasVertex(Vertex v)
@@ -237,10 +251,8 @@ namespace Delaunay
 
 		void UpdateWalkableMaterial()
 		{
-#if ENABLE_MESH
 			MeshRenderer meshRenderer = gameObject.GetComponent<MeshRenderer>();
 			meshRenderer.material = Walkable ? EditorConstants.kWalkableMaterial : EditorConstants.kBlockMaterial;
-#endif
 		}
 
 		static int triangleID = 0;
@@ -253,6 +265,9 @@ namespace Delaunay
 		{
 			Triangle triangle = target as Triangle;
 			triangle.Walkable = GUILayout.Toggle(triangle.Walkable, "Walkable");
+			GUILayout.Label("A:" + triangle.A);
+			GUILayout.Label("B:" + triangle.B);
+			GUILayout.Label("C:" + triangle.C);
 		}
 	}
 }

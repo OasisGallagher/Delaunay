@@ -27,7 +27,7 @@ namespace Delaunay
 
 		public DelaunayMesh(Rect bound)
 		{
-			const float padding = 1f;
+			const float padding = 0f;
 
 			float left = bound.xMin - padding;
 			float top = bound.yMax + padding;
@@ -45,25 +45,32 @@ namespace Delaunay
 			stBPosition = new Vector3(-4 * max, 0, -4 * max);
 			stCPosition = new Vector3(4 * max, 0, 0);
 
-			Rebuild();
+			try
+			{
+				Rebuild();
+			}
+			catch (Exception e)
+			{
+				Debug.LogError("Exception: " + e.Message);
+			}
 		}
 
 		public void Rebuild()
 		{
 			SetUpBounds();
 
-			Vector3[] localBox = 
-			{
-				new Vector3(4, 0, 1),
-				new Vector3(-4, 0, 1),
-				new Vector3(-4, 0, -1),
-				new Vector3(4, 0, -1),
-			};
+			//Vector3[] localBox = 
+			//{
+			//	new Vector3(4, 0, 1),
+			//	new Vector3(-4, 0, 1),
+			//	new Vector3(-4, 0, -1),
+			//	new Vector3(4, 0, -1),
+			//};
 
 			//Vector3[] box = new Vector3[localBox.Length];
 			//AddObject(localBox.transform(box, item => { return item + new Vector3(-2, stAPosition.y, 5); }), true);
 
-			Vector3[] localCircle = new Vector3[8];
+			Vector3[] localCircle = new Vector3[32];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
 			for (int i = 0; i < localCircle.Length; ++i)
 			{
@@ -71,7 +78,7 @@ namespace Delaunay
 			}
 
 			Vector3[] circle = new Vector3[localCircle.Length];
-			AddObject(localCircle.transform(circle, item => { return item * 2f + new Vector3(3, stAPosition.y, -2); }), true);
+			AddObject(localCircle.transform(circle, item => { return item * 4f + new Vector3(0, stAPosition.y, 0); }), true);
 
 			AddObject(borderCorners, false);
 
@@ -197,7 +204,8 @@ namespace Delaunay
 			return newSrc;
 		}
 
-		Vertex CollectCrossedTriangles(List<HalfEdge> crossedTriangles, List<Vertex> up, List<Vertex> low, Vertex src, Vertex dest, HalfEdge start)
+		Vertex CollectCrossedTriangles(List<HalfEdge> crossedTriangles, 
+			List<Vertex> up, List<Vertex> low, Vertex src, Vertex dest, HalfEdge start)
 		{
 			Vector3 srcDest = dest.Position - src.Position;
 
@@ -214,11 +222,11 @@ namespace Delaunay
 				Vertex opposedVertex = opposedTriangle.Next.Dest;
 				if (Utility.Cross2D(opposedVertex.Position - src.Position, srcDest) < 0)
 				{
-					v = opposedTriangle.Dest;
+					v = opposedTriangle.Src;
 				}
 				else
 				{
-					v = opposedTriangle.Src;
+					v = opposedTriangle.Dest;
 				}
 
 				float cr = Utility.Cross2D(opposedTriangle.Dest.Position - src.Position, srcDest);
