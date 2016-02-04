@@ -40,8 +40,6 @@ namespace Delaunay
 		{
 			GUILayout.BeginVertical("Box", GUILayout.Width(EditorConstants.kPanelWidth));
 
-			EditorParameter.plant = GUILayout.Toggle(EditorParameter.plant, "Plant");
-
 			GUILayout.Button("Save");
 
 			GUILayout.EndVertical();

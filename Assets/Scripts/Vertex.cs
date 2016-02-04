@@ -1,10 +1,13 @@
 ﻿using System;
 using UnityEngine;
 using System.Collections.Generic;
+using System.Xml.Serialization;
+using System.Xml;
+using System.Xml.Schema;
 
 namespace Delaunay
 {
-	public class Vertex
+	public class Vertex : IXmlSerializable
 	{
 		public int ID;
 
@@ -66,6 +69,33 @@ namespace Delaunay
 		public override int GetHashCode()
 		{
 			return base.GetHashCode();
+		}
+
+		public XmlSchema GetSchema()
+		{
+			throw new NotImplementedException();
+		}
+
+		public void ReadXml(XmlReader reader)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void WriteXml(XmlWriter writer)
+		{
+			writer.WriteAttributeString("ID", ID.ToString());
+
+			using (new XmlWriterScope(writer, "Position"))
+			{
+				writer.WriteAttributeString("X", Position.x.ToString());
+				writer.WriteAttributeString("Y", Position.y.ToString());
+				writer.WriteAttributeString("Z", Position.z.ToString());
+			}
+
+			using (new XmlWriterScope(writer, "EdgeID"))
+			{
+				writer.WriteString(Edge != null ? Edge.ID.ToString() : "-1");
+			}
 		}
 
 		static int vertexID = 0;

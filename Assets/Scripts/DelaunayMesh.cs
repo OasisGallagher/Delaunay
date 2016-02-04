@@ -45,14 +45,7 @@ namespace Delaunay
 			stBPosition = new Vector3(-4 * max, 0, -4 * max);
 			stCPosition = new Vector3(4 * max, 0, 0);
 
-			try
-			{
-				Rebuild();
-			}
-			catch (Exception e)
-			{
-				Debug.LogError("Exception: " + e.Message);
-			}
+			Rebuild();
 		}
 
 		public void Rebuild()
@@ -84,6 +77,8 @@ namespace Delaunay
 
 			RemoveBounds();
 
+			Utility.Verify(Facets.Count == GeomManager.AllTriangles.Count);
+
 			List<Vector3> positions = new List<Vector3>();
 			GeomManager.SortedVertices.ForEach(vertex => { positions.Add(vertex.Position); });
 			convexHull = ConvexHullComputer.Compute(positions);
@@ -91,7 +86,7 @@ namespace Delaunay
 
 		public void OnDrawGizmos(bool showFindBoundTrianglePath, bool showConvexHull)
 		{
-			Facets.ForEach(facet =>
+			/*Facets.ForEach(facet =>
 			{
 				if (!facet.gameObject.activeSelf) { return; }
 
@@ -103,7 +98,17 @@ namespace Delaunay
 						edge.Constraint ? Color.red : Color.white
 					);
 				});
-			});
+			});*/
+			foreach (Vertex vertex in GeomManager.SortedVertices)
+			{
+				Vector3 offset = EditorConstants.kEdgeGizmosOffset;
+				foreach (HalfEdge edge in GeomManager.GetRays(vertex))
+				{
+					Debug.DrawLine(edge.Src.Position + offset,
+						edge.Dest.Position + offset, Color.white
+					);
+				}
+			}
 
 			if (showConvexHull)
 			{
@@ -186,11 +191,13 @@ namespace Delaunay
 				{
 					Facets.Remove(edge.Face);
 					Triangle.Release(edge.Face, true);
+					//edge.Face = null;
 				}
 				if (edge.Pair.Face != null)
 				{
 					Facets.Remove(edge.Pair.Face);
 					Triangle.Release(edge.Pair.Face, true);
+					//edge.Pair.Face = null;
 				}
 			});
 
@@ -401,7 +408,6 @@ namespace Delaunay
 
 		void SetUpBounds()
 		{
-			//Utility.GetAllHalfEdges().ForEach(e => { GameObject.DestroyImmediate(e.gameObject); });
 			Facets.ForEach(facet =>
 			{
 				Triangle.Release(facet, true);
@@ -586,7 +592,7 @@ namespace Delaunay
 			//v2.Face = oposite2;
 			//v2.Pair.Face = split2;
 
-			HalfEdge.Release(hitEdge);
+			//HalfEdge.Release(hitEdge);
 
 			FlipIfNeeded(split1.Edge);
 			FlipIfNeeded(split2.Edge);
@@ -645,7 +651,8 @@ namespace Delaunay
 
 				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Next.Next);
 
-				HalfEdge.Release(halfEdge);
+				halfEdge.Face = halfEdge.Pair.Face = null;
+				//HalfEdge.Release(halfEdge);
 			}
 		}
 	}

@@ -46,6 +46,7 @@ namespace Delaunay
 
 		public static void Release(Triangle triangle, bool disconnect = false)
 		{
+			/*
 			foreach (HalfEdge edge in triangle.AllEdges)
 			{
 				if (edge.Pair.Face == null && (disconnect || edge.Face == null))
@@ -53,6 +54,14 @@ namespace Delaunay
 					HalfEdge.Release(edge);
 				}
 			}
+			*/
+			triangle.AllEdges.ForEach(e => 
+			{ 
+				if (e.Face == triangle) 
+				{
+					e.Face = null; 
+				}
+			});
 
 			triangle.Edge = null;
 			GameObject.DestroyImmediate(triangle.gameObject);
