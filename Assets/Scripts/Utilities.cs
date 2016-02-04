@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Xml;
 using UnityEngine;
 
 namespace Delaunay
@@ -191,6 +192,18 @@ namespace Delaunay
 		}
 	}
 
+	public class XmlWriterScope : IDisposable
+	{
+		XmlWriter writer = null;
+		public XmlWriterScope(XmlWriter writer, string localName)
+		{
+			this.writer = writer;
+			writer.WriteStartElement(localName);
+		}
+
+		public void Dispose() { writer.WriteEndElement(); }
+	}
+
 	public static class Extentions
 	{
 		public static T back<T>(this IList<T> target)
@@ -314,11 +327,6 @@ namespace Delaunay
 
 			return stack.Container;
 		}
-	}
-	
-	static class EditorParameter
-	{
-		public static bool plant = true;
 	}
 
 	static class EditorConstants

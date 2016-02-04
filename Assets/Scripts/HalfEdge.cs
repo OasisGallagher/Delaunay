@@ -2,6 +2,9 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Xml.Serialization;
+using System.Xml;
+using System.Xml.Schema;
 using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.Vertex, System.Collections.Generic.List<Delaunay.HalfEdge>>;
 
 namespace Delaunay
@@ -48,9 +51,52 @@ namespace Delaunay
 		{
 			get { return new List<Vertex>(container.Keys); }
 		}
+
+		public static List<Triangle> AllTriangles
+		{
+			get
+			{
+				if (container.Count == 0) { return new List<Triangle>(); }
+				return CollectTriangles();
+			}
+		}
+
+		static List<Triangle> CollectTriangles()
+		{
+			Triangle face = null;
+			foreach (HalfEdge edge in GetRays(SortedVertices[0]))
+			{
+				if ((face = edge.Face) != null) { break; }
+			}
+
+			Utility.Verify(face != null);
+			HashSet<int> visitedFaces = new HashSet<int> { face.ID };
+
+			Stack<Triangle> stack = new Stack<Triangle>();
+			stack.Push(face);
+
+			List<Triangle> answer = new List<Triangle>();
+
+			for (; stack.Count != 0; )
+			{
+				face = stack.Pop();
+				answer.Add(face);
+
+				foreach (HalfEdge edge in face.AllEdges)
+				{
+					if (edge.Pair.Face != null && !visitedFaces.Contains(edge.Pair.Face.ID))
+					{
+						visitedFaces.Add(edge.Pair.Face.ID);
+						stack.Push(edge.Pair.Face);
+					}
+				}
+			}
+
+			return answer;
+		}
 	}
 
-	public class HalfEdge
+	public class HalfEdge : IXmlSerializable
 	{
 		public static HalfEdge Fetch(Vertex src, Vertex dest)
 		{
@@ -103,7 +149,19 @@ namespace Delaunay
 		/// <summary>
 		/// Face the half-edge borders.
 		/// </summary>
-		public Triangle Face;
+		public Triangle Face
+		{
+			get { return face; }
+			set
+			{
+				if (face == value) { return; }
+				face = value;
+				if (face == null && Pair.face == null)
+				{
+					HalfEdge.Release(this);
+				}
+			}
+		}
 
 		HalfEdge() { ID = halfEdgeID++; }
 
@@ -125,6 +183,46 @@ namespace Delaunay
 		public List<HalfEdge> Cycle
 		{
 			get { return GetEdgeCycle(); }
+		}
+
+		public XmlSchema GetSchema()
+		{
+			throw new NotImplementedException();
+		}
+
+		public void ReadXml(XmlReader reader)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void WriteXml(XmlWriter writer)
+		{
+			writer.WriteAttributeString("ID", ID.ToString());
+
+			using (new XmlWriterScope(writer, "DestVertexID"))
+			{
+				writer.WriteString(Dest != null ? Dest.ID.ToString() : "-1");
+			}
+
+			using (new XmlWriterScope(writer, "NextEdgeID"))
+			{
+				writer.WriteString(Next != null ? Next.ID.ToString() : "-1");
+			}
+
+			using (new XmlWriterScope(writer, "PairEdgeID"))
+			{
+				writer.WriteString(Pair != null ? Pair.ID.ToString() : "-1");
+			}
+
+			using (new XmlWriterScope(writer, "FaceID"))
+			{
+				writer.WriteString(Face != null ? Face.ID.ToString() : "-1");
+			}
+
+			using (new XmlWriterScope(writer, "Constraint"))
+			{
+				writer.WriteString(Constraint.ToString());
+			}
 		}
 
 		public override string ToString()
@@ -150,6 +248,7 @@ namespace Delaunay
 		}
 
 		bool isConstraint;
+		Triangle face;
 
 		static int halfEdgeID = 0;
 	}
