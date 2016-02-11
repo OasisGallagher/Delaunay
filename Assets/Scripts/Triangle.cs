@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Xml;
 using UnityEngine;
 
 namespace Delaunay
@@ -18,6 +18,19 @@ namespace Delaunay
 			Triangle answer = go.AddComponent<Triangle>();
 
 			answer.CopyFrom(src);
+			return answer;
+		}
+
+		public static Triangle Create(XmlReader reader, IDictionary<int, HalfEdge> container)
+		{
+			GameObject go = new GameObject();
+
+			go.AddComponent<MeshFilter>();
+			go.AddComponent<MeshRenderer>();
+
+			Triangle answer = go.AddComponent<Triangle>();
+
+			answer.ReadXml(reader, container);
 			return answer;
 		}
 
@@ -46,26 +59,20 @@ namespace Delaunay
 
 		public static void Release(Triangle triangle)
 		{
-			/*
-			foreach (HalfEdge edge in triangle.AllEdges)
+			triangle.BoundingEdges.ForEach(e => 
 			{
-				if (edge.Pair.Face == null && (disconnect || edge.Face == null))
+				if (e.Face == triangle)
 				{
-					HalfEdge.Release(edge);
-				}
-			}
-			*/
-			triangle.AllEdges.ForEach(e => 
-			{ 
-				if (e.Face == triangle) 
-				{
-					e.Face = null; 
+					e.Face = null;
+					e.Next = null;
 				}
 			});
 
 			triangle.Edge = null;
 			GameObject.DestroyImmediate(triangle.gameObject);
 		}
+
+		public static void ResetIDGenerator() { triangleID = 0; }
 
 		void Awake()
 		{
@@ -112,7 +119,7 @@ namespace Delaunay
 
 		public HalfEdge GetOpposite(Vertex from)
 		{
-			foreach (HalfEdge edge in AllEdges)
+			foreach (HalfEdge edge in BoundingEdges)
 			{
 				if (!Utility.Equals2D(from.Position, edge.Src.Position)
 					&& !Utility.Equals2D(from.Position, edge.Dest.Position))
@@ -124,7 +131,10 @@ namespace Delaunay
 			return null;
 		}
 
-		public bool IsValid { get { return Edge != null; } }
+		/// <summary>
+		/// One of the half-edges bordering the face.
+		/// </summary>
+		public HalfEdge Edge;
 
 		public bool Walkable
 		{
@@ -158,17 +168,7 @@ namespace Delaunay
 			}
 		}
 
-		public bool IsReady
-		{
-			get { return A != null && B != null && C != null; }
-		}
-
-		/// <summary>
-		/// One of the half-edges bordering the face.
-		/// </summary>
-		public HalfEdge Edge;
-
-		public List<HalfEdge> AllEdges
+		public List<HalfEdge> BoundingEdges
 		{
 			get
 			{
@@ -253,6 +253,39 @@ namespace Delaunay
 		public bool PointInCircumCircle(Vertex v)
 		{
 			return Utility.PointInCircumCircle(A, B, C, v);
+		}
+
+		public void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
+		{
+			ID = int.Parse(reader["ID"]);
+
+			reader.Read();
+			// Skip whitespace.
+			reader.Read();
+
+			int edge = reader.ReadElementContentAsInt();
+			reader.Skip();
+
+			Edge = container[edge];
+
+			BoundingEdges.ForEach(e => { e.Face = this; });
+
+			Walkable = reader.ReadElementContentAsBoolean();
+			reader.Skip();
+		}
+
+		public void WriteXml(XmlWriter writer)
+		{
+			writer.WriteAttributeString("ID", ID.ToString());
+			using (new XmlWriterScope(writer, "EdgeID"))
+			{
+				writer.WriteString(Edge != null ? Edge.ID.ToString() : "-1");
+			}
+
+			using (new XmlWriterScope(writer, "Walkable"))
+			{
+				writer.WriteString(Walkable ? "1" : "0");
+			}
 		}
 
 		void CopyFrom(Triangle src)

@@ -1,26 +1,24 @@
-﻿using System;
+﻿using System.Xml;
 using UnityEngine;
-using System.Collections.Generic;
-using System.Xml.Serialization;
-using System.Xml;
-using System.Xml.Schema;
 
 namespace Delaunay
 {
-	public class Vertex : IXmlSerializable
+	public class Vertex
 	{
 		public int ID;
 
 		/// <summary>
 		/// One of the half-edges emanating from this vertex.
 		/// </summary>
+		/*
 		public HalfEdge Edge;
+		*/
 
 		public Vector3 Position;
 
 		public static Vertex Create(Vector3 position)
 		{
-			Utility.Verify(FindExistingVertex(position) == null, "Duplicate vertex at position " + position);
+			Utility.Verify(GeomManager.FindVertex(position) == null, "Duplicate vertex at position " + position);
 			Vertex ans = new Vertex(position);
 			GeomManager.Add(ans);
 			return ans;
@@ -34,35 +32,13 @@ namespace Delaunay
 			return ans;
 		}
 
-		static Vertex FindExistingVertex(Vector3 position)
-		{
-			List<Vertex> vertices = GeomManager.SortedVertices;
-
-			int low = 0, high = vertices.Count - 1, mid = 0;
-			for (; low <= high; )
-			{
-				mid = low + (high - low) / 2;
-				int comp = Utility.CompareTo2D(position, vertices[mid].Position);
-
-				if (comp == 0) { return vertices[mid]; }
-				if (comp < 0)
-				{
-					high = mid - 1;
-				}
-				else
-				{
-					low = mid + 1;
-				}
-			}
-
-			return null;
-		}
-
 		Vertex(Vector3 position)
 		{
 			ID = vertexID++;
 			this.Position = position;
 		}
+
+		public static void ResetIDGenerator() { vertexID = 0; }
 
 		public override string ToString()
 		{
@@ -79,19 +55,13 @@ namespace Delaunay
 			return base.GetHashCode();
 		}
 
-		public XmlSchema GetSchema()
-		{
-			throw new NotImplementedException();
-		}
-
 		public void ReadXml(XmlReader reader)
 		{
 			ID = int.Parse(reader["ID"]);
 			reader.Read();
-			Position.Set(float.Parse(reader["X"]), float.Parse(reader["Y"]), float.Parse(reader["Z"]));
+			// Skip whitespace.
 			reader.Read();
-
-			// TODO: INIT EDGE ID.
+			Position.Set(float.Parse(reader["X"]), float.Parse(reader["Y"]), float.Parse(reader["Z"]));
 		}
 
 		public void WriteXml(XmlWriter writer)
@@ -105,10 +75,10 @@ namespace Delaunay
 				writer.WriteAttributeString("Z", Position.z.ToString());
 			}
 
-			using (new XmlWriterScope(writer, "EdgeID"))
+			/*using (new XmlWriterScope(writer, "EdgeID"))
 			{
 				writer.WriteString(Edge != null ? Edge.ID.ToString() : "-1");
-			}
+			}*/
 		}
 
 		static int vertexID = 0;

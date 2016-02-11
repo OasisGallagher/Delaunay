@@ -22,16 +22,21 @@ namespace Delaunay
 			XmlWriter writer = XmlWriter.Create(path, settings);
 
 			writer.WriteStartDocument();
-			using (new XmlWriterScope(writer, "Root"))
+			using (new XmlWriterScope(writer, EditorConstants.kXmlRoot))
 			{
-				using (new XmlWriterScope(writer, "Vertices"))
+				using (new XmlWriterScope(writer, EditorConstants.kXmlAllVertices))
 				{
 					WriteAllVertices(writer);
 				}
 
-				using (new XmlWriterScope(writer, "Edges"))
+				using (new XmlWriterScope(writer, EditorConstants.kXmlAllEdges))
 				{
 					WriteAllEdges(writer);
+				}
+
+				using (new XmlWriterScope(writer, EditorConstants.kXmlAllTriangles))
+				{
+					WriteAllTriangles(writer);
 				}
 			}
 
@@ -42,36 +47,82 @@ namespace Delaunay
 		public static void Load(string path)
 		{
 			XmlReader reader = XmlReader.Create(path);
+			
 			for (; reader.Read(); )
 			{
+				if (reader.NodeType == XmlNodeType.EndElement
+					&& reader.Name == EditorConstants.kXmlAllVertices)
+				{
+					break;
+				}
+				
 				if (reader.NodeType != XmlNodeType.Element) { continue; }
 				if (reader.Name == EditorConstants.kXmlVertex)
 				{
 					Vertex.Create(reader);
 				}
-				else if (reader.Name == EditorConstants.kXmlEdge)
-				{ 
+			}
 
+			Dictionary<int, HalfEdge> container = new Dictionary<int, HalfEdge>();
+			for (; reader.Read(); )
+			{
+				if (reader.NodeType == XmlNodeType.EndElement
+					&& reader.Name == EditorConstants.kXmlAllEdges)
+				{
+					break;
 				}
+
+				if (reader.NodeType != XmlNodeType.Element) { continue; }
+				if (reader.Name == EditorConstants.kXmlEdge)
+				{
+					HalfEdge.Create(reader, container);
+				}
+			}
+
+			for (; reader.Read(); )
+			{
+				if (reader.NodeType == XmlNodeType.EndElement
+					&& reader.Name == EditorConstants.kXmlAllTriangles)
+				{
+					break;
+				}
+
+				if (reader.NodeType != XmlNodeType.Element) { continue; }
+				if (reader.Name == EditorConstants.kXmlTriangle)
+				{
+					Triangle.Create(reader, container);
+				}
+			}
+
+			reader.Close();
+
+			foreach (HalfEdge edge in container.Values)
+			{
+				GeomManager.Add(edge);
 			}
 		}
 
 		static void WriteAllVertices(XmlWriter writer)
 		{
-			GeomManager.SortedVertices.ForEach(vertex =>
+			GeomManager.AllVertices.ForEach(vertex =>
 			{
-				using (new XmlWriterScope(writer, "Vertex")) { vertex.WriteXml(writer); }
+				using (new XmlWriterScope(writer, EditorConstants.kXmlVertex)) { vertex.WriteXml(writer); }
 			});
 		}
 
 		static void WriteAllEdges(XmlWriter writer)
 		{
-			GeomManager.SortedVertices.ForEach(vertex =>
+			GeomManager.AllEdges.ForEach(edge =>
 			{
-				GeomManager.GetRays(vertex).ForEach(edge =>
-				{
-					using (new XmlWriterScope(writer, "Edge")) { edge.WriteXml(writer); }
-				});
+				using (new XmlWriterScope(writer, EditorConstants.kXmlEdge)) { edge.WriteXml(writer); }
+			});
+		}
+
+		static void WriteAllTriangles(XmlWriter writer)
+		{
+			GeomManager.AllTriangles.ForEach(triangle =>
+			{
+				using (new XmlWriterScope(writer, EditorConstants.kXmlTriangle)) { triangle.WriteXml(writer); }
 			});
 		}
 	}

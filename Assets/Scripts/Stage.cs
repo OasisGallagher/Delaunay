@@ -47,6 +47,13 @@ namespace Delaunay
 				SerializeTools.Save(path);
 			}
 
+			if (GUILayout.Button("Load"))
+			{
+				GeomManager.Clear();
+				string path = UnityEditor.EditorUtility.OpenFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "xml");
+				SerializeTools.Load(path);
+			}
+
 			GUILayout.EndVertical();
 		}
 

@@ -48,7 +48,7 @@ namespace Delaunay
 		{
 			SetUpBounds();
 
-			Vector3[] localCircle = new Vector3[32];
+			Vector3[] localCircle = new Vector3[12];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
 			for (int i = 0; i < localCircle.Length; ++i)
 			{
@@ -63,7 +63,7 @@ namespace Delaunay
 			RemoveBounds();
 
 			List<Vector3> positions = new List<Vector3>();
-			GeomManager.SortedVertices.ForEach(vertex => { positions.Add(vertex.Position); });
+			GeomManager.AllVertices.ForEach(vertex => { positions.Add(vertex.Position); });
 			convexHull = ConvexHullComputer.Compute(positions);
 		}
 
@@ -73,7 +73,7 @@ namespace Delaunay
 			{
 				if (!facet.gameObject.activeSelf) { return; }
 
-				facet.AllEdges.ForEach(edge =>
+				facet.BoundingEdges.ForEach(edge =>
 				{
 					Vector3 offset = EditorConstants.kEdgeGizmosOffset;
 					Debug.DrawLine(edge.Src.Position + offset,
@@ -165,13 +165,11 @@ namespace Delaunay
 				if (edge.Face != null)
 				{
 					Triangle.Release(edge.Face);
-					//Facets.Remove(edge.Face);
 				}
 
 				if (edge.Pair.Face != null)
 				{
 					Triangle.Release(edge.Pair.Face);
-					//Facets.Remove(edge.Pair.Face);
 				}
 			}
 
@@ -270,7 +268,7 @@ namespace Delaunay
 
 			if (vertices.Count > 0)
 			{
-				/*Facets.Add(*/Triangle.Create(src, dest, c);//);
+				Triangle.Create(src, dest, c);
 			}
 		}
 
@@ -433,16 +431,16 @@ namespace Delaunay
 			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
 
 			ab.Edge = Utility.CycleLink(AB, bv, av.Pair);
-			ab.AllEdges.ForEach(item => { item.Face = ab; });
+			ab.BoundingEdges.ForEach(item => { item.Face = ab; });
 			//ab.Edge.Face = ab;
 
 			bc.Edge = Utility.CycleLink(BC, cv, bv.Pair);
 			//bc.Edge.Face = bc;
-			bc.AllEdges.ForEach(item => { item.Face = bc; });
+			bc.BoundingEdges.ForEach(item => { item.Face = bc; });
 
 			ca.Edge = Utility.CycleLink(CA, av, cv.Pair);
 			//ca.Edge.Face = ca;
-			ca.AllEdges.ForEach(item => { item.Face = ca; });
+			ca.BoundingEdges.ForEach(item => { item.Face = ca; });
 
 			// Edges of old is in use.
 			Triangle.Release(old);
@@ -487,10 +485,10 @@ namespace Delaunay
 			HalfEdge sp2Edge1 = v2.Pair;
 			HalfEdge sp2Edge2 = ov.Pair;
 			split1.Edge = Utility.CycleLink(hitEdge.Next, ov, v1);
-			split1.AllEdges.ForEach(item => { item.Face = split1; });
+			split1.BoundingEdges.ForEach(item => { item.Face = split1; });
 
 			split2.Edge = Utility.CycleLink(sp2Edge0, sp2Edge1, sp2Edge2);
-			split2.AllEdges.ForEach(item => { item.Face = split2; });
+			split2.BoundingEdges.ForEach(item => { item.Face = split2; });
 
 			Triangle.Release(old);
 			oldFacets.Add(old);
@@ -522,10 +520,10 @@ namespace Delaunay
 				HalfEdge op1Edge2 = vp;
 
 				oposite2.Edge = Utility.CycleLink(hitEdge.Pair.Next, vp.Pair, v2);
-				oposite2.AllEdges.ForEach(item => { item.Face = oposite2; });
+				oposite2.BoundingEdges.ForEach(item => { item.Face = oposite2; });
 
 				oposite1.Edge = Utility.CycleLink(op1Edge0, op1Edge1, op1Edge2);
-				oposite1.AllEdges.ForEach(item => { item.Face = oposite1; });
+				oposite1.BoundingEdges.ForEach(item => { item.Face = oposite1; });
 
 				Triangle.Release(other);
 				oldFacets.Add(other);
@@ -590,10 +588,10 @@ namespace Delaunay
 				a.Edge = Utility.CycleLink(halfEdge.Next.Next, halfEdge.Pair.Next, ab.Pair);
 				b.Edge = Utility.CycleLink(bEdges0, bEdges1, bEdges2);
 
-				a.AllEdges.ForEach(item => { item.Face = a; });
-				b.AllEdges.ForEach(item => { item.Face = b; });
+				a.BoundingEdges.ForEach(item => { item.Face = a; });
+				b.BoundingEdges.ForEach(item => { item.Face = b; });
 
-				if (halfEdge.Dest.Edge == halfEdge.Pair)
+				/*if (halfEdge.Dest.Edge == halfEdge.Pair)
 				{
 					Utility.FixVertexHalfEdge(halfEdge.Dest);
 				}
@@ -601,7 +599,7 @@ namespace Delaunay
 				if (halfEdge.Pair.Dest.Edge == halfEdge)
 				{
 					Utility.FixVertexHalfEdge(halfEdge.Pair.Dest);
-				}
+				}*/
 
 				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Pair.Next.Next);
 

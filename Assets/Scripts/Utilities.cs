@@ -23,13 +23,13 @@ namespace Delaunay
 
 	public static class Utility
 	{
-		public static void FixVertexHalfEdge(Vertex vertex)
+		/*public static void FixVertexHalfEdge(Vertex vertex)
 		{
 			if (vertex.Edge != null)
 			{
 				vertex.Edge = vertex.Edge.Pair.Next;
 			}
-		}
+		}*/
 
 		public static HalfEdge CycleLink(HalfEdge x, HalfEdge y, HalfEdge z)
 		{
@@ -327,11 +327,14 @@ namespace Delaunay
 
 	static class EditorConstants
 	{
-		public const string kXmlRoot = "Root";
-		public const string kXmlVertices = "Vertices";
-		public const string kXmlEdges = "Edges";
 		public const string kXmlVertex = "Vertex";
 		public const string kXmlEdge = "Edge";
+		public const string kXmlTriangle = "Triangle";
+
+		public const string kXmlRoot = "Root";
+		public const string kXmlAllVertices = "AllVertices";
+		public const string kXmlAllEdges = "AllEdges";
+		public const string kXmlAllTriangles = "AllTriangles";
 
 		public const float kPanelWidth = 60;
 		public const float kConvexHullGizmosHeight = 0.7f;

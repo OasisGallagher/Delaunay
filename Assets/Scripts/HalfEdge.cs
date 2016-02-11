@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Xml;
-using System.Xml.Schema;
-using System.Xml.Serialization;
 
 namespace Delaunay
 {
-	public class HalfEdge : IXmlSerializable
+	public class HalfEdge
 	{
 		public static HalfEdge Create(Vertex src, Vertex dest)
 		{
@@ -23,9 +21,9 @@ namespace Delaunay
 				self.Pair = other;
 				other.Pair = self;
 
-				src.Edge = self;
+				/*src.Edge = self;
 				dest.Edge = other;
-
+				*/
 				GeomManager.Add(self);
 				GeomManager.Add(other);
 			}
@@ -33,10 +31,21 @@ namespace Delaunay
 			return self;
 		}
 
-		public static HalfEdge Create(XmlReader reader)
+		public static HalfEdge Create(XmlReader reader, IDictionary<int, HalfEdge> container)
 		{
-			HalfEdge answer = new HalfEdge();
-			answer.ReadXml(reader);
+			HalfEdge answer = null;
+			int edgeID = int.Parse(reader["ID"]);
+			reader.Read();
+			// Skip whitespace.
+			reader.Read();
+
+			if (!container.TryGetValue(edgeID, out answer))
+			{
+				container.Add(edgeID, answer = new HalfEdge());
+				answer.ID = edgeID;
+			}
+
+			answer.ReadXml(reader, container);
 			return answer;
 		}
 
@@ -72,6 +81,7 @@ namespace Delaunay
 			set
 			{
 				if (face == value) { return; }
+
 				face = value;
 				if (face == null && Pair.face == null)
 				{
@@ -80,7 +90,12 @@ namespace Delaunay
 			}
 		}
 
-		HalfEdge() { ID = halfEdgeID++; }
+		HalfEdge()
+		{
+			ID = halfEdgeID++;
+		}
+
+		public static void ResetIDGenerator() { halfEdgeID = 0; }
 
 		public bool Constraint
 		{
@@ -102,17 +117,43 @@ namespace Delaunay
 			get { return GetEdgeCycle(); }
 		}
 
-		public XmlSchema GetSchema()
+		public void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
 		{
-			throw new NotImplementedException();
-		}
+			container[ID] = this;
 
-		public void ReadXml(XmlReader reader)
-		{
-			ID = int.Parse(reader["ID"]);
-			// TODO: INIT DEST VERTEX ID.
+			int destVertexID = reader.ReadElementContentAsInt();
+			reader.Skip();
 
-			//
+			Dest = GeomManager.AllVertices.Find(item => { return item.ID == destVertexID; });
+			Utility.Verify(Dest != null);
+
+			int nextEdge = reader.ReadElementContentAsInt();
+			reader.Skip();
+
+			HalfEdge edge = null;
+			if (nextEdge != -1 && !container.TryGetValue(nextEdge, out edge))
+			{
+				container.Add(nextEdge, edge = new HalfEdge());
+				edge.ID = nextEdge;
+			}
+			Next = edge;
+
+			int pairEdge = reader.ReadElementContentAsInt();
+			reader.Skip();
+
+			if (!container.TryGetValue(pairEdge, out edge))
+			{
+				container.Add(pairEdge, edge = new HalfEdge());
+				edge.ID = pairEdge;
+			}
+			Pair = edge;
+			
+			Utility.Verify(Pair != null);
+
+			isConstraint = reader.ReadElementContentAsBoolean();
+			reader.Skip();
+
+			// Face is updated by Triangle.
 		}
 
 		public void WriteXml(XmlWriter writer)
@@ -134,14 +175,9 @@ namespace Delaunay
 				writer.WriteString(Pair != null ? Pair.ID.ToString() : "-1");
 			}
 
-			using (new XmlWriterScope(writer, "FaceID"))
-			{
-				writer.WriteString(Face != null ? Face.ID.ToString() : "-1");
-			}
-
 			using (new XmlWriterScope(writer, "Constraint"))
 			{
-				writer.WriteString(Constraint.ToString());
+				writer.WriteString(Constraint ? "1" : "0");
 			}
 		}
 
