@@ -12,12 +12,8 @@ namespace Delaunay
 
 	public class DelaunayMesh
 	{
-		public List<Triangle> Facets = new List<Triangle>();
-
 		List<Vector3> borderCorners = new List<Vector3>();
 		List<Vector3> convexHull = new List<Vector3>();
-
-		Triangle superTriangle;
 
 		Vector3 stAPosition;
 		Vector3 stBPosition;
@@ -52,17 +48,6 @@ namespace Delaunay
 		{
 			SetUpBounds();
 
-			//Vector3[] localBox = 
-			//{
-			//	new Vector3(4, 0, 1),
-			//	new Vector3(-4, 0, 1),
-			//	new Vector3(-4, 0, -1),
-			//	new Vector3(4, 0, -1),
-			//};
-
-			//Vector3[] box = new Vector3[localBox.Length];
-			//AddObject(localBox.transform(box, item => { return item + new Vector3(-2, stAPosition.y, 5); }), true);
-
 			Vector3[] localCircle = new Vector3[32];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
 			for (int i = 0; i < localCircle.Length; ++i)
@@ -77,8 +62,6 @@ namespace Delaunay
 
 			RemoveBounds();
 
-			Utility.Verify(Facets.Count == GeomManager.AllTriangles.Count);
-
 			List<Vector3> positions = new List<Vector3>();
 			GeomManager.SortedVertices.ForEach(vertex => { positions.Add(vertex.Position); });
 			convexHull = ConvexHullComputer.Compute(positions);
@@ -86,7 +69,7 @@ namespace Delaunay
 
 		public void OnDrawGizmos(bool showFindBoundTrianglePath, bool showConvexHull)
 		{
-			/*Facets.ForEach(facet =>
+			GeomManager.AllTriangles.ForEach(facet =>
 			{
 				if (!facet.gameObject.activeSelf) { return; }
 
@@ -98,18 +81,8 @@ namespace Delaunay
 						edge.Constraint ? Color.red : Color.white
 					);
 				});
-			});*/
-			foreach (Vertex vertex in GeomManager.SortedVertices)
-			{
-				Vector3 offset = EditorConstants.kEdgeGizmosOffset;
-				foreach (HalfEdge edge in GeomManager.GetRays(vertex))
-				{
-					Debug.DrawLine(edge.Src.Position + offset,
-						edge.Dest.Position + offset, Color.white
-					);
-				}
-			}
-
+			});
+			
 			if (showConvexHull)
 			{
 				DrawConvexHull();
@@ -185,21 +158,22 @@ namespace Delaunay
 			List<HalfEdge> crossedEdges = new List<HalfEdge>();
 
 			Vertex newSrc = CollectCrossedTriangles(crossedEdges, up, low, src, dest, crossResult.edge);
-			crossedEdges.ForEach(edge =>
+
+			for (int i = 0; i < crossedEdges.Count; ++i)
 			{
+				HalfEdge edge = crossedEdges[i];
 				if (edge.Face != null)
 				{
-					Facets.Remove(edge.Face);
-					Triangle.Release(edge.Face, true);
-					//edge.Face = null;
+					Triangle.Release(edge.Face);
+					//Facets.Remove(edge.Face);
 				}
+
 				if (edge.Pair.Face != null)
 				{
-					Facets.Remove(edge.Pair.Face);
-					Triangle.Release(edge.Pair.Face, true);
-					//edge.Pair.Face = null;
+					Triangle.Release(edge.Pair.Face);
+					//Facets.Remove(edge.Pair.Face);
 				}
-			});
+			}
 
 			TriangulatePseudopolygonDelaunay(low, dest, src);
 			TriangulatePseudopolygonDelaunay(up, src, dest);
@@ -249,6 +223,7 @@ namespace Delaunay
 
 				if (Utility.PointOnSegment(opposedVertex.Position, src.Position, dest.Position))
 				{
+					crossedTriangles.Add(opposedTriangle);
 					src = opposedVertex;
 					break;
 				}
@@ -295,7 +270,7 @@ namespace Delaunay
 
 			if (vertices.Count > 0)
 			{
-				Facets.Add(Triangle.Create(src, dest, c));
+				/*Facets.Add(*/Triangle.Create(src, dest, c);//);
 			}
 		}
 
@@ -333,14 +308,13 @@ namespace Delaunay
 			List<Vector3> positions = new List<Vector3>();
 			vertices.ForEach(item => { positions.Add(item.Position); });
 
-			for (int i = 0; i < Facets.Count; ++i)
+			foreach(Triangle triangle in GeomManager.AllTriangles)
 			{
-				Triangle current = Facets[i];
-				if (Utility.PolygonContains(positions, current.A.Position)
-					&& Utility.PolygonContains(positions, current.B.Position)
-					&& Utility.PolygonContains(positions, current.C.Position))
+				if (Utility.PolygonContains(positions, triangle.A.Position)
+					&& Utility.PolygonContains(positions, triangle.B.Position)
+					&& Utility.PolygonContains(positions, triangle.C.Position))
 				{
-					current.Walkable = false;
+					triangle.Walkable = false;
 				}
 			}
 		}
@@ -398,39 +372,23 @@ namespace Delaunay
 				InsertOnEdge(v, triangle, hitEdge, oldFacets, newFacets);
 			}
 
-			// Simply remove old facets from Facets without releasing edges.
-			// No edge should be orphan.
-			oldFacets.ForEach(item => { Facets.Remove(item); });
-			newFacets.ForEach(item => { Facets.Add(item); });
-
 			return true;
 		}
 
 		void SetUpBounds()
 		{
-			Facets.ForEach(facet =>
-			{
-				Triangle.Release(facet, true);
-			});
-
-			Facets.Clear();
-
-			superTriangle = Triangle.Create(Vertex.Create(stAPosition), Vertex.Create(stBPosition), Vertex.Create(stCPosition));
-
-			Facets.Add(superTriangle);
+			GeomManager.Clear();
+			Triangle.Create(Vertex.Create(stAPosition), Vertex.Create(stBPosition), Vertex.Create(stCPosition));
 		}
 
 		void RemoveBounds()
 		{
-			Facets.RemoveAll(facet =>
+			GeomManager.AllTriangles.ForEach(facet =>
 			{
 				if (facet.HasVertex(stAPosition) || facet.HasVertex(stBPosition) || facet.HasVertex(stCPosition))
 				{
-					Triangle.Release(facet, true);
-					return true;
+					Triangle.Release(facet);
 				}
-
-				return false;
 			});
 		}
 
@@ -439,7 +397,9 @@ namespace Delaunay
 			hitEdgeIndex = 0;
 			findBoundTrianglePath.Clear();
 
-			for (Triangle triangle = Facets[0]; triangle != null; )
+			Triangle triangle = GeomManager.AllTriangles[0];
+
+			for (; triangle != null; )
 			{
 				findBoundTrianglePath.Add(triangle.Center);
 				if (triangle.HasVertex(vertex))
@@ -466,9 +426,9 @@ namespace Delaunay
 			Triangle bc = Triangle.Create(old);
 			Triangle ca = Triangle.Create(old);
 
-			HalfEdge av = HalfEdge.Fetch(old.A, v);
-			HalfEdge bv = HalfEdge.Fetch(old.B, v);
-			HalfEdge cv = HalfEdge.Fetch(old.C, v);
+			HalfEdge av = HalfEdge.Create(old.A, v);
+			HalfEdge bv = HalfEdge.Create(old.B, v);
+			HalfEdge cv = HalfEdge.Create(old.C, v);
 
 			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
 
@@ -519,9 +479,9 @@ namespace Delaunay
 
 			Vertex opositeVertex = hitEdge.Next.Dest;
 
-			HalfEdge ov = HalfEdge.Fetch(opositeVertex, v);
-			HalfEdge v1 = HalfEdge.Fetch(v, hitEdge.Dest);
-			HalfEdge v2 = HalfEdge.Fetch(v, hitEdge.Pair.Dest);
+			HalfEdge ov = HalfEdge.Create(opositeVertex, v);
+			HalfEdge v1 = HalfEdge.Create(v, hitEdge.Dest);
+			HalfEdge v2 = HalfEdge.Create(v, hitEdge.Pair.Dest);
 
 			HalfEdge sp2Edge0 = hitEdge.Next.Next;
 			HalfEdge sp2Edge1 = v2.Pair;
@@ -552,7 +512,7 @@ namespace Delaunay
 			{
 				Vertex p = hitEdge.Pair.Next.Dest;
 
-				HalfEdge vp = HalfEdge.Fetch(v, p);
+				HalfEdge vp = HalfEdge.Create(v, p);
 
 				oposite1 = Triangle.Create(other);
 				oposite2 = Triangle.Create(other);
@@ -621,7 +581,7 @@ namespace Delaunay
 
 				if (!a.PointInCircumCircle(halfEdge.Pair.Next.Dest)) { continue; }
 
-				HalfEdge ab = HalfEdge.Fetch(halfEdge.Next.Dest, halfEdge.Pair.Next.Dest);
+				HalfEdge ab = HalfEdge.Create(halfEdge.Next.Dest, halfEdge.Pair.Next.Dest);
 
 				HalfEdge bEdges0 = halfEdge.Pair.Next.Next;
 				HalfEdge bEdges1 = halfEdge.Next;

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace Delaunay
 {
@@ -40,7 +41,11 @@ namespace Delaunay
 		{
 			GUILayout.BeginVertical("Box", GUILayout.Width(EditorConstants.kPanelWidth));
 
-			GUILayout.Button("Save");
+			if (GUILayout.Button("Save"))
+			{
+				string path = UnityEditor.EditorUtility.SaveFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "delaunay", "xml");
+				SerializeTools.Save(path);
+			}
 
 			GUILayout.EndVertical();
 		}

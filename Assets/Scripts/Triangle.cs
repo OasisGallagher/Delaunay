@@ -23,9 +23,9 @@ namespace Delaunay
 
 		public static Triangle Create(Vertex a, Vertex b, Vertex c)
 		{
-			HalfEdge ab = HalfEdge.Fetch(a, b);
-			HalfEdge bc = HalfEdge.Fetch(b, c);
-			HalfEdge ca = HalfEdge.Fetch(c, a);
+			HalfEdge ab = HalfEdge.Create(a, b);
+			HalfEdge bc = HalfEdge.Create(b, c);
+			HalfEdge ca = HalfEdge.Create(c, a);
 
 			ab.Next = bc;
 			bc.Next = ca;
@@ -44,7 +44,7 @@ namespace Delaunay
 			return answer;
 		}
 
-		public static void Release(Triangle triangle, bool disconnect = false)
+		public static void Release(Triangle triangle)
 		{
 			/*
 			foreach (HalfEdge edge in triangle.AllEdges)
@@ -123,6 +123,8 @@ namespace Delaunay
 
 			return null;
 		}
+
+		public bool IsValid { get { return Edge != null; } }
 
 		public bool Walkable
 		{

@@ -26,6 +26,14 @@ namespace Delaunay
 			return ans;
 		}
 
+		public static Vertex Create(XmlReader reader)
+		{
+			Vertex ans = new Vertex(Vector3.zero);
+			ans.ReadXml(reader);
+			GeomManager.Add(ans);
+			return ans;
+		}
+
 		static Vertex FindExistingVertex(Vector3 position)
 		{
 			List<Vertex> vertices = GeomManager.SortedVertices;
@@ -78,7 +86,12 @@ namespace Delaunay
 
 		public void ReadXml(XmlReader reader)
 		{
-			throw new NotImplementedException();
+			ID = int.Parse(reader["ID"]);
+			reader.Read();
+			Position.Set(float.Parse(reader["X"]), float.Parse(reader["Y"]), float.Parse(reader["Z"]));
+			reader.Read();
+
+			// TODO: INIT EDGE ID.
 		}
 
 		public void WriteXml(XmlWriter writer)

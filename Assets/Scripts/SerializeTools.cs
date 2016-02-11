@@ -10,6 +10,10 @@ namespace Delaunay
 	{
 		public static void Save(string path)
 		{
+			if (string.IsNullOrEmpty(path)) { return; }
+
+			File.Delete(path);
+
 			XmlWriterSettings settings = new XmlWriterSettings();
 			settings.Indent = true;
 			settings.Encoding = new UTF8Encoding(false);
@@ -17,6 +21,7 @@ namespace Delaunay
 			settings.NewLineChars = Environment.NewLine;
 			XmlWriter writer = XmlWriter.Create(path, settings);
 
+			writer.WriteStartDocument();
 			using (new XmlWriterScope(writer, "Root"))
 			{
 				using (new XmlWriterScope(writer, "Vertices"))
@@ -29,43 +34,45 @@ namespace Delaunay
 					WriteAllEdges(writer);
 				}
 			}
+
+			writer.WriteEndDocument();
+			writer.Close();
 		}
 
-		private static void WriteAllVertices(XmlWriter writer)
+		public static void Load(string path)
 		{
-			foreach (Vertex vertex in GeomManager.SortedVertices)
+			XmlReader reader = XmlReader.Create(path);
+			for (; reader.Read(); )
 			{
-				using (new XmlWriterScope(writer, "Vertex")) { vertex.WriteXml(writer); }
-			}
-		}
-
-		private static void WriteAllEdges(XmlWriter writer)
-		{
-			foreach (Vertex vertex in GeomManager.SortedVertices)
-			{
-				foreach (HalfEdge edge in GeomManager.GetRays(vertex))
+				if (reader.NodeType != XmlNodeType.Element) { continue; }
+				if (reader.Name == EditorConstants.kXmlVertex)
 				{
-					using (new XmlWriterScope(writer, "Edge")) { edge.WriteXml(writer); }
+					Vertex.Create(reader);
+				}
+				else if (reader.Name == EditorConstants.kXmlEdge)
+				{ 
+
 				}
 			}
 		}
 
-		static void WriteVertex(Vertex vertex, XmlElement element)
+		static void WriteAllVertices(XmlWriter writer)
 		{
-			element.SetAttribute("ID", vertex.ID.ToString());
-			element.SetAttribute("EdgeID", vertex.Edge.ID.ToString());
-			element.SetAttribute("X", vertex.Position.x.ToString());
-			element.SetAttribute("Y", vertex.Position.y.ToString());
-			element.SetAttribute("Z", vertex.Position.z.ToString());
+			GeomManager.SortedVertices.ForEach(vertex =>
+			{
+				using (new XmlWriterScope(writer, "Vertex")) { vertex.WriteXml(writer); }
+			});
 		}
 
-		static void WriteEdge(HalfEdge edge, XmlElement element)
+		static void WriteAllEdges(XmlWriter writer)
 		{
-			element.SetAttribute("ID", edge.ID.ToString());
-			element.SetAttribute("DestVertexID", edge.Dest.ID.ToString());
-			element.SetAttribute("NextEdgeID", edge.Next.ID.ToString());
-			element.SetAttribute("PairEdgeID", edge.Pair.ID.ToString());
-			element.SetAttribute("FaceID", edge.Face != null ? edge.Face.ID.ToString() : "-1");
+			GeomManager.SortedVertices.ForEach(vertex =>
+			{
+				GeomManager.GetRays(vertex).ForEach(edge =>
+				{
+					using (new XmlWriterScope(writer, "Edge")) { edge.WriteXml(writer); }
+				});
+			});
 		}
 	}
 }

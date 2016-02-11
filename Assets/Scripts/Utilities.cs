@@ -185,7 +185,6 @@ namespace Delaunay
 			if (!condition)
 			{
 				throw new Exception(string.Format(message ?? "Condition failed", arguments));
-				//Debug.Break();
 			}
 
 			return condition;
@@ -284,8 +283,6 @@ namespace Delaunay
 				float c = Utility.Cross2D(lhs - start, rhs - start);
 				if (!Mathf.Approximately(c, 0)) { return c > 0 ? -1 : 1; }
 
-				// 对于极角相等的两个点, 按照到start的距离递减的顺序排列.
-				// 从而在Unique中删除.
 				Vector3 drhs = rhs - start;
 				Vector3 dlhs = lhs - start;
 				drhs.y = dlhs.y = 0f;
@@ -314,7 +311,6 @@ namespace Delaunay
 					Utility.Verify(stack.Container.Count > 0);
 
 					Vector3 top = stack.Peek(), next2top = stack.Peek(1);
-					// next2top -> top -> pi is a non-left turn.
 					float cr = Utility.Cross2D(next2top - top, pi - top);
 
 					if (cr < 0) { break; }
@@ -331,6 +327,12 @@ namespace Delaunay
 
 	static class EditorConstants
 	{
+		public const string kXmlRoot = "Root";
+		public const string kXmlVertices = "Vertices";
+		public const string kXmlEdges = "Edges";
+		public const string kXmlVertex = "Vertex";
+		public const string kXmlEdge = "Edge";
+
 		public const float kPanelWidth = 60;
 		public const float kConvexHullGizmosHeight = 0.7f;
 		public const float kNeighborTriangleGizmosHeight = 0.5f;

@@ -1,104 +1,14 @@
 ﻿using System;
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
-using System.Xml.Serialization;
 using System.Xml;
 using System.Xml.Schema;
-using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.Vertex, System.Collections.Generic.List<Delaunay.HalfEdge>>;
+using System.Xml.Serialization;
 
 namespace Delaunay
 {
-	public static class GeomManager
-	{
-		static HalfEdgeContainer container = new HalfEdgeContainer(EditorConstants.kVertexComparer);
-
-		public static void Add(HalfEdge edge)
-		{
-			List<HalfEdge> list = null;
-			if (!container.TryGetValue(edge.Src, out list))
-			{
-				container.Add(edge.Src, list = new List<HalfEdge>());
-			}
-
-			list.Add(edge);
-		}
-
-		public static void Add(Vertex vertex)
-		{
-			Utility.Verify(!container.ContainsKey(vertex));
-			container.Add(vertex, new List<HalfEdge>());
-		}
-
-		public static void Remove(HalfEdge edge)
-		{
-			List<HalfEdge> list = container[edge.Src];
-			Utility.Verify(list.Remove(edge));
-			if (list.Count == 0)
-			{
-				container.Remove(edge.Src);
-			}
-		}
-
-		public static List<HalfEdge> GetRays(Vertex vertex)
-		{
-			List<HalfEdge> answer = null;
-			container.TryGetValue(vertex, out answer);
-			return answer ?? new List<HalfEdge>();
-		}
-
-		public static List<Vertex> SortedVertices
-		{
-			get { return new List<Vertex>(container.Keys); }
-		}
-
-		public static List<Triangle> AllTriangles
-		{
-			get
-			{
-				if (container.Count == 0) { return new List<Triangle>(); }
-				return CollectTriangles();
-			}
-		}
-
-		static List<Triangle> CollectTriangles()
-		{
-			Triangle face = null;
-			foreach (HalfEdge edge in GetRays(SortedVertices[0]))
-			{
-				if ((face = edge.Face) != null) { break; }
-			}
-
-			Utility.Verify(face != null);
-			HashSet<int> visitedFaces = new HashSet<int> { face.ID };
-
-			Stack<Triangle> stack = new Stack<Triangle>();
-			stack.Push(face);
-
-			List<Triangle> answer = new List<Triangle>();
-
-			for (; stack.Count != 0; )
-			{
-				face = stack.Pop();
-				answer.Add(face);
-
-				foreach (HalfEdge edge in face.AllEdges)
-				{
-					if (edge.Pair.Face != null && !visitedFaces.Contains(edge.Pair.Face.ID))
-					{
-						visitedFaces.Add(edge.Pair.Face.ID);
-						stack.Push(edge.Pair.Face);
-					}
-				}
-			}
-
-			return answer;
-		}
-	}
-
 	public class HalfEdge : IXmlSerializable
 	{
-		public static HalfEdge Fetch(Vertex src, Vertex dest)
+		public static HalfEdge Create(Vertex src, Vertex dest)
 		{
 			HalfEdge self = GeomManager.GetRays(src).Find(item => { return item.Dest == dest; });
 
@@ -121,6 +31,13 @@ namespace Delaunay
 			}
 
 			return self;
+		}
+
+		public static HalfEdge Create(XmlReader reader)
+		{
+			HalfEdge answer = new HalfEdge();
+			answer.ReadXml(reader);
+			return answer;
 		}
 
 		public static void Release(HalfEdge edge)
@@ -192,7 +109,10 @@ namespace Delaunay
 
 		public void ReadXml(XmlReader reader)
 		{
-			throw new NotImplementedException();
+			ID = int.Parse(reader["ID"]);
+			// TODO: INIT DEST VERTEX ID.
+
+			//
 		}
 
 		public void WriteXml(XmlWriter writer)
@@ -237,11 +157,7 @@ namespace Delaunay
 			{
 				if (current == null) { throw new ArgumentNullException("Invalid cycle"); }
 				answer.Add(current);
-				if (answer.Count >= EditorConstants.kDebugInvalidCycle)
-				{
-					Debug.LogError("Too many edges!");
-					break;
-				}
+				Utility.Verify(answer.Count < EditorConstants.kDebugInvalidCycle);
 			}
 
 			return answer;
