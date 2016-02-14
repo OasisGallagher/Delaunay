@@ -34,6 +34,8 @@ namespace Delaunay
 
 		public static HalfEdge CycleLink(HalfEdge x, HalfEdge y, HalfEdge z)
 		{
+			Verify(x != null && y != null && z != null);
+
 			x.Next = y;
 			y.Next = z;
 			z.Next = x;
@@ -119,6 +121,11 @@ namespace Delaunay
 			return a.x * b.z - a.z * b.x;
 		}
 
+		public static float Dot2D(Vector3 a, Vector3 b)
+		{
+			return a.x * b.x + a.z * b.z;
+		}
+
 		public static float Cross2D(Vector3 a, Vector3 b, Vector3 pivot)
 		{
 			return Cross2D(a - pivot, b - pivot);
@@ -164,6 +171,23 @@ namespace Delaunay
 			return true;
 		}
 
+		public static float MinDistance(Vector3 point, Vector3 segSrc, Vector3 segDest)
+		{
+			Vector3 ray = segDest - segSrc;
+			float ratio = Dot2D(point - segSrc, ray) / ray.sqrMagnitude;
+
+			if (ratio < 0f)
+			{
+				ratio = 0f;
+			}
+			else if (ratio > 1f)
+			{
+				ratio = 1f;
+			}
+
+			return (segSrc + ratio * ray - point).magnitude;
+		}
+
 		public static bool PointInCircumCircle(Vertex a, Vertex b, Vertex c, Vertex v)
 		{
 			// https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcircle_equations
@@ -188,6 +212,24 @@ namespace Delaunay
 			float det = a1 * (b2 * c3 - b3 * c2) + a2 * (b3 * c1 - b1 * c3) + a3 * (b1 * c2 - b2 * c1);
 
 			return det > 0;
+		}
+
+		public static bool Assert(bool condition)
+		{
+			return Assert(condition, "Verify failed");
+		}
+
+		public static bool Assert(bool condition, string message, params object[] arguments)
+		{
+			if (!condition)
+			{
+#if DEBUG
+				throw new Exception(string.Format(message ?? "Condition failed", arguments));
+#else
+				Debug.LogError(string.Format(message ?? "Condition failed", arguments));
+#endif
+			}
+			return condition;
 		}
 
 		public static bool Verify(bool condition)

@@ -55,6 +55,7 @@ namespace Delaunay
 
 			Vector3[] circle = new Vector3[localCircle.Length];
 
+			//AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
 			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
 			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
 			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
@@ -70,6 +71,10 @@ namespace Delaunay
 			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, -5); }), true);
 			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, 5); }), true);
 			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, -5); }), true);
+			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, 5); }), true);
+			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
+			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
+			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
 
 			AddObject(borderCorners, false);
 
@@ -88,7 +93,7 @@ namespace Delaunay
 		}
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest)
-		{ 
+		{
 			// TODO: Fix from and to.
 			FindContainingFacetResult findResult = FindFacetContainsVertex(start);
 			Utility.Verify(findResult != null, "invalid from position " + start);
@@ -97,11 +102,12 @@ namespace Delaunay
 			findResult = FindFacetContainsVertex(dest, facet1);
 			Utility.Verify(findResult != null, "invalid to position " + dest);
 
-			List<Triangle> path = FindPath(facet1, findResult.triangle);
+			List<HalfEdge> path = FindPath(facet1, findResult.triangle);
 			if (path == null) { return null; }
 
 			List<Vector3> answer = new List<Vector3>(path.Count) { start };
-			path.ForEach(triangle => answer.Add(triangle.Center));
+			for (int i = 0; i < path.Count; ++i) { answer.Add((path[i].Src.Position + path[i].Dest.Position) / 2f); }
+
 			answer.Add(dest);
 
 			return answer;
@@ -357,14 +363,13 @@ namespace Delaunay
 			}
 		}
 
-		List<Triangle> FindPath(Triangle start, Triangle dest)
+		List<HalfEdge> FindPath(Triangle start, Triangle dest)
 		{
 			//TODO: Clear all ??
 			GeomManager.AllTriangles.ForEach(triangle =>
 			{
 				triangle.H = (dest.Center - triangle.Center).magnitude;
-				triangle.Parent = null;
-				triangle.HeapIndex = -1;
+				triangle.Entry = null;
 			});
 
 			return AStarPathfinding.FindPath(start, dest);
@@ -393,9 +398,6 @@ namespace Delaunay
 
 		bool Append(Vertex v)
 		{
-			List<Triangle> newFacets = new List<Triangle>();
-			List<Triangle> oldFacets = new List<Triangle>();
-
 			FindContainingFacetResult answer = FindFacetContainsVertex(v.Position);
 
 			if (answer == null) { return false; }
@@ -404,12 +406,12 @@ namespace Delaunay
 
 			if (answer.hitEdge == 0)
 			{
-				InsertToFacet(v, answer.triangle, oldFacets, newFacets);
+				InsertToFacet(v, answer.triangle);
 			}
 			else
 			{
 				HalfEdge hitEdge = Utility.GetHalfEdgeByDirection(answer.triangle, answer.hitEdge);
-				InsertOnEdge(v, answer.triangle, hitEdge, oldFacets, newFacets);
+				InsertOnEdge(v, answer.triangle, hitEdge);
 			}
 
 			return true;
@@ -460,7 +462,7 @@ namespace Delaunay
 			return null;
 		}
 
-		void InsertToFacet(Vertex v, Triangle old, List<Triangle> oldFacets, List<Triangle> newFacets)
+		void InsertToFacet(Vertex v, Triangle old)
 		{
 			Triangle ab = Triangle.Create(old);
 			Triangle bc = Triangle.Create(old);
@@ -472,21 +474,20 @@ namespace Delaunay
 
 			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
 
-			ab.Edge = Utility.CycleLink(AB, bv, av.Pair);
-			ab.BoundingEdges.ForEach(item => { item.Face = ab; });
-			//ab.Edge.Face = ab;
+			AB.Face = bv.Face = av.Pair.Face = ab;
+			BC.Face = cv.Face = bv.Pair.Face = bc;
+			CA.Face = av.Face = cv.Pair.Face = ca;
 
-			bc.Edge = Utility.CycleLink(BC, cv, bv.Pair);
-			//bc.Edge.Face = bc;
-			bc.BoundingEdges.ForEach(item => { item.Face = bc; });
-
-			ca.Edge = Utility.CycleLink(CA, av, cv.Pair);
-			//ca.Edge.Face = ca;
-			ca.BoundingEdges.ForEach(item => { item.Face = ca; });
-
-			// Edges of old is in use.
 			Triangle.Release(old);
-			oldFacets.Add(old);
+
+			ab.Edge = Utility.CycleLink(AB, bv, av.Pair);
+			//ab.BoundingEdges.ForEach(item => { item.Face = ab; });
+			
+			bc.Edge = Utility.CycleLink(BC, cv, bv.Pair);
+			//bc.BoundingEdges.ForEach(item => { item.Face = bc; });
+			
+			ca.Edge = Utility.CycleLink(CA, av, cv.Pair);
+			//ca.BoundingEdges.ForEach(item => { item.Face = ca; });
 
 			Utility.Verify(av.Face == ca);
 			Utility.Verify(av.Pair.Face == ab);
@@ -503,16 +504,12 @@ namespace Delaunay
 			//cv.Face = bc;
 			//cv.Pair.Face = ca;
 
-			newFacets.Add(ab);
-			newFacets.Add(bc);
-			newFacets.Add(ca);
-
 			FlipIfNeeded(ab.Edge);
 			FlipIfNeeded(bc.Edge);
 			FlipIfNeeded(ca.Edge);
 		}
 
-		void InsertOnEdge(Vertex v, Triangle old, HalfEdge hitEdge, List<Triangle> oldFacets, List<Triangle> newFacets)
+		void InsertOnEdge(Vertex v, Triangle old, HalfEdge hitEdge)
 		{
 			Triangle split1 = Triangle.Create(old);
 			Triangle split2 = Triangle.Create(old);
@@ -523,25 +520,27 @@ namespace Delaunay
 			HalfEdge v1 = HalfEdge.Create(v, hitEdge.Dest);
 			HalfEdge v2 = HalfEdge.Create(v, hitEdge.Pair.Dest);
 
+			HalfEdge sp1Edge0 = hitEdge.Next;
+
 			HalfEdge sp2Edge0 = hitEdge.Next.Next;
 			HalfEdge sp2Edge1 = v2.Pair;
 			HalfEdge sp2Edge2 = ov.Pair;
-			split1.Edge = Utility.CycleLink(hitEdge.Next, ov, v1);
-			split1.BoundingEdges.ForEach(item => { item.Face = split1; });
+
+			sp1Edge0.Face = ov.Face = v1.Face = split1;
+			sp2Edge0.Face = sp2Edge1.Face = sp2Edge2.Face = split2;
+			
+			Triangle.Release(old);
+
+			split1.Edge = Utility.CycleLink(sp1Edge0, ov, v1);
+			//split1.BoundingEdges.ForEach(item => { item.Face = split1; });
 
 			split2.Edge = Utility.CycleLink(sp2Edge0, sp2Edge1, sp2Edge2);
-			split2.BoundingEdges.ForEach(item => { item.Face = split2; });
-
-			Triangle.Release(old);
-			oldFacets.Add(old);
+			//split2.BoundingEdges.ForEach(item => { item.Face = split2; });
 
 			Utility.Verify(ov.Face == split1);
 			Utility.Verify(ov.Pair.Face == split2);
 			//ov.Face = split1;
 			//ov.Pair.Face = split2;
-
-			newFacets.Add(split1);
-			newFacets.Add(split2);
 
 			Triangle other = hitEdge.Pair.Face;
 
@@ -557,27 +556,26 @@ namespace Delaunay
 				oposite1 = Triangle.Create(other);
 				oposite2 = Triangle.Create(other);
 
-				HalfEdge op1Edge0 = hitEdge.Pair.Next.Next;
+				HalfEdge hpn = hitEdge.Pair.Next;
+				HalfEdge op1Edge0 = hpn.Next;
 				HalfEdge op1Edge1 = v1.Pair;
 				HalfEdge op1Edge2 = vp;
 
-				oposite2.Edge = Utility.CycleLink(hitEdge.Pair.Next, vp.Pair, v2);
-				oposite2.BoundingEdges.ForEach(item => { item.Face = oposite2; });
+				hpn.Face = vp.Pair.Face = v2.Face = oposite2;
+				op1Edge0.Face = op1Edge1.Face = op1Edge2.Face = oposite1;
+				Triangle.Release(other);
+
+				oposite2.Edge = Utility.CycleLink(hpn, vp.Pair, v2);
+				//oposite2.BoundingEdges.ForEach(item => { item.Face = oposite2; });
 
 				oposite1.Edge = Utility.CycleLink(op1Edge0, op1Edge1, op1Edge2);
-				oposite1.BoundingEdges.ForEach(item => { item.Face = oposite1; });
-
-				Triangle.Release(other);
-				oldFacets.Add(other);
+				//oposite1.BoundingEdges.ForEach(item => { item.Face = oposite1; });
 
 				Utility.Verify(vp.Face == oposite1);
 				Utility.Verify(vp.Pair.Face == oposite2);
 
 				//vp.Face = oposite1;
 				//vp.Pair.Face = oposite2;
-
-				newFacets.Add(oposite1);
-				newFacets.Add(oposite2);
 			}
 
 			Utility.Verify(v1.Face == split1);

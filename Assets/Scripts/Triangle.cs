@@ -265,8 +265,7 @@ namespace Delaunay
 		}
 
 		#region Pathfinding
-		public int HeapIndex { get; set; }
-		public Triangle Parent { get; set; }
+		public HalfEdge Entry { get; set; }
 		public List<HalfEdge> AdjNodes
 		{
 			get

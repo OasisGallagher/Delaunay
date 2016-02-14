@@ -87,34 +87,17 @@ namespace Delaunay
 		/// <summary>
 		/// Vertex at the end of the half-edge.
 		/// </summary>
-		public Vertex Dest;
+		public Vertex Dest { get; set; }
 
 		/// <summary>
 		/// Next half-edge around the face.
 		/// </summary>
-		public HalfEdge Next
-		{
-			get { return mNext; }
-			set
-			{
-				if (value == mNext) { return; }
-				if (Face != null && Face.Edge == this)
-				{
-					if (Next.Face == Face) { Face.Edge = Next; }
-					else if (Prev != null && Prev.Face == Face) { Face.Edge = Prev; }
-					else { Face.Edge = null; }
-				}
-
-				mNext = value;
-			}
-		}
+		public HalfEdge Next { get; set; }
 
 		public HalfEdge Prev
 		{
 			get { return Pair.Next; }
 		}
-
-		HalfEdge mNext;
 
 		/// <summary>
 		/// Oppositely oriented adjacent half-edge.

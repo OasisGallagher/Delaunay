@@ -6,7 +6,7 @@ namespace Delaunay
 {
 	public static class AStarPathfinding
 	{
-		public static List<Triangle> FindPath(Triangle start, Triangle dest)
+		public static List<HalfEdge> FindPath(Triangle start, Triangle dest)
 		{
 			BinaryHeap open = new BinaryHeap();
 			HashSet<Triangle> close = new HashSet<Triangle>();
@@ -26,32 +26,35 @@ namespace Delaunay
 						continue;
 					}
 
-					if (!open.Contains(current.Face))
+					int index = open.IndexOf(current.Face);
+					if (index < 0)
 					{
 						current.Face.G = float.PositiveInfinity;
 						open.Push(current.Face);
+						index = open.Count - 1;
 					}
 
 					float tmp = start.G + start.CalcWeight(current);
 					if (tmp < current.Face.G)
 					{
-						open.DecrG(current.Face, tmp);
-						current.Face.Parent = start;
+						open.DecrG(index, tmp);
+						current.Face.Entry = current;
 					}
 				}
 
 				close.Add(start);
 			}
 
-			return open.Count == 0 ? null : CreatePath(dest);
+			return start == dest ? CreatePath(dest) : null;
 		}
 
-		static List<Triangle> CreatePath(Triangle dest)
+		static List<HalfEdge> CreatePath(Triangle dest)
 		{
-			List<Triangle> result = new List<Triangle>();
-			for (; dest != null; dest = dest.Parent)
+			List<HalfEdge> result = new List<HalfEdge>();
+			for(HalfEdge entry; (entry = dest.Entry) != null; dest = entry.Pair.Face)
 			{
-				result.Add(dest);
+				Utility.Verify(result.Count < 1024, "Too many waypoints");
+				result.Add(entry);
 			}
 
 			result.Reverse();
@@ -63,12 +66,9 @@ namespace Delaunay
 		{
 			public void Push(Triangle node)
 			{
-				node.HeapIndex = container.Count;
 				container.Add(node);
 
-				AdjustAt(node);
-
-				Utility.Verify(IsHeap());
+				AdjustAt(container.Count - 1);
 			}
 
 			public int Count { get { return container.Count; } }
@@ -85,39 +85,41 @@ namespace Delaunay
 					int min = current;
 					int lchild = LeftChild(min), rchild = RightChild(min);
 					if (lchild < container.Count && container[lchild].F < container[min].F)
+					{
 						min = lchild;
+					}
 
 					if (rchild < container.Count && container[rchild].F < container[min].F)
+					{
 						min = rchild;
+					}
 
 					if (min == current)
+					{
 						break;
+					}
 
 					Swap(min, current);
 
 					current = min;
 				}
 
-				result.HeapIndex = -1;
-
-				Utility.Verify(IsHeap());
 				return result;
 			}
 
-			public void DecrG(Triangle node, float value)
+			public void DecrG(int index, float value)
 			{
-				Utility.Verify(node.G > value);
+				Utility.Verify(container[index].G > value);
 
-				node.G = value;
+				container[index].G = value;
 
-				AdjustAt(node);
-
-				Utility.Verify(IsHeap());
+				AdjustAt(index);
 			}
 
-			public bool Contains(Triangle node)
+			// TODO: O(n).
+			public int IndexOf(Triangle node)
 			{
-				return node.HeapIndex != -1;
+				return container.IndexOf(node);
 			}
 
 			bool IsHeap()
@@ -133,12 +135,14 @@ namespace Delaunay
 				return true;
 			}
 
-			void AdjustAt(Triangle node)
+			void AdjustAt(int index)
 			{
-				int parent = Parent(node.HeapIndex);
-				for (; parent >= 0 && node.F < container[parent].F; parent = Parent(parent))
+				int parent = Parent(index);
+				for (; parent >= 0 && container[index].F < container[parent].F; )
 				{
-					Swap(node.HeapIndex, parent);
+					Swap(index, parent);
+					index = parent;
+					parent = Parent(parent);
 				}
 			}
 
@@ -147,9 +151,6 @@ namespace Delaunay
 				Triangle tmp = container[i];
 				container[i] = container[j];
 				container[j] = tmp;
-
-				container[i].HeapIndex = i;
-				container[j].HeapIndex = j;
 			}
 
 			int Parent(int i) { return (i - 1) / 2; }
