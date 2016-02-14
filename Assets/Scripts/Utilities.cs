@@ -8,7 +8,8 @@ namespace Delaunay
 	public enum LineCrossState
 	{
 		Parallel,
-		Collinear,
+		FullyOverlaps,
+		PartiallyOverlaps,
 		CrossOnSegment,
 		CrossOnExtLine,
 	}
@@ -54,12 +55,26 @@ namespace Delaunay
 
 			answer = Vector2.zero;
 
-			float t = Cross2D(q - p, s);
 			if (Mathf.Approximately(0, crs))
 			{
-				return Mathf.Approximately(0, t) ? LineCrossState.Collinear : LineCrossState.Parallel;
+				bool onSeg1 = PointOnSegment(p, q, qd);
+				bool onSeg2 = PointOnSegment(pd, q, qd);
+				bool onSeg3 = PointOnSegment(q, p, pd);
+				bool onSeg4 = PointOnSegment(qd, p, pd);
+				if((onSeg1 && onSeg2) || (onSeg3 && onSeg4))
+				{
+					return LineCrossState.FullyOverlaps;
+				}
+				
+				if ((onSeg1 || onSeg2) && (onSeg3 || onSeg4))
+				{
+					return LineCrossState.PartiallyOverlaps;
+				}
+				
+				return LineCrossState.Parallel;
 			}
 
+			float t = Cross2D(q - p, s);
 			answer.Set(t / crs, Cross2D(q - p, r) / crs);
 
 			return (InRange(answer.x) && InRange(answer.y))
@@ -73,7 +88,7 @@ namespace Delaunay
 			Vector2 segCrossAnswer = Vector2.zero;
 			LineCrossState crossState = SegmentCross(out segCrossAnswer, p, pd, q, qd);
 
-			if (crossState == LineCrossState.Parallel || crossState == LineCrossState.Collinear)
+			if (crossState == LineCrossState.Parallel || crossState == LineCrossState.FullyOverlaps)
 			{
 				return crossState;
 			}
@@ -343,6 +358,7 @@ namespace Delaunay
 		public const int kMaxStackCapacity = 4096;
 		public const int kDebugInvalidCycle = 32;
 
+		public static readonly Vector3 kPathRendererOffset = new Vector3(0, 0.42f, 0);
 		public static readonly Vector3 kTriangleGizmosOffset = new Vector3(0, 0.4f, 0);
 		public static readonly Vector3 kTriangleMeshOffset = new Vector3(0, 0.1f, 0);
 		public static readonly Vector3 kHalfEdgeGizmosOffset = new Vector3(0, 0.3f, 0);

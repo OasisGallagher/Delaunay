@@ -55,15 +55,6 @@ namespace Delaunay
 			return base.GetHashCode();
 		}
 
-		public void ReadXml(XmlReader reader)
-		{
-			ID = int.Parse(reader["ID"]);
-			reader.Read();
-			// Skip whitespace.
-			reader.Read();
-			Position.Set(float.Parse(reader["X"]), float.Parse(reader["Y"]), float.Parse(reader["Z"]));
-		}
-
 		public void WriteXml(XmlWriter writer)
 		{
 			writer.WriteAttributeString("ID", ID.ToString());
@@ -79,6 +70,13 @@ namespace Delaunay
 			{
 				writer.WriteString(Edge != null ? Edge.ID.ToString() : "-1");
 			}*/
+		}
+
+		void ReadXml(XmlReader reader)
+		{
+			ID = int.Parse(reader["ID"]);
+			reader.Read();
+			Position.Set(float.Parse(reader["X"]), float.Parse(reader["Y"]), float.Parse(reader["Z"]));
 		}
 
 		static int vertexID = 0;

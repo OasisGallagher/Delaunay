@@ -19,8 +19,6 @@ namespace Delaunay
 		Vector3 stBPosition;
 		Vector3 stCPosition;
 
-		List<Vector3> findBoundTrianglePath = new List<Vector3>();
-
 		public DelaunayMesh(Rect bound)
 		{
 			const float padding = 0f;
@@ -48,7 +46,7 @@ namespace Delaunay
 		{
 			SetUpBounds();
 
-			Vector3[] localCircle = new Vector3[12];
+			Vector3[] localCircle = new Vector3[6];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
 			for (int i = 0; i < localCircle.Length; ++i)
 			{
@@ -56,7 +54,22 @@ namespace Delaunay
 			}
 
 			Vector3[] circle = new Vector3[localCircle.Length];
-			AddObject(localCircle.transform(circle, item => { return item * 4f + new Vector3(0, stAPosition.y, 0); }), true);
+
+			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
+			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
+			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
+			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
+
+			Vector3[] localSquare = new Vector3[4];
+			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
+			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
+			localSquare[2] = new Vector3(-0.5f, 0f, -0.5f);
+			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
+			Vector3[] square = new Vector3[localSquare.Length];
+			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
+			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, -5); }), true);
+			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, 5); }), true);
+			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, -5); }), true);
 
 			AddObject(borderCorners, false);
 
@@ -67,7 +80,34 @@ namespace Delaunay
 			convexHull = ConvexHullComputer.Compute(positions);
 		}
 
-		public void OnDrawGizmos(bool showFindBoundTrianglePath, bool showConvexHull)
+		class FindContainingFacetResult
+		{
+			public int hitEdge = 0;
+			public Triangle triangle = null;
+			public List<Triangle> path = null;
+		}
+
+		public List<Vector3> FindPath(Vector3 start, Vector3 dest)
+		{ 
+			// TODO: Fix from and to.
+			FindContainingFacetResult findResult = FindFacetContainsVertex(start);
+			Utility.Verify(findResult != null, "invalid from position " + start);
+			Triangle facet1 = findResult.triangle;
+
+			findResult = FindFacetContainsVertex(dest, facet1);
+			Utility.Verify(findResult != null, "invalid to position " + dest);
+
+			List<Triangle> path = FindPath(facet1, findResult.triangle);
+			if (path == null) { return null; }
+
+			List<Vector3> answer = new List<Vector3>(path.Count) { start };
+			path.ForEach(triangle => answer.Add(triangle.Center));
+			answer.Add(dest);
+
+			return answer;
+		}
+
+		public void OnDrawGizmos(bool showConvexHull)
 		{
 			GeomManager.AllTriangles.ForEach(facet =>
 			{
@@ -86,11 +126,6 @@ namespace Delaunay
 			if (showConvexHull)
 			{
 				DrawConvexHull();
-			}
-
-			if (showFindBoundTrianglePath)
-			{
-				DrawFindBoundTrianglePath();
 			}
 		}
 
@@ -125,9 +160,14 @@ namespace Delaunay
 		void AddConstraintEdge(Vertex src, Vertex dest)
 		{
 			Append(src);
+			/*var e364 = GeomManager.AllEdges.Find(item => { return item.ID == 364; });
+			if (e364 != null)
+			{
+				UnityEngine.Debug.Log("hit");
+			}*/
 			Append(dest);
 
-			const int maxLoopCount = 32;
+			const int maxLoopCount = 4096;
 			for (int i = 0; src != dest; )
 			{
 				src = AddConstraintAt(src, dest);
@@ -145,7 +185,7 @@ namespace Delaunay
 
 			Utility.Verify(crossResult.crossState != LineCrossState.Parallel);
 
-			if (crossResult.crossState == LineCrossState.Collinear)
+			if (crossResult.crossState == LineCrossState.FullyOverlaps)
 			{
 				crossResult.edge.Constraint = true;
 				return crossResult.edge.Dest;
@@ -283,12 +323,12 @@ namespace Delaunay
 					src.Position, dest.Position
 				);
 
-				if (crossState == LineCrossState.Collinear
+				if (crossState == LineCrossState.FullyOverlaps
 					|| (crossState == LineCrossState.CrossOnSegment && !Utility.Equals2D(point, edge.Src.Position) && !Utility.Equals2D(point, edge.Dest.Position)))
 				{
 					answer.crossState = crossState;
 					answer.edge = edge;
-					if (crossState == LineCrossState.Collinear 
+					if (crossState == LineCrossState.FullyOverlaps 
 						&& (Utility.Equals2D(dest.Position, edge.Src.Position) || Utility.Equals2D(src.Position, edge.Dest.Position)))
 					{
 						answer.edge = answer.edge.Pair;
@@ -317,6 +357,19 @@ namespace Delaunay
 			}
 		}
 
+		List<Triangle> FindPath(Triangle start, Triangle dest)
+		{
+			//TODO: Clear all ??
+			GeomManager.AllTriangles.ForEach(triangle =>
+			{
+				triangle.H = (dest.Center - triangle.Center).magnitude;
+				triangle.Parent = null;
+				triangle.HeapIndex = -1;
+			});
+
+			return AStarPathfinding.FindPath(start, dest);
+		}
+
 		void DrawConvexHull()
 		{
 			if (convexHull == null) { return; }
@@ -338,36 +391,25 @@ namespace Delaunay
 			}
 		}
 
-		void DrawFindBoundTrianglePath()
-		{
-			for (int i = 1; i < findBoundTrianglePath.Count; ++i)
-			{
-				Debug.DrawLine(findBoundTrianglePath[i - 1] + EditorConstants.kEdgeGizmosOffset * 2,
-					findBoundTrianglePath[i] + EditorConstants.kEdgeGizmosOffset * 2, Color.yellow
-				);
-			}
-		}
-
 		bool Append(Vertex v)
 		{
 			List<Triangle> newFacets = new List<Triangle>();
 			List<Triangle> oldFacets = new List<Triangle>();
 
-			int iedge = 0;
-			Triangle triangle = FindFacetContainsVertex(out iedge, v);
+			FindContainingFacetResult answer = FindFacetContainsVertex(v.Position);
 
-			if (triangle == null) { return false; }
+			if (answer == null) { return false; }
 
-			Utility.Verify(iedge >= 0);
+			Utility.Verify(answer.hitEdge >= 0);
 
-			if (iedge == 0)
+			if (answer.hitEdge == 0)
 			{
-				InsertToFacet(v, triangle, oldFacets, newFacets);
+				InsertToFacet(v, answer.triangle, oldFacets, newFacets);
 			}
 			else
 			{
-				HalfEdge hitEdge = Utility.GetHalfEdgeByDirection(triangle, iedge);
-				InsertOnEdge(v, triangle, hitEdge, oldFacets, newFacets);
+				HalfEdge hitEdge = Utility.GetHalfEdgeByDirection(answer.triangle, answer.hitEdge);
+				InsertOnEdge(v, answer.triangle, hitEdge, oldFacets, newFacets);
 			}
 
 			return true;
@@ -390,29 +432,29 @@ namespace Delaunay
 			});
 		}
 
-		Triangle FindFacetContainsVertex(out int hitEdgeIndex, Vertex vertex)
+		FindContainingFacetResult FindFacetContainsVertex(Vector3 position, Triangle startFacet = null)
 		{
-			hitEdgeIndex = 0;
-			findBoundTrianglePath.Clear();
+			FindContainingFacetResult answer = new FindContainingFacetResult();
 
-			Triangle triangle = GeomManager.AllTriangles[0];
+			startFacet = startFacet ?? GeomManager.AllTriangles[0];
 
-			for (; triangle != null; )
+			for (; startFacet != null; )
 			{
-				findBoundTrianglePath.Add(triangle.Center);
-				if (triangle.HasVertex(vertex))
+				if (answer.path != null) { answer.path.Add(startFacet); }
+				if (startFacet.HasVertex(position))
 				{
 					return null;
 				}
 
-				int iedge = triangle.GetVertexDirection(vertex);
+				int iedge = startFacet.GetPointDirection(position);
 				if (iedge >= 0)
 				{
-					hitEdgeIndex = iedge;
-					return triangle;
+					answer.hitEdge = iedge;
+					answer.triangle = startFacet;
+					return answer;
 				}
 
-				triangle = Utility.GetHalfEdgeByDirection(triangle, iedge).Pair.Face;
+				startFacet = Utility.GetHalfEdgeByDirection(startFacet, iedge).Pair.Face;
 			}
 
 			return null;

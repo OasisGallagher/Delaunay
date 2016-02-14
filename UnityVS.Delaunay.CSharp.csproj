@@ -54,15 +54,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\DelaunayMesh.cs" />
+    <Compile Include="Assets\Scripts\GeomManager.cs" />
     <Compile Include="Assets\Scripts\HalfEdge.cs" />
+    <Compile Include="Assets\Scripts\Pathfinding.cs" />
     <Compile Include="Assets\Scripts\SerializeTools.cs" />
     <Compile Include="Assets\Scripts\Stage.cs" />
     <Compile Include="Assets\Scripts\Triangle.cs" />
     <Compile Include="Assets\Scripts\Utilities.cs" />
     <Compile Include="Assets\Scripts\Vertex.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Assets\Scripts\GeomManager.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\SyntaxTree\UnityVS\2013\UnityVS.CSharp.targets" />
 </Project>

@@ -134,7 +134,7 @@ namespace Delaunay
 		/// <summary>
 		/// One of the half-edges bordering the face.
 		/// </summary>
-		public HalfEdge Edge;
+		public HalfEdge Edge { get; set; }
 
 		public bool Walkable
 		{
@@ -145,11 +145,6 @@ namespace Delaunay
 				walkable = value;
 				UpdateWalkableMaterial();
 			}
-		}
-
-		public Vector3 Center
-		{
-			get { return (A.Position + B.Position + C.Position) / 3f; }
 		}
 
 		public Vector3 CircumCircleCenter
@@ -202,31 +197,31 @@ namespace Delaunay
 			return Utility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, t.Position);
 		}
 
-		public int GetVertexDirection(Vertex t)
+		public int GetPointDirection(Vector3 point)
 		{
-			float t0 = Utility.Cross2D(t.Position, B.Position, A.Position);
+			float t0 = Utility.Cross2D(point, B.Position, A.Position);
 			if (t0 > 0) { return -1; }
 
 			if (Mathf.Approximately(t0, 0)
-				&& Utility.DiagonalRectContains(t.Position, B.Position, A.Position))
+				&& Utility.DiagonalRectContains(point, B.Position, A.Position))
 			{
 				return 1;
 			}
 
-			float t1 = Utility.Cross2D(t.Position, C.Position, B.Position);
+			float t1 = Utility.Cross2D(point, C.Position, B.Position);
 			if (t1 > 0) { return -2; }
 
 			if (Mathf.Approximately(t1, 0)
-				&& Utility.DiagonalRectContains(t.Position, C.Position, B.Position))
+				&& Utility.DiagonalRectContains(point, C.Position, B.Position))
 			{
 				return 2;
 			}
 
-			float t2 = Utility.Cross2D(t.Position, A.Position, C.Position);
+			float t2 = Utility.Cross2D(point, A.Position, C.Position);
 			if (t2 > 0) { return -3; }
 
 			if (Mathf.Approximately(t2, 0)
-				&& Utility.DiagonalRectContains(t.Position, A.Position, C.Position))
+				&& Utility.DiagonalRectContains(point, A.Position, C.Position))
 			{
 				return 3;
 			}
@@ -255,25 +250,6 @@ namespace Delaunay
 			return Utility.PointInCircumCircle(A, B, C, v);
 		}
 
-		public void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
-		{
-			ID = int.Parse(reader["ID"]);
-
-			reader.Read();
-			// Skip whitespace.
-			reader.Read();
-
-			int edge = reader.ReadElementContentAsInt();
-			reader.Skip();
-
-			Edge = container[edge];
-
-			BoundingEdges.ForEach(e => { e.Face = this; });
-
-			Walkable = reader.ReadElementContentAsBoolean();
-			reader.Skip();
-		}
-
 		public void WriteXml(XmlWriter writer)
 		{
 			writer.WriteAttributeString("ID", ID.ToString());
@@ -286,6 +262,68 @@ namespace Delaunay
 			{
 				writer.WriteString(Walkable ? "1" : "0");
 			}
+		}
+
+		#region Pathfinding
+		public int HeapIndex { get; set; }
+		public Triangle Parent { get; set; }
+		public List<HalfEdge> AdjNodes
+		{
+			get
+			{
+				// TODO:
+				System.Action<List<HalfEdge>, HalfEdge> lamda = (container, edge) =>
+				{
+					if (!edge.Constraint && edge.Pair.Face != null && edge.Pair.Face.Walkable)
+					{
+						container.Add(edge.Pair);
+					}
+				};
+
+				List<HalfEdge> answer = new List<HalfEdge>();
+
+				lamda(answer, AB);
+				lamda(answer, BC);
+				lamda(answer, CA);
+
+				return answer;
+			}
+		}
+
+		public Vector3 Center
+		{
+			get { return (A.Position + B.Position + C.Position) / 3f; }
+		}
+
+		public float F { get { return G + H; } }
+		public float G { get; set; }
+		public float H { get; set; }
+
+		public float CalcWeight(HalfEdge other)
+		{
+			if (!AdjNodes.Contains(other))
+			{
+				return float.PositiveInfinity;
+			}
+
+			return (Center - other.Face.Center).magnitude;
+		}
+
+		#endregion
+
+		void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
+		{
+			ID = int.Parse(reader["ID"]);
+
+			reader.Read();
+
+			int edge = reader.ReadElementContentAsInt();
+
+			Edge = container[edge];
+
+			BoundingEdges.ForEach(e => { e.Face = this; });
+
+			Walkable = reader.ReadElementContentAsBoolean();
 		}
 
 		void CopyFrom(Triangle src)

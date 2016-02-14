@@ -24,6 +24,35 @@ namespace Delaunay
 				/*src.Edge = self;
 				dest.Edge = other;
 				*/
+// 
+// 				if (self.ID == 364 || other.ID == 364)
+// 				{
+// 					UnityEngine.Debug.Log("364");
+// 				}
+// 
+// 				HalfEdge target = GeomManager.AllEdges.Find(item =>
+// 				{
+// 					if (item == self || item == other) { return false; }
+// 					if (item.ID == 359)
+// 					{
+// 						UnityEngine.Debug.Log("359");
+// 					}
+// 
+// 					var trace = new System.Diagnostics.StackTrace();
+// 					if (trace.GetFrame(4).ToString().Contains("InsertOnEdge"))
+// 					{
+// 						return false;
+// 					}
+// 
+// 					UnityEngine.Vector2 answer = UnityEngine.Vector2.zero;
+// 					return Utility.SegmentCross(out answer, src.Position, dest.Position, item.Src.Position, item.Dest.Position) == LineCrossState.FullyOverlaps;
+// 				});
+
+//				if (target != null)
+// 				{
+// 					UnityEngine.Debug.LogError(string.Format("edge {0} overlaps another edge {1}", self.ID, target.ID));
+//				}
+
 				GeomManager.Add(self);
 				GeomManager.Add(other);
 			}
@@ -35,8 +64,6 @@ namespace Delaunay
 		{
 			HalfEdge answer = null;
 			int edgeID = int.Parse(reader["ID"]);
-			reader.Read();
-			// Skip whitespace.
 			reader.Read();
 
 			if (!container.TryGetValue(edgeID, out answer))
@@ -65,7 +92,29 @@ namespace Delaunay
 		/// <summary>
 		/// Next half-edge around the face.
 		/// </summary>
-		public HalfEdge Next;
+		public HalfEdge Next
+		{
+			get { return mNext; }
+			set
+			{
+				if (value == mNext) { return; }
+				if (Face != null && Face.Edge == this)
+				{
+					if (Next.Face == Face) { Face.Edge = Next; }
+					else if (Prev != null && Prev.Face == Face) { Face.Edge = Prev; }
+					else { Face.Edge = null; }
+				}
+
+				mNext = value;
+			}
+		}
+
+		public HalfEdge Prev
+		{
+			get { return Pair.Next; }
+		}
+
+		HalfEdge mNext;
 
 		/// <summary>
 		/// Oppositely oriented adjacent half-edge.
@@ -117,45 +166,6 @@ namespace Delaunay
 			get { return GetEdgeCycle(); }
 		}
 
-		public void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
-		{
-			container[ID] = this;
-
-			int destVertexID = reader.ReadElementContentAsInt();
-			reader.Skip();
-
-			Dest = GeomManager.AllVertices.Find(item => { return item.ID == destVertexID; });
-			Utility.Verify(Dest != null);
-
-			int nextEdge = reader.ReadElementContentAsInt();
-			reader.Skip();
-
-			HalfEdge edge = null;
-			if (nextEdge != -1 && !container.TryGetValue(nextEdge, out edge))
-			{
-				container.Add(nextEdge, edge = new HalfEdge());
-				edge.ID = nextEdge;
-			}
-			Next = edge;
-
-			int pairEdge = reader.ReadElementContentAsInt();
-			reader.Skip();
-
-			if (!container.TryGetValue(pairEdge, out edge))
-			{
-				container.Add(pairEdge, edge = new HalfEdge());
-				edge.ID = pairEdge;
-			}
-			Pair = edge;
-			
-			Utility.Verify(Pair != null);
-
-			isConstraint = reader.ReadElementContentAsBoolean();
-			reader.Skip();
-
-			// Face is updated by Triangle.
-		}
-
 		public void WriteXml(XmlWriter writer)
 		{
 			writer.WriteAttributeString("ID", ID.ToString());
@@ -184,6 +194,41 @@ namespace Delaunay
 		public override string ToString()
 		{
 			return ID + "_" + Pair.Dest + "=>" + Dest;
+		}
+
+		void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
+		{
+			container[ID] = this;
+
+			int destVertexID = reader.ReadElementContentAsInt();
+
+			Dest = GeomManager.AllVertices.Find(item => { return item.ID == destVertexID; });
+			Utility.Verify(Dest != null);
+
+			int nextEdge = reader.ReadElementContentAsInt();
+
+			HalfEdge edge = null;
+			if (nextEdge != -1 && !container.TryGetValue(nextEdge, out edge))
+			{
+				container.Add(nextEdge, edge = new HalfEdge());
+				edge.ID = nextEdge;
+			}
+			Next = edge;
+
+			int pairEdge = reader.ReadElementContentAsInt();
+
+			if (!container.TryGetValue(pairEdge, out edge))
+			{
+				container.Add(pairEdge, edge = new HalfEdge());
+				edge.ID = pairEdge;
+			}
+			Pair = edge;
+
+			Utility.Verify(Pair != null);
+
+			isConstraint = reader.ReadElementContentAsBoolean();
+
+			// Face is updated by Triangle.
 		}
 
 		List<HalfEdge> GetEdgeCycle()
