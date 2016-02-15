@@ -105,12 +105,14 @@ namespace Delaunay
 			List<HalfEdge> path = FindPath(facet1, findResult.triangle);
 			if (path == null) { return null; }
 
-			List<Vector3> answer = new List<Vector3>(path.Count) { start };
-			for (int i = 0; i < path.Count; ++i) { answer.Add((path[i].Src.Position + path[i].Dest.Position) / 2f); }
+			return PathSmoother.Smooth(start, dest, path);
 
-			answer.Add(dest);
-
-			return answer;
+// 			List<Vector3> answer = new List<Vector3>(path.Count) { start };
+// 			for (int i = 0; i < path.Count; ++i) { answer.Add((path[i].Src.Position + path[i].Dest.Position) / 2f); }
+// 
+// 			answer.Add(dest);
+// 
+// 			return answer;
 		}
 
 		public void OnDrawGizmos(bool showConvexHull)
@@ -369,7 +371,7 @@ namespace Delaunay
 			GeomManager.AllTriangles.ForEach(triangle =>
 			{
 				triangle.H = (dest.Center - triangle.Center).magnitude;
-				triangle.Entry = null;
+				//triangle.Entry = null;
 			});
 
 			return AStarPathfinding.FindPath(start, dest);

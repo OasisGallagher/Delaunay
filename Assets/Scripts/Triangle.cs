@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public class Triangle : MonoBehaviour
+	public class Triangle : MonoBehaviour, IPathNode
 	{
 		public int ID { get; private set; }
 
@@ -190,8 +190,6 @@ namespace Delaunay
 		public Vertex B { get { return AB.Dest; } }
 		public Vertex C { get { return AB.Next.Dest; } }
 
-		bool walkable = true;
-
 		public bool Contains(Vertex t)
 		{
 			return Utility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, t.Position);
@@ -335,6 +333,8 @@ namespace Delaunay
 			MeshRenderer meshRenderer = gameObject.GetComponent<MeshRenderer>();
 			meshRenderer.material = Walkable ? EditorConstants.kWalkableMaterial : EditorConstants.kBlockMaterial;
 		}
+
+		bool walkable = true;
 
 		static int triangleID = 0;
 	}
