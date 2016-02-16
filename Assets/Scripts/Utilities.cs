@@ -18,7 +18,7 @@ namespace Delaunay
 	{
 		public int Compare(Vertex lhs, Vertex rhs)
 		{
-			return Utility.CompareTo2D(lhs.Position, rhs.Position);
+			return lhs.Position.compare2(rhs.Position);
 		}
 	}
 
@@ -53,7 +53,7 @@ namespace Delaunay
 		{
 			Vector3 r = pd - p;
 			Vector3 s = qd - q;
-			float crs = Cross2D(r, s);
+			float crs = r.cross2(s);
 
 			answer = Vector2.zero;
 
@@ -76,8 +76,8 @@ namespace Delaunay
 				return LineCrossState.Parallel;
 			}
 
-			float t = Cross2D(q - p, s);
-			answer.Set(t / crs, Cross2D(q - p, r) / crs);
+			float t = (q - p).cross2(s);
+			answer.Set(t / crs, (q - p).cross2(r) / crs);
 
 			return (InRange(answer.x) && InRange(answer.y))
 			   ? LineCrossState.CrossOnSegment : LineCrossState.CrossOnExtLine;
@@ -102,7 +102,7 @@ namespace Delaunay
 		public static bool PointOnSegment(Vector3 point, Vector3 segSrc, Vector3 segDest)
 		{
 			if (!DiagonalRectContains(point, segSrc, segDest)) { return false; }
-			return Mathf.Approximately(0, Cross2D(point - segSrc, segDest - segSrc));
+			return Mathf.Approximately(0, point.cross2(segDest, segSrc));
 		}
 
 		public static bool DiagonalRectContains(Vector3 point, Vector3 tl, Vector3 rb)
@@ -116,42 +116,6 @@ namespace Delaunay
 			return point.x >= xMin && point.x <= xMax && point.z >= zMin && point.z <= zMax;
 		}
 
-		public static float Cross2D(Vector3 a, Vector3 b)
-		{
-			return a.x * b.z - a.z * b.x;
-		}
-
-		public static float Dot2D(Vector3 a, Vector3 b)
-		{
-			return a.x * b.x + a.z * b.z;
-		}
-
-		public static float Cross2D(Vector3 a, Vector3 b, Vector3 pivot)
-		{
-			return Cross2D(a - pivot, b - pivot);
-		}
-
-		public static bool Equals2D(Vertex a, Vertex b)
-		{
-			if (a == null) { return b == null; }
-			if (b == null) { return a == null; }
-
-			return Equals2D(a.Position, b.Position);
-		}
-
-		public static bool Equals2D(Vector3 a, Vector3 b)
-		{
-			a.y = b.y = 0;
-			return a == b;
-		}
-
-		public static int CompareTo2D(Vector3 a, Vector3 b)
-		{
-			int answer = a.x.CompareTo(b.x);
-			if (answer == 0) { answer = a.z.CompareTo(b.z); }
-			return answer;
-		}
-
 		public static bool InRange(float f, float a = 0f, float b = 1f)
 		{
 			return f >= a && f <= b;
@@ -162,7 +126,7 @@ namespace Delaunay
 			for (int i = 1; i <= positions.Count; ++i)
 			{
 				Vector3 currentPosition = (i < positions.Count) ? positions[i] : positions[0];
-				if (Utility.Cross2D(point, currentPosition, positions[i - 1]) > 0)
+				if (point.cross2(currentPosition, positions[i - 1]) > 0)
 				{
 					return false;
 				}
@@ -174,7 +138,7 @@ namespace Delaunay
 		public static float MinDistance(Vector3 point, Vector3 segSrc, Vector3 segDest)
 		{
 			Vector3 ray = segDest - segSrc;
-			float ratio = Dot2D(point - segSrc, ray) / ray.sqrMagnitude;
+			float ratio = (point - segSrc).dot2(ray) / ray.sqrMagnitude2();
 
 			if (ratio < 0f)
 			{
@@ -185,7 +149,7 @@ namespace Delaunay
 				ratio = 1f;
 			}
 
-			return (segSrc + ratio * ray - point).magnitude;
+			return (segSrc + ratio * ray - point).magnitude2();
 		}
 
 		public static bool PointInCircumCircle(Vertex a, Vertex b, Vertex c, Vertex v)
@@ -276,6 +240,54 @@ namespace Delaunay
 
 			return dest;
 		}
+
+		public static float magnitude2(this Vector3 a)
+		{
+			a.y = 0;
+			return a.magnitude;
+		}
+
+		public static float sqrMagnitude2(this Vector3 a)
+		{
+			a.y = 0;
+			return a.sqrMagnitude;
+		}
+
+		public static float cross2(this Vector3 a, Vector3 b, Vector3 p)
+		{
+			return (a - p).cross2(b - p);
+		}
+
+		public static float cross2(this Vector3 a, Vector3 b)
+		{
+			return a.x * b.z - a.z * b.x;
+		}
+
+		public static float dot2(this Vector3 a, Vector3 b)
+		{
+			return a.x * b.x + a.z * b.z;
+		}
+
+		public static bool equals2(this Vector3 a, Vector3 b)
+		{
+			a.y = b.y = 0;
+			return a == b;
+		}
+
+		public static int compare2(this Vector3 a, Vector3 b)
+		{
+			int answer = a.x.CompareTo(b.x);
+			if (answer == 0) { answer = a.z.CompareTo(b.z); }
+			return answer;
+		}
+
+		public static bool equals2(this Vertex a, Vertex b)
+		{
+			if (a == null) { return b == null; }
+			if (b == null) { return a == null; }
+
+			return a.Position.equals2(b.Position);
+		}
 	}
 
 	public static class ConvexHullComputer
@@ -332,19 +344,19 @@ namespace Delaunay
 
 			int IComparer<Vector3>.Compare(Vector3 lhs, Vector3 rhs)
 			{
-				bool b1 = Utility.Cross2D(lhs - start, new Vector3(1, 0, 0)) > 0;
-				bool b2 = Utility.Cross2D(rhs - start, new Vector3(1, 0, 0)) > 0;
+				bool b1 = (lhs - start).cross2(new Vector3(1, 0, 0)) > 0;
+				bool b2 = (rhs - start).cross2(new Vector3(1, 0, 0)) > 0;
 
 				if (b1 != b2) { return b2 ? -1 : 1; }
 
-				float c = Utility.Cross2D(lhs - start, rhs - start);
+				float c = (lhs - start).cross2(rhs - start);
 				if (!Mathf.Approximately(c, 0)) { return c > 0 ? -1 : 1; }
 
 				Vector3 drhs = rhs - start;
 				Vector3 dlhs = lhs - start;
 				drhs.y = dlhs.y = 0f;
 
-				return Math.Sign(drhs.sqrMagnitude - dlhs.sqrMagnitude);
+				return Math.Sign(drhs.sqrMagnitude2() - dlhs.sqrMagnitude2());
 			}
 		}
 
@@ -368,7 +380,7 @@ namespace Delaunay
 					Utility.Verify(stack.Container.Count > 0);
 
 					Vector3 top = stack.Peek(), next2top = stack.Peek(1);
-					float cr = Utility.Cross2D(next2top - top, pi - top);
+					float cr = (next2top - top).cross2(pi - top);
 
 					if (cr < 0) { break; }
 

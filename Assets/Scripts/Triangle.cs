@@ -16,8 +16,8 @@ namespace Delaunay
 			go.AddComponent<MeshRenderer>();
 
 			Triangle answer = go.AddComponent<Triangle>();
+			answer.Edge = src.Edge;
 
-			answer.CopyFrom(src);
 			return answer;
 		}
 
@@ -121,8 +121,8 @@ namespace Delaunay
 		{
 			foreach (HalfEdge edge in BoundingEdges)
 			{
-				if (!Utility.Equals2D(from.Position, edge.Src.Position)
-					&& !Utility.Equals2D(from.Position, edge.Dest.Position))
+				if (!from.Position.equals2(edge.Src.Position)
+					&& !from.Position.equals2(edge.Dest.Position))
 				{
 					return edge.Pair;
 				}
@@ -197,7 +197,7 @@ namespace Delaunay
 
 		public int GetPointDirection(Vector3 point)
 		{
-			float t0 = Utility.Cross2D(point, B.Position, A.Position);
+			float t0 = point.cross2(B.Position, A.Position);
 			if (t0 > 0) { return -1; }
 
 			if (Mathf.Approximately(t0, 0)
@@ -206,7 +206,7 @@ namespace Delaunay
 				return 1;
 			}
 
-			float t1 = Utility.Cross2D(point, C.Position, B.Position);
+			float t1 = point.cross2(C.Position, B.Position);
 			if (t1 > 0) { return -2; }
 
 			if (Mathf.Approximately(t1, 0)
@@ -215,7 +215,7 @@ namespace Delaunay
 				return 2;
 			}
 
-			float t2 = Utility.Cross2D(point, A.Position, C.Position);
+			float t2 = point.cross2(A.Position, C.Position);
 			if (t2 > 0) { return -3; }
 
 			if (Mathf.Approximately(t2, 0)
@@ -234,13 +234,14 @@ namespace Delaunay
 
 		public bool HasVertex(Vertex v)
 		{
-			return Utility.Equals2D(A, v) || Utility.Equals2D(B, v) || Utility.Equals2D(C, v);
+			return A.equals2(v) || B.equals2(v) || C.equals2(v);
 		}
 
 		public bool HasVertex(Vector3 position)
 		{
-			return Utility.Equals2D(A.Position, position)
-				|| Utility.Equals2D(B.Position, position) || Utility.Equals2D(C.Position, position);
+			return A.Position.equals2(position)
+				|| B.Position.equals2(position) 
+				|| C.Position.equals2(position);
 		}
 
 		public bool PointInCircumCircle(Vertex v)
@@ -263,49 +264,13 @@ namespace Delaunay
 		}
 
 		#region Pathfinding
-		public HalfEdge Entry { get; set; }
-		public List<HalfEdge> AdjNodes
-		{
-			get
-			{
-				// TODO:
-				System.Action<List<HalfEdge>, HalfEdge> lamda = (container, edge) =>
-				{
-					if (!edge.Constraint && edge.Pair.Face != null && edge.Pair.Face.Walkable)
-					{
-						container.Add(edge.Pair);
-					}
-				};
+		public HalfEdge Portal { get; set; }
 
-				List<HalfEdge> answer = new List<HalfEdge>();
+		public HalfEdge[] AdjPortals { get { return GetAdjPortals(); } }
 
-				lamda(answer, AB);
-				lamda(answer, BC);
-				lamda(answer, CA);
-
-				return answer;
-			}
-		}
-
-		public Vector3 Center
-		{
-			get { return (A.Position + B.Position + C.Position) / 3f; }
-		}
-
-		public float F { get { return G + H; } }
 		public float G { get; set; }
+
 		public float H { get; set; }
-
-		public float CalcWeight(HalfEdge other)
-		{
-			if (!AdjNodes.Contains(other))
-			{
-				return float.PositiveInfinity;
-			}
-
-			return (Center - other.Face.Center).magnitude;
-		}
-
 		#endregion
 
 		void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
@@ -323,9 +288,18 @@ namespace Delaunay
 			Walkable = reader.ReadElementContentAsBoolean();
 		}
 
-		void CopyFrom(Triangle src)
+		HalfEdge[] GetAdjPortals()
 		{
-			Edge = src.Edge;
+			List<HalfEdge> answer = new List<HalfEdge>(3);
+			foreach (HalfEdge edge in BoundingEdges)
+			{
+				if (edge.Pair.Face != null && edge.Pair.Face.Walkable)
+				{
+					answer.Add(edge.Pair);
+				}
+			}
+
+			return answer.ToArray();
 		}
 
 		void UpdateWalkableMaterial()

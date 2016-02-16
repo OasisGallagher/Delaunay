@@ -60,7 +60,7 @@ namespace Delaunay
 			for (; low <= high; )
 			{
 				mid = low + (high - low) / 2;
-				int comp = Utility.CompareTo2D(position, vertices[mid].Position);
+				int comp = position.compare2(vertices[mid].Position);
 
 				if (comp == 0) { return vertices[mid]; }
 				if (comp < 0)

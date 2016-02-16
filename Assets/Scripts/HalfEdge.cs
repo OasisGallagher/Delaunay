@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 using System.Collections.Generic;
 using System.Xml;
 
@@ -24,34 +25,6 @@ namespace Delaunay
 				/*src.Edge = self;
 				dest.Edge = other;
 				*/
-// 
-// 				if (self.ID == 364 || other.ID == 364)
-// 				{
-// 					UnityEngine.Debug.Log("364");
-// 				}
-// 
-// 				HalfEdge target = GeomManager.AllEdges.Find(item =>
-// 				{
-// 					if (item == self || item == other) { return false; }
-// 					if (item.ID == 359)
-// 					{
-// 						UnityEngine.Debug.Log("359");
-// 					}
-// 
-// 					var trace = new System.Diagnostics.StackTrace();
-// 					if (trace.GetFrame(4).ToString().Contains("InsertOnEdge"))
-// 					{
-// 						return false;
-// 					}
-// 
-// 					UnityEngine.Vector2 answer = UnityEngine.Vector2.zero;
-// 					return Utility.SegmentCross(out answer, src.Position, dest.Position, item.Src.Position, item.Dest.Position) == LineCrossState.FullyOverlaps;
-// 				});
-
-//				if (target != null)
-// 				{
-// 					UnityEngine.Debug.LogError(string.Format("edge {0} overlaps another edge {1}", self.ID, target.ID));
-//				}
 
 				GeomManager.Add(self);
 				GeomManager.Add(other);
@@ -121,6 +94,8 @@ namespace Delaunay
 				}
 			}
 		}
+
+		public Vector3 Center { get { return (Src.Position + Dest.Position) / 2f; } }
 
 		HalfEdge()
 		{

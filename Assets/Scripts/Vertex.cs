@@ -47,7 +47,7 @@ namespace Delaunay
 
 		public override bool Equals(object obj)
 		{
-			return obj is Vertex && Utility.Equals2D((obj as Vertex).Position, Position);
+			return obj is Vertex && (obj as Vertex).Position.equals2(Position);
 		}
 
 		public override int GetHashCode()

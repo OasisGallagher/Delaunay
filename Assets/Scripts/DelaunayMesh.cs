@@ -102,17 +102,7 @@ namespace Delaunay
 			findResult = FindFacetContainsVertex(dest, facet1);
 			Utility.Verify(findResult != null, "invalid to position " + dest);
 
-			List<HalfEdge> path = FindPath(facet1, findResult.triangle);
-			if (path == null) { return null; }
-
-			return PathSmoother.Smooth(start, dest, path);
-
-// 			List<Vector3> answer = new List<Vector3>(path.Count) { start };
-// 			for (int i = 0; i < path.Count; ++i) { answer.Add((path[i].Src.Position + path[i].Dest.Position) / 2f); }
-// 
-// 			answer.Add(dest);
-// 
-// 			return answer;
+			return Pathfinding.FindPath(start,dest, facet1, findResult.triangle);
 		}
 
 		public void OnDrawGizmos(bool showConvexHull)
@@ -247,7 +237,7 @@ namespace Delaunay
 				Utility.Verify(opposedTriangle != null);
 
 				Vertex opposedVertex = opposedTriangle.Next.Dest;
-				if (Utility.Cross2D(opposedVertex.Position - src.Position, srcDest) < 0)
+				if ((opposedVertex.Position - src.Position).cross2(srcDest) < 0)
 				{
 					v = opposedTriangle.Src;
 				}
@@ -256,13 +246,13 @@ namespace Delaunay
 					v = opposedTriangle.Dest;
 				}
 
-				float cr = Utility.Cross2D(opposedTriangle.Dest.Position - src.Position, srcDest);
+				float cr = (opposedTriangle.Dest.Position - src.Position).cross2(srcDest);
 				Utility.Verify(!Mathf.Approximately(0, cr), "Not implement");
 				List<Vertex> activeContainer = ((cr < 0) ? up : low);
 
 				if (!activeContainer.Contains(opposedTriangle.Dest)) { activeContainer.Add(opposedTriangle.Dest); }
 
-				cr = Utility.Cross2D(opposedTriangle.Src.Position - src.Position, srcDest);
+				cr = (opposedTriangle.Src.Position - src.Position).cross2(srcDest);
 				activeContainer = ((cr < 0) ? up : low);
 
 				if (!activeContainer.Contains(opposedTriangle.Src)) { activeContainer.Add(opposedTriangle.Src); }
@@ -332,12 +322,12 @@ namespace Delaunay
 				);
 
 				if (crossState == LineCrossState.FullyOverlaps
-					|| (crossState == LineCrossState.CrossOnSegment && !Utility.Equals2D(point, edge.Src.Position) && !Utility.Equals2D(point, edge.Dest.Position)))
+					|| (crossState == LineCrossState.CrossOnSegment && !point.equals2(edge.Src.Position) && !point.equals2(edge.Dest.Position)))
 				{
 					answer.crossState = crossState;
 					answer.edge = edge;
 					if (crossState == LineCrossState.FullyOverlaps 
-						&& (Utility.Equals2D(dest.Position, edge.Src.Position) || Utility.Equals2D(src.Position, edge.Dest.Position)))
+						&& (dest.Position.equals2(edge.Src.Position) || src.Position.equals2(edge.Dest.Position)))
 					{
 						answer.edge = answer.edge.Pair;
 					}
@@ -363,18 +353,6 @@ namespace Delaunay
 					triangle.Walkable = false;
 				}
 			}
-		}
-
-		List<HalfEdge> FindPath(Triangle start, Triangle dest)
-		{
-			//TODO: Clear all ??
-			GeomManager.AllTriangles.ForEach(triangle =>
-			{
-				triangle.H = (dest.Center - triangle.Center).magnitude;
-				//triangle.Entry = null;
-			});
-
-			return AStarPathfinding.FindPath(start, dest);
 		}
 
 		void DrawConvexHull()
