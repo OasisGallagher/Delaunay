@@ -57,20 +57,18 @@ namespace Delaunay
 
 					Utility.Verify(startNode.G == 0 || startNode.Portal != null);
 
-					float tmp = startNode.G;
+					float newH = Utility.MinDistance(destPosition, current.Src.Position, current.Dest.Position);
 
+					float newG = startNode.G;
 					if (startNode.Portal != null)
 					{
-						tmp += (startNode.Portal.Center - current.Center).magnitude2();
+						newG += (startNode.Portal.Center - current.Center).magnitude2();
 					}
 
-					if (tmp < current.Face.G)
+					if (newG + newH < current.Face.G + current.Face.H)
 					{
-						float h = Utility.MinDistance(destPosition, current.Src.Position, current.Dest.Position);
-						Utility.Verify(current.Face.H + current.Face.G >= h + tmp, "Invalid F");
-
-						current.Face.H = h;
-						current.Face.G = tmp;
+						current.Face.H = newH;
+						current.Face.G = newG;
 						open.AdjustHeap(index);
 						current.Face.Portal = current;
 					}

@@ -26,8 +26,8 @@ namespace Delaunay
 				dest.Edge = other;
 				*/
 
-				GeomManager.Add(self);
-				GeomManager.Add(other);
+				GeomManager.AddEdge(self);
+				GeomManager.AddEdge(other);
 			}
 
 			return self;
@@ -51,8 +51,8 @@ namespace Delaunay
 
 		public static void Release(HalfEdge edge)
 		{
-			GeomManager.Remove(edge.Pair);
-			GeomManager.Remove(edge);
+			GeomManager.RemoveEdge(edge.Pair);
+			GeomManager.RemoveEdge(edge);
 		}
 
 		public int ID { get; private set; }
@@ -110,7 +110,7 @@ namespace Delaunay
 			set
 			{
 				if (isConstraint == value) { return; }
-				Pair.isConstraint = isConstraint = value;
+				isConstraint = value;
 			}
 		}
 

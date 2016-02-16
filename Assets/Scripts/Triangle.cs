@@ -293,6 +293,8 @@ namespace Delaunay
 			List<HalfEdge> answer = new List<HalfEdge>(3);
 			foreach (HalfEdge edge in BoundingEdges)
 			{
+				if (edge.Constraint || edge.Pair.Constraint) { continue; }
+
 				if (edge.Pair.Face != null && edge.Pair.Face.Walkable)
 				{
 					answer.Add(edge.Pair);
@@ -319,7 +321,7 @@ namespace Delaunay
 		public override void OnInspectorGUI()
 		{
 			Triangle triangle = target as Triangle;
-			triangle.Walkable = GUILayout.Toggle(triangle.Walkable, "Walkable");
+			GUILayout.Label("Walkable:" + triangle.Walkable);
 			GUILayout.Label("A:" + triangle.A);
 			GUILayout.Label("B:" + triangle.B);
 			GUILayout.Label("C:" + triangle.C);

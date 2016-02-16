@@ -20,7 +20,7 @@ namespace Delaunay
 		{
 			Utility.Verify(GeomManager.FindVertex(position) == null, "Duplicate vertex at position " + position);
 			Vertex ans = new Vertex(position);
-			GeomManager.Add(ans);
+			GeomManager.AddVertex(ans);
 			return ans;
 		}
 
@@ -28,7 +28,7 @@ namespace Delaunay
 		{
 			Vertex ans = new Vertex(Vector3.zero);
 			ans.ReadXml(reader);
-			GeomManager.Add(ans);
+			GeomManager.AddVertex(ans);
 			return ans;
 		}
 

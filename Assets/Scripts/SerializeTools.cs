@@ -81,7 +81,7 @@ namespace Delaunay
 
 			foreach (HalfEdge edge in container.Values)
 			{
-				GeomManager.Add(edge);
+				GeomManager.AddEdge(edge);
 			}
 		}
 

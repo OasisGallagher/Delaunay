@@ -106,7 +106,7 @@ namespace Delaunay
 				string path = UnityEditor.EditorUtility.OpenFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "xml");
 				if (!string.IsNullOrEmpty(path))
 				{
-					GeomManager.Clear();
+					Clear();
 					SerializeTools.Load(path);
 					print(path + " loaded.");
 				}
@@ -126,5 +126,31 @@ namespace Delaunay
 		}
 
 		#endregion
+
+		void Clear()
+		{
+			if (delaunayMesh != null) { delaunayMesh.Clear(); }
+			ballStart.SetActive(false);
+			ballDest.SetActive(false);
+			currentPath.Clear();
+		}
+	}
+
+	[UnityEditor.CustomEditor(typeof(Stage))]
+	public class StageEditor : UnityEditor.Editor
+	{
+		public override void OnInspectorGUI()
+		{
+			base.OnInspectorGUI();
+			foreach (Obstacle obstacle in GeomManager.AllObstacles)
+			{
+				bool active = GUILayout.Toggle(obstacle.__tmpActive, "Obstacle " + obstacle.ID);
+				if (active != obstacle.__tmpActive)
+				{
+					obstacle.__tmpActive = active;
+					obstacle.Mesh.ForEach(item => { item.gameObject.SetActive(active); });
+				}
+			}
+		}
 	}
 }

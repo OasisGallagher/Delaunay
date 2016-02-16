@@ -21,7 +21,7 @@ namespace Delaunay
 
 		public DelaunayMesh(Rect bound)
 		{
-			const float padding = 0f;
+			const float padding = 0;
 
 			float left = bound.xMin - padding;
 			float top = bound.yMax + padding;
@@ -46,7 +46,7 @@ namespace Delaunay
 		{
 			SetUpBounds();
 
-			Vector3[] localCircle = new Vector3[6];
+			Vector3[] localCircle = new Vector3[7];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
 			for (int i = 0; i < localCircle.Length; ++i)
 			{
@@ -56,10 +56,10 @@ namespace Delaunay
 			Vector3[] circle = new Vector3[localCircle.Length];
 
 			//AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
-			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
-			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
-			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
-			AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
+			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
+			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
+			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
+			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
 
 			Vector3[] localSquare = new Vector3[4];
 			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
@@ -67,16 +67,16 @@ namespace Delaunay
 			localSquare[2] = new Vector3(-0.5f, 0f, -0.5f);
 			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
 			Vector3[] square = new Vector3[localSquare.Length];
-			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
-			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, -5); }), true);
-			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, 5); }), true);
-			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, -5); }), true);
-			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, 5); }), true);
-			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
-			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
-			AddObject(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, -5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, 5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, -5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, 5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
 
-			AddObject(borderCorners, false);
+			AddObstacle(borderCorners, false);
 
 			RemoveBounds();
 
@@ -84,6 +84,8 @@ namespace Delaunay
 			GeomManager.AllVertices.ForEach(vertex => { positions.Add(vertex.Position); });
 			convexHull = ConvexHullComputer.Compute(positions);
 		}
+
+		public void Clear() { GeomManager.Clear(); }
 
 		class FindContainingFacetResult
 		{
@@ -116,7 +118,7 @@ namespace Delaunay
 					Vector3 offset = EditorConstants.kEdgeGizmosOffset;
 					Debug.DrawLine(edge.Src.Position + offset,
 						edge.Dest.Position + offset,
-						edge.Constraint ? Color.red : Color.white
+						(edge.Constraint || edge.Pair.Constraint) ? Color.red : Color.white
 					);
 				});
 			});
@@ -127,7 +129,11 @@ namespace Delaunay
 			}
 		}
 
-		void AddObject(IEnumerable<Vector3> container, bool obstacle)
+		void RemoveStaticObject(HalfEdge edge)
+		{ 
+		}
+
+		void AddObstacle(IEnumerable<Vector3> container, bool isObstacle)
 		{
 			IEnumerator<Vector3> e = container.GetEnumerator();
 			if (!e.MoveNext()) { return; }
@@ -135,6 +141,7 @@ namespace Delaunay
 			Vertex prevVertex = Vertex.Create(e.Current);
 			Vertex firstVertex = prevVertex;
 
+			List<HalfEdge> obstacleBoundingEdges = new List<HalfEdge>();
 			List<Vertex> vertices = new List<Vertex>();
 
 			for (; e.MoveNext(); )
@@ -142,38 +149,38 @@ namespace Delaunay
 				vertices.Add(prevVertex);
 
 				Vertex currentVertex = Vertex.Create(e.Current);
-				AddConstraintEdge(prevVertex, currentVertex);
+				obstacleBoundingEdges.AddRange(AddConstraintEdge(prevVertex, currentVertex));
 				prevVertex = currentVertex;
 			}
 
 			vertices.Add(prevVertex);
-			AddConstraintEdge(prevVertex, firstVertex);
+			obstacleBoundingEdges.AddRange(AddConstraintEdge(prevVertex, firstVertex));
 
-			if (obstacle)
+			if (isObstacle)
 			{
-				MarkObstacle(vertices);
+				Obstacle obstacle = Obstacle.Create(obstacleBoundingEdges);
+				MarkObstacle(obstacle);
 			}
 		}
 
-		void AddConstraintEdge(Vertex src, Vertex dest)
+		List<HalfEdge> AddConstraintEdge(Vertex src, Vertex dest)
 		{
 			Append(src);
-			/*var e364 = GeomManager.AllEdges.Find(item => { return item.ID == 364; });
-			if (e364 != null)
-			{
-				UnityEngine.Debug.Log("hit");
-			}*/
 			Append(dest);
+
+			List<HalfEdge> answer = new List<HalfEdge>();
 
 			const int maxLoopCount = 4096;
 			for (int i = 0; src != dest; )
 			{
-				src = AddConstraintAt(src, dest);
+				answer.Add(AddConstraintAt(ref src, dest));
 				Utility.Verify(++i < maxLoopCount, "Max loop count exceed");
 			}
+
+			return answer;
 		}
 
-		Vertex AddConstraintAt(Vertex src, Vertex dest)
+		HalfEdge AddConstraintAt(ref Vertex src, Vertex dest)
 		{
 			CrossResult crossResult = new CrossResult();
 			foreach (HalfEdge ray in GeomManager.GetRays(src))
@@ -186,16 +193,22 @@ namespace Delaunay
 			if (crossResult.crossState == LineCrossState.FullyOverlaps)
 			{
 				crossResult.edge.Constraint = true;
-				return crossResult.edge.Dest;
+				src = crossResult.edge.Dest;
+				return crossResult.edge;
 			}
 
 			Utility.Verify(crossResult.crossState == LineCrossState.CrossOnSegment);
 
+			return ConstraintCrossEdges(ref src, dest, crossResult.edge);
+		}
+
+		HalfEdge ConstraintCrossEdges(ref Vertex src, Vertex dest, HalfEdge crossedEdge)
+		{
 			List<Vertex> up = new List<Vertex>();
 			List<Vertex> low = new List<Vertex>();
 			List<HalfEdge> crossedEdges = new List<HalfEdge>();
 
-			Vertex newSrc = CollectCrossedTriangles(crossedEdges, up, low, src, dest, crossResult.edge);
+			Vertex newSrc = CollectCrossedTriangles(crossedEdges, up, low, src, dest, crossedEdge);
 
 			for (int i = 0; i < crossedEdges.Count; ++i)
 			{
@@ -218,7 +231,8 @@ namespace Delaunay
 			Utility.Verify(constraintEdge != null);
 			constraintEdge.Constraint = true;
 
-			return newSrc;
+			src = newSrc;
+			return constraintEdge;
 		}
 
 		Vertex CollectCrossedTriangles(List<HalfEdge> crossedTriangles, 
@@ -339,20 +353,10 @@ namespace Delaunay
 			return false;
 		}
 
-		void MarkObstacle(List<Vertex> vertices)
+		//TODO:	
+		void MarkObstacle(Obstacle obstacle)
 		{
-			List<Vector3> positions = new List<Vector3>();
-			vertices.ForEach(item => { positions.Add(item.Position); });
-
-			foreach(Triangle triangle in GeomManager.AllTriangles)
-			{
-				if (Utility.PolygonContains(positions, triangle.A.Position)
-					&& Utility.PolygonContains(positions, triangle.B.Position)
-					&& Utility.PolygonContains(positions, triangle.C.Position))
-				{
-					triangle.Walkable = false;
-				}
-			}
+			obstacle.Mesh.ForEach(triangle => { triangle.Walkable = false; });
 		}
 
 		void DrawConvexHull()
@@ -399,7 +403,7 @@ namespace Delaunay
 
 		void SetUpBounds()
 		{
-			GeomManager.Clear();
+			Clear();
 			Triangle.Create(Vertex.Create(stAPosition), Vertex.Create(stBPosition), Vertex.Create(stCPosition));
 		}
 

@@ -2,39 +2,51 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.Vertex, System.Collections.Generic.List<Delaunay.HalfEdge>>;
+using ObstacleContainer = System.Collections.Generic.List<Delaunay.Obstacle>;
 
 namespace Delaunay
 {
 	public static class GeomManager
 	{
-		static HalfEdgeContainer container = new HalfEdgeContainer(EditorConstants.kVertexComparer);
+		static HalfEdgeContainer halfEdgeContainer = new HalfEdgeContainer(EditorConstants.kVertexComparer);
+		static ObstacleContainer obstacleContainer = new ObstacleContainer();
 
-		public static void Add(HalfEdge edge)
+		public static void AddEdge(HalfEdge edge)
 		{
 			List<HalfEdge> list = null;
 			Utility.Verify(edge.Pair != null, "Invalid Edge, ID = " + edge.ID);
 
-			if (!container.TryGetValue(edge.Src, out list))
+			if (!halfEdgeContainer.TryGetValue(edge.Src, out list))
 			{
-				container.Add(edge.Src, list = new List<HalfEdge>());
+				halfEdgeContainer.Add(edge.Src, list = new List<HalfEdge>());
 			}
 
 			list.Add(edge);
 		}
 
-		public static void Add(Vertex vertex)
+		public static void AddVertex(Vertex vertex)
 		{
-			Utility.Verify(!container.ContainsKey(vertex));
-			container.Add(vertex, new List<HalfEdge>());
+			Utility.Verify(!halfEdgeContainer.ContainsKey(vertex));
+			halfEdgeContainer.Add(vertex, new List<HalfEdge>());
 		}
 
-		public static void Remove(HalfEdge edge)
+		public static void AddObstacle(Obstacle obstacle)
 		{
-			List<HalfEdge> list = container[edge.Src];
+			obstacleContainer.Add(obstacle);
+		}
+
+		public static void RemoveObstacle(Obstacle obstacle)
+		{
+			obstacleContainer.Remove(obstacle);
+		}
+
+		public static void RemoveEdge(HalfEdge edge)
+		{
+			List<HalfEdge> list = halfEdgeContainer[edge.Src];
 			Utility.Verify(list.Remove(edge));
 			if (list.Count == 0)
 			{
-				container.Remove(edge.Src);
+				halfEdgeContainer.Remove(edge.Src);
 			}
 		}
 
@@ -45,7 +57,7 @@ namespace Delaunay
 				Triangle.Release(facet);
 			});
 
-			container.Clear();
+			halfEdgeContainer.Clear();
 
 			Vertex.ResetIDGenerator();
 			HalfEdge.ResetIDGenerator();
@@ -79,13 +91,13 @@ namespace Delaunay
 		public static List<HalfEdge> GetRays(Vertex vertex)
 		{
 			List<HalfEdge> answer = null;
-			container.TryGetValue(vertex, out answer);
+			halfEdgeContainer.TryGetValue(vertex, out answer);
 			return answer ?? new List<HalfEdge>();
 		}
 
 		public static List<Vertex> AllVertices
 		{
-			get { return new List<Vertex>(container.Keys); }
+			get { return new List<Vertex>(halfEdgeContainer.Keys); }
 		}
 
 		public static List<HalfEdge> AllEdges
@@ -107,15 +119,20 @@ namespace Delaunay
 		{
 			get
 			{
-				if (container.Count == 0) { return new List<Triangle>(); }
+				if (halfEdgeContainer.Count == 0) { return new List<Triangle>(); }
 				return CollectTriangles();
 			}
+		}
+
+		public static List<Obstacle> AllObstacles
+		{
+			get { return obstacleContainer; }
 		}
 
 		static List<Triangle> CollectTriangles()
 		{
 			Triangle face = null;
-			foreach (List<HalfEdge> edgeContainer in container.Values)
+			foreach (List<HalfEdge> edgeContainer in halfEdgeContainer.Values)
 			{
 				foreach (HalfEdge edge in edgeContainer)
 				{
