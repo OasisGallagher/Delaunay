@@ -20,7 +20,7 @@ namespace Delaunay
 		public static List<HalfEdge> FindPath(IPathNode start, IPathNode dest)
 		{
 			BinaryHeap open = new BinaryHeap();
-			HashSet<IPathNode> close = new HashSet<IPathNode>();
+			CloseList close = new CloseList();
 			
 			start.G = 0;
 
@@ -57,9 +57,13 @@ namespace Delaunay
 				close.Add(start);
 			}
 
-			open.Dispose();
+			List<HalfEdge> path = null;
+			if (start == dest) { path = CreatePath(dest); }
 
-			return start == dest ? CreatePath(dest) : null;
+			open.Dispose();
+			close.Dispose();
+
+			return path;
 		}
 
 		static List<HalfEdge> CreatePath(IPathNode dest)
@@ -76,9 +80,33 @@ namespace Delaunay
 			return result;
 		}
 
+		internal class CloseList : IDisposable
+		{
+			public void Dispose()
+			{
+				foreach (IPathNode node in container) { node.Entry = null; }
+			}
+
+			public void Add(IPathNode item) 
+			{
+				container.Add(item);
+			}
+
+			public bool Contains(IPathNode item)
+			{
+				return container.Contains(item);
+			}
+
+			HashSet<IPathNode> container = new HashSet<IPathNode>();
+		}
+
 		internal class BinaryHeap : IDisposable
 		{
-			public void Dispose() { container.ForEach(item => { item.Entry = null; }); }
+			public void Dispose()
+			{
+				container.ForEach(item => { item.Entry = null; });
+			}
+
 			public void Push(IPathNode node)
 			{
 				container.Add(node);
@@ -195,7 +223,6 @@ namespace Delaunay
 			}
 
 			portals[index] = portals[index + 1] = dest;
-			edges.ForEach(e => { e.Face.Entry = null; });
 
 			return StringPull(portals);
 		}
