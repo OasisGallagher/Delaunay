@@ -131,6 +131,15 @@ namespace Delaunay
 			return null;
 		}
 
+		public Vertex GetOpposite(HalfEdge from)
+		{
+			if (AB.ID == from.ID) { return C; }
+			if (BC.ID == from.ID) { return A; }
+			if (CA.ID == from.ID) { return B; }
+			Utility.Verify(false, "Invalid argument");
+			return null;
+		}
+
 		/// <summary>
 		/// One of the half-edges bordering the face.
 		/// </summary>

@@ -145,14 +145,14 @@ namespace Delaunay
 			Utility.Verify(face != null);
 			HashSet<int> visitedFaces = new HashSet<int> { face.ID };
 
-			Stack<Triangle> stack = new Stack<Triangle>();
-			stack.Push(face);
+			Queue<Triangle> queue = new Queue<Triangle>();
+			queue.Enqueue(face);
 
 			List<Triangle> answer = new List<Triangle>();
 
-			for (; stack.Count != 0; )
+			for (; queue.Count != 0; )
 			{
-				face = stack.Pop();
+				face = queue.Dequeue();
 				answer.Add(face);
 
 				foreach (HalfEdge edge in face.BoundingEdges)
@@ -160,7 +160,7 @@ namespace Delaunay
 					if (edge.Pair.Face != null && !visitedFaces.Contains(edge.Pair.Face.ID))
 					{
 						visitedFaces.Add(edge.Pair.Face.ID);
-						stack.Push(edge.Pair.Face);
+						queue.Enqueue(edge.Pair.Face);
 					}
 				}
 			}

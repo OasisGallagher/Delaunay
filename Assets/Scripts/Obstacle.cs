@@ -12,7 +12,7 @@ namespace Delaunay
 		public static Obstacle Create(List<HalfEdge> boundingEdges)
 		{
 			Obstacle answer = new Obstacle();
-			answer.boundingEdges = boundingEdges;
+			answer.BoundingEdges = boundingEdges;
 			GeomManager.AddObstacle(answer);
 			return answer;
 		}
@@ -27,45 +27,47 @@ namespace Delaunay
 			ID = obstacleID++;
 		}
 
-		public List<HalfEdge> BoundingEdges { get { return boundingEdges; } }
-
-		/// <summary>
-		/// TODO: Iterate....
-		/// </summary>
-		public List<Triangle> Mesh
+		public List<HalfEdge> BoundingEdges
 		{
-			get
+			get { return boundingEdges; }
+			set
 			{
-				List<Triangle> answer = new List<Triangle>();
-				Vector3[] boundings = new Vector3[BoundingEdges.Count];
-
-				int index = 0;
-				BoundingEdges.ForEach(item => {boundings[index++] = item.Src.Position;});
-
-				foreach (HalfEdge edge in BoundingEdges)
-				{
-					foreach (HalfEdge ray in GeomManager.GetRays(edge.Src))
-					{
-						if (ray.Face == null) { continue; }
-						bool contains = true;
-
-						foreach (HalfEdge faceBounding in ray.Face.BoundingEdges)
-						{
-							if (!Utility.PolygonContains(boundings, faceBounding.Src.Position))
-							{
-								contains = false;
-								break;
-							}
-						}
-
-						if (contains) { answer.Add(ray.Face); }
-					}
-				}
-
-				return answer;
+				boundingEdges = value;
+				mesh = GetMeshTriangles(boundingEdges);
 			}
 		}
 
+		public List<Triangle> Mesh { get { return mesh; } }
+
+		List<Triangle> GetMeshTriangles(List<HalfEdge> edges)
+		{
+			Vector3[] boundings = new Vector3[edges.Count];
+			edges.transform(boundings, item => { return item.Src.Position; });
+
+			List<Triangle> answer = new List<Triangle>();
+
+			Queue<HalfEdge> queue = new Queue<HalfEdge>();
+			queue.Enqueue(boundingEdges[0]);
+			for (; queue.Count > 0; )
+			{
+				HalfEdge edge = queue.Dequeue();
+				if (edge.Face == null) { continue; }
+				if (!Utility.PolygonContains(boundings, edge.Face.GetOpposite(edge).Position)) { continue; }
+
+				answer.Add(edge.Face);
+
+				HalfEdge e1 = edge.Face.BC, e2 = edge.Face.CA;
+				if (edge == edge.Face.BC) { e1 = edge.Face.AB; e2 = edge.Face.CA; }
+				if (edge == edge.Face.CA) { e1 = edge.Face.AB; e2 = edge.Face.BC; }
+
+				queue.Enqueue(e1.Pair);
+				queue.Enqueue(e2.Pair);
+			}
+
+			return answer;
+		}
+
+		List<Triangle> mesh = null;
 		List<HalfEdge> boundingEdges = null;
 		static int obstacleID = 0;
 	}

@@ -353,7 +353,6 @@ namespace Delaunay
 			return false;
 		}
 
-		//TODO:	
 		void MarkObstacle(Obstacle obstacle)
 		{
 			obstacle.Mesh.ForEach(triangle => { triangle.Walkable = false; });
