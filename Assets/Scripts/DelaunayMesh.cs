@@ -55,26 +55,25 @@ namespace Delaunay
 
 			Vector3[] circle = new Vector3[localCircle.Length];
 
-			//AddObject(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
-			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
-			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
-			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
-			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
+			//AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
+			//AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
+			//AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
+			//AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
 
 			Vector3[] localSquare = new Vector3[4];
 			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
 			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
-			localSquare[2] = new Vector3(-0.5f, 0f, -0.5f);
+			localSquare[2] = new Vector3(0.3f, 0f, 0.3f);
 			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
 			Vector3[] square = new Vector3[localSquare.Length];
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, -5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, 5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, -5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, 5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
+			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
+			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, -5); }), true);
+			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, 5); }), true);
+			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, -5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 4f + new Vector3(-6, stAPosition.y, 5); }), true);
+			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
+			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
+			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
 
 			AddObstacle(borderCorners, false);
 
@@ -129,8 +128,21 @@ namespace Delaunay
 			}
 		}
 
-		void RemoveStaticObject(HalfEdge edge)
+		public void RemoveObstacle(int obstacleID)
 		{ 
+			Obstacle obstacle = GeomManager.GetObstacle(obstacleID);
+			List<Triangle> triangles = new List<Triangle>();
+
+			foreach (HalfEdge edge in obstacle.BoundingEdges)
+			{
+				foreach (HalfEdge ray in GeomManager.GetRays(edge.Src))
+				{ 
+					if(ray.Face == null) {continue;}
+					if (triangles.IndexOf(ray.Face) < 0) { triangles.Add(ray.Face); }
+				}
+			}
+
+			triangles.ForEach(t => { t.gameObject.SetActive(false); });
 		}
 
 		void AddObstacle(IEnumerable<Vector3> container, bool isObstacle)

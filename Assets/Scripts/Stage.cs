@@ -21,6 +21,11 @@ namespace Delaunay
 
 		ClickState clickState = ClickState.PlantingStartPoint;
 
+		public void __tmpRemoveObstacle(int ID)
+		{
+			delaunayMesh.RemoveObstacle(ID);
+		}
+
 		#region Mono behaviour
 		void Start()
 		{
@@ -148,7 +153,11 @@ namespace Delaunay
 				if (active != obstacle.__tmpActive)
 				{
 					obstacle.__tmpActive = active;
-					obstacle.Mesh.ForEach(item => { item.gameObject.SetActive(active); });
+					if (!obstacle.__tmpActive)
+					{
+						(target as Stage).__tmpRemoveObstacle(obstacle.ID);
+					}
+					//obstacle.Mesh.ForEach(item => { item.gameObject.SetActive(active); });
 				}
 			}
 		}

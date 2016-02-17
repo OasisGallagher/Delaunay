@@ -123,6 +123,11 @@ namespace Delaunay
 
 		public static bool PolygonContains(IList<Vector3> positions, Vector3 point)
 		{
+			foreach (Vector3 current in positions)
+			{
+				if (current.equals2(point)) { return true; }
+			}
+			/*
 			for (int i = 1; i <= positions.Count; ++i)
 			{
 				Vector3 currentPosition = (i < positions.Count) ? positions[i] : positions[0];
@@ -132,7 +137,23 @@ namespace Delaunay
 				}
 			}
 
-			return true;
+			return true;*/
+
+			int i, j = positions.Count - 1;
+			bool oddNodes = false;
+
+			for (i = 0; i < positions.Count; i++)
+			{
+				if ((positions[i].z < point.z && positions[j].z >= point.z || positions[j].z < point.z && positions[i].z >= point.z)
+					&& (positions[i].x <= point.x || positions[j].x <= point.x))
+				{
+					oddNodes ^= (positions[i].x + (point.z - positions[i].z) / (positions[j].z - positions[i].z) * (positions[j].x - positions[i].x) < point.x);
+				}
+
+				j = i;
+			}
+
+			return oddNodes;
 		}
 
 		public static float MinDistance(Vector3 point, Vector3 segSrc, Vector3 segDest)

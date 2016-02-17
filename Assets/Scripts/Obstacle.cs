@@ -41,8 +41,8 @@ namespace Delaunay
 
 		List<Triangle> GetMeshTriangles(List<HalfEdge> edges)
 		{
-			Vector3[] boundings = new Vector3[edges.Count];
-			edges.transform(boundings, item => { return item.Src.Position; });
+			List<Vector3> boundings = new List<Vector3>(edges.Count);
+			edges.ForEach(item => { boundings.Add(item.Src.Position); });
 
 			List<Triangle> answer = new List<Triangle>();
 
@@ -52,8 +52,19 @@ namespace Delaunay
 			{
 				HalfEdge edge = queue.Dequeue();
 				if (edge.Face == null) { continue; }
-				if (!Utility.PolygonContains(boundings, edge.Face.GetOpposite(edge).Position)) { continue; }
 
+				if (!Utility.PolygonContains(boundings, edge.Face.GetOpposite(edge).Position))
+				{
+					continue;
+				}
+				/*
+				Vertex oppositeVertex = edge.Face.GetOpposite(edge);
+				if (edges.Find(item => { return item.Src == oppositeVertex; }) == null)
+				{
+					continue;
+				}
+				*/
+				if (answer.Contains(edge.Face)) { continue; }
 				answer.Add(edge.Face);
 
 				HalfEdge e1 = edge.Face.BC, e2 = edge.Face.CA;

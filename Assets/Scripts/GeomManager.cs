@@ -40,6 +40,11 @@ namespace Delaunay
 			obstacleContainer.Remove(obstacle);
 		}
 
+		public static Obstacle GetObstacle(int ID)
+		{
+			return obstacleContainer.Find(item => { return item.ID == ID; });
+		}
+
 		public static void RemoveEdge(HalfEdge edge)
 		{
 			List<HalfEdge> list = halfEdgeContainer[edge.Src];
