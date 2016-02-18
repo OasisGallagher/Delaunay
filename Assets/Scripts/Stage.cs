@@ -117,6 +117,10 @@ namespace Delaunay
 				}
 			}
 
+			GUILayout.Label("V: " + GeomManager.AllVertices.Count);
+			GUILayout.Label("E: " + GeomManager.AllEdges.Count);
+			GUILayout.Label("T: " + GeomManager.AllTriangles.Count);
+
 			GUILayout.EndVertical();
 		}
 

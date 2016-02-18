@@ -123,11 +123,6 @@ namespace Delaunay
 
 		public static bool PolygonContains(IList<Vector3> positions, Vector3 point)
 		{
-			foreach (Vector3 current in positions)
-			{
-				if (current.equals2(point)) { return true; }
-			}
-			/*
 			for (int i = 1; i <= positions.Count; ++i)
 			{
 				Vector3 currentPosition = (i < positions.Count) ? positions[i] : positions[0];
@@ -137,23 +132,7 @@ namespace Delaunay
 				}
 			}
 
-			return true;*/
-
-			int i, j = positions.Count - 1;
-			bool oddNodes = false;
-
-			for (i = 0; i < positions.Count; i++)
-			{
-				if ((positions[i].z < point.z && positions[j].z >= point.z || positions[j].z < point.z && positions[i].z >= point.z)
-					&& (positions[i].x <= point.x || positions[j].x <= point.x))
-				{
-					oddNodes ^= (positions[i].x + (point.z - positions[i].z) / (positions[j].z - positions[i].z) * (positions[j].x - positions[i].x) < point.x);
-				}
-
-				j = i;
-			}
-
-			return oddNodes;
+			return true;
 		}
 
 		public static float MinDistance(Vector3 point, Vector3 segSrc, Vector3 segDest)
@@ -282,6 +261,11 @@ namespace Delaunay
 		public static float cross2(this Vector3 a, Vector3 b)
 		{
 			return a.x * b.z - a.z * b.x;
+		}
+
+		public static float dot2(this Vector3 a, Vector3 b, Vector3 p)
+		{
+			return (a - p).dot2(b - p);
 		}
 
 		public static float dot2(this Vector3 a, Vector3 b)
@@ -413,6 +397,121 @@ namespace Delaunay
 
 			return stack.Container;
 		}
+	}
+
+	public class ArrayLinkedList<T>
+	{
+		public ArrayLinkedList(int size)
+		{
+			container = new ListNode[size];
+			
+			for (int i = 0; i < size; ++i)
+			{
+				container[i] = new ListNode();
+				container[i].index = i;
+
+				if (i < size - 1)
+				{
+					container[i].nextFree = i + 1;
+				}
+			}
+
+			freeListHead = 0;
+		}
+
+		public int Add(T value)
+		{
+			int pos = PopFreeList();
+			if (linkedListTail == -1)
+			{
+				linkedListHead = pos;
+				container[pos].prev = -1;
+			}
+			else
+			{
+				container[linkedListTail].next = pos;
+				container[pos].prev = linkedListTail;
+			}
+
+			container[pos].value = value;
+			linkedListTail = pos;
+
+			return linkedListTail;
+		}
+
+		public int Remove(int index)
+		{
+			int next = container[index].next;
+
+			ListNode node = container[index];
+			if (node.prev != -1) { container[node.prev].next = node.next; }
+			if (node.next != -1) { container[node.next].prev = node.prev; }
+			if (node.index == linkedListHead) { linkedListHead = node.next; }
+			if (node.index == linkedListTail) { linkedListTail = node.prev; }
+
+			PushFreeList(node);
+
+			return next;
+		}
+
+		public int NextIndex(int current)
+		{
+			return container[current].next;
+		}
+
+		public T this[int index]
+		{
+			get { return container[index].value; }
+		}
+
+		public int First
+		{
+			get { return linkedListHead; }
+		}
+
+		public override string ToString()
+		{
+			string text = string.Empty;
+			for (int index = First; index >= 0; index = NextIndex(index))
+			{
+				if (!string.IsNullOrEmpty(text)) { text += " "; }
+				text += this[index];
+			}
+
+			return text;
+		}
+
+		int PopFreeList()
+		{
+			if (freeListHead == -1) { throw new OutOfMemoryException(); }
+
+			int answer = freeListHead;
+			freeListHead = container[freeListHead].nextFree;
+			container[answer].nextFree = -1;
+
+			return answer;
+		}
+
+		void PushFreeList(ListNode node)
+		{
+			node.value = default(T);
+			node.prev = node.next = -1;
+			node.nextFree = freeListHead;
+			freeListHead = node.index;
+		}
+
+		class ListNode
+		{
+			public T value;
+			public int index = -1;
+			public int prev = -1;
+			public int next = -1;
+			public int nextFree = -1;
+		}
+
+		ListNode[] container = null;
+		int freeListHead = -1;
+		int linkedListHead = -1, linkedListTail = -1;
 	}
 
 	static class EditorConstants

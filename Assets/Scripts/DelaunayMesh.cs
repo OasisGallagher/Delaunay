@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -55,25 +56,26 @@ namespace Delaunay
 
 			Vector3[] circle = new Vector3[localCircle.Length];
 
-			//AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
-			//AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
-			//AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
-			//AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
+			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
+			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
+			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
+			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
 
 			Vector3[] localSquare = new Vector3[4];
 			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
 			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
-			localSquare[2] = new Vector3(0.3f, 0f, 0.3f);
+			localSquare[2] = new Vector3(-0.5f, 0f, -0.5f);
 			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
 			Vector3[] square = new Vector3[localSquare.Length];
-			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
-			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, -5); }), true);
-			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, 5); }), true);
-			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, -5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 4f + new Vector3(-6, stAPosition.y, 5); }), true);
-			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
-			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
-			//AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
+
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, -5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, 5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, -5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, 5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
+			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
 
 			AddObstacle(borderCorners, false);
 
@@ -128,21 +130,189 @@ namespace Delaunay
 			}
 		}
 
-		public void RemoveObstacle(int obstacleID)
-		{ 
-			Obstacle obstacle = GeomManager.GetObstacle(obstacleID);
-			List<Triangle> triangles = new List<Triangle>();
+		bool IsEar(List<Vertex> vertices, int current)
+		{
+			int prev = (current - 1 + vertices.Count) % vertices.Count;
+			int next = (current + 1) % vertices.Count;
+			Vector3[] points = new Vector3[3];
 
-			foreach (HalfEdge edge in obstacle.BoundingEdges)
+			for (int i = 0; i < vertices.Count; ++i)
 			{
-				foreach (HalfEdge ray in GeomManager.GetRays(edge.Src))
-				{ 
-					if(ray.Face == null) {continue;}
-					if (triangles.IndexOf(ray.Face) < 0) { triangles.Add(ray.Face); }
+				if (i == current || i == prev || i == next) { continue; }
+				points[0] = vertices[prev].Position;
+				points[1] = vertices[current].Position;
+				points[2] = vertices[next].Position;
+
+				if (Utility.PolygonContains(points, vertices[i].Position))
+				{
+					return false;
 				}
 			}
 
-			triangles.ForEach(t => { t.gameObject.SetActive(false); });
+			return true;
+		}
+
+		bool IsReflex(List<Vertex> vertices, int index)
+		{
+			Vertex current = vertices[index];
+			Vertex prev = vertices[(index - 1 + vertices.Count) % vertices.Count];
+			Vertex next = vertices[(index + 1) % vertices.Count];
+			return prev.Position.dot2(next.Position, current.Position) < 0f;
+		}
+
+		void EarClipping(List<Vertex> vertices)
+		{
+			vertices.Sort((lhs, rhs) =>
+			{
+				int cmpZ = lhs.Position.z.CompareTo(rhs.Position.z);
+				if (cmpZ != 0) { return cmpZ; }
+				return lhs.Position.x.CompareTo(rhs.Position.x);
+			});
+
+			ArrayLinkedList<int> ears = new ArrayLinkedList<int>(vertices.Count);
+			ArrayLinkedList<int> reflexVertices = new ArrayLinkedList<int>(vertices.Count);
+			List<int> flags = new List<int>(vertices.Count);
+			for (int i = 0; i < vertices.Count; ++i) { flags.Add(0); }
+
+			for (int i = 0; i < vertices.Count; ++i)
+			{
+				Vertex vertex = vertices[i];
+
+				Vector3 current = vertex.Position;
+				Vector3 prev = vertices[(i - 1 + vertices.Count) % vertices.Count].Position;
+				Vector3 next = vertices[(i + 1) % vertices.Count].Position;
+
+				if (IsReflex(vertices, i))
+				{
+					flags[i] |= 1;
+					reflexVertices.Add(i);
+				}
+
+				if (IsEar(vertices, i))
+				{
+					flags[i] |= 2;
+					ears.Add(i);
+				}
+			}
+
+			EarClipping(vertices, ears, reflexVertices, flags);
+		}
+
+		void EarClipping(List<Vertex> vertices, ArrayLinkedList<int> ears, ArrayLinkedList<int> reflexVertices, List<int> flags)
+		{
+			List<int> removedEars = new List<int>();
+			List<int> addedEars = new List<int>();
+
+			for (int index = ears.First; index >= 0; )
+			{
+				int currentEar = ears[index];
+				int prev = (currentEar - 1 + vertices.Count) % vertices.Count;
+				int next = (currentEar + 1) % vertices.Count;
+
+				Triangle.Create(vertices[prev], vertices[currentEar], vertices[next]);
+				break;
+
+				removedEars.Add(currentEar);
+
+				// TODO: O(n).
+				vertices.RemoveAt(currentEar);
+
+				if ((flags[prev] & 1) != 0)
+				{
+					flags[prev] = IsReflex(vertices, prev) ? (flags[prev] | 1) : (flags[prev] & (~1));
+				}
+				
+				if ((flags[prev] & 1) != 0 || (flags[prev] & 2) != 0)
+				{
+					bool oldState = (flags[prev] & 2) != 0;
+					flags[prev] = IsEar(vertices, prev) ? (flags[prev] | 2) : (flags[prev] & (~2));
+					if (oldState != ((flags[prev] & 2) != 0))
+					{
+						if (oldState)
+						{
+							removedEars.Add(prev);
+						}
+						else
+						{
+							addedEars.Add(prev);
+						}
+					}
+				}
+
+				if ((flags[next] & 1) != 0)
+				{
+					flags[next] = IsReflex(vertices, next) ? (flags[next] | 1) : (flags[next] & (~1));
+				}
+
+				if ((flags[next] & 1) != 0 || (flags[next] & 2) != 0)
+				{
+					bool oldState = (flags[next] & 2) != 0;
+					flags[next] = IsEar(vertices, next) ? (flags[next] | 2) : (flags[next] & (~2));
+					if (oldState != ((flags[next] & 2) != 0))
+					{
+						if (oldState)
+						{
+							removedEars.Add(next);
+						}
+						else
+						{
+							addedEars.Add(next);
+						}
+					}
+				}
+
+				flags.RemoveAt(currentEar);
+
+				bool indexUpdated = false;
+				foreach (int r in removedEars)
+				{
+					index = ears.Remove(r);
+					indexUpdated = true;
+				}
+
+				if (addedEars.Count > 0)
+				{
+					index = ears.Add(addedEars[0]);
+					indexUpdated = true;
+				}
+				for (int i = 1; i < addedEars.Count; ++i)
+				{
+					ears.Add(addedEars[i]);
+				}
+
+				if (!indexUpdated) { index = ears.NextIndex(index); }
+
+				removedEars.Clear();
+				addedEars.Clear();
+			}
+		}
+
+		public void RemoveObstacle(int obstacleID)
+		{ 
+			Obstacle obstacle = GeomManager.GetObstacle(obstacleID);
+			List<Vertex> boundingVertices = new List<Vertex>(obstacle.BoundingEdges.Count);
+			obstacle.BoundingEdges.ForEach(item => { boundingVertices.Add(item.Src); });
+
+			List<Vertex> polygon = new List<Vertex>(obstacle.BoundingEdges.Count * 2);
+
+			List<Triangle> triangles = new List<Triangle>();
+			foreach (HalfEdge edge in obstacle.BoundingEdges)
+			{
+				foreach (HalfEdge ray in GeomManager.GetRays(edge.Src))
+				{
+					if (ray.Face == null) { continue; }
+					if (triangles.IndexOf(ray.Face) < 0) { triangles.Add(ray.Face); }
+
+					if (boundingVertices.Contains(ray.Dest)) { continue; }
+					if (polygon.Contains(ray.Dest)) { continue; }
+
+					polygon.Add(ray.Dest);
+				}
+			}
+
+			triangles.ForEach(t => { Triangle.Release(t); });
+
+			EarClipping(polygon);
 		}
 
 		void AddObstacle(IEnumerable<Vector3> container, bool isObstacle)

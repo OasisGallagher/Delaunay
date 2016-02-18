@@ -147,13 +147,14 @@ namespace Delaunay
 				if (face != null) { break; }
 			}
 
-			Utility.Verify(face != null);
+			List<Triangle> answer = new List<Triangle>();
+
+			if (face == null) { return answer; }
+ 
 			HashSet<int> visitedFaces = new HashSet<int> { face.ID };
 
 			Queue<Triangle> queue = new Queue<Triangle>();
 			queue.Enqueue(face);
-
-			List<Triangle> answer = new List<Triangle>();
 
 			for (; queue.Count != 0; )
 			{
