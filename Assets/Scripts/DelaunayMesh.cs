@@ -128,6 +128,53 @@ namespace Delaunay
 			}
 		}
 
+		bool IsEar(List<Vertex> vertices, int current)
+		{
+			int prev = (current - 1 + vertices.Count) % vertices.Count;
+			int next = (current + 1) % vertices.Count;
+			Vertex[] array = new array[3];
+			for (int i = 0; i < vertices.Count; ++i)
+			{
+				if (i == current || i == prev || i == next) { continue; }
+				array[0] = vertices[prev];
+				array[1] = vertices[current];
+				array[2] = vertices[next];
+
+				if (!Utility.PolygonContains()) { return false; }
+			}
+
+			return true;
+		}
+
+		void Clipping(List<Vertex> vertices)
+		{
+			ArrayLinkedList<int> ears = new ArrayLinkedList<int>(vertices.Count);
+			ArrayLinkedList<int> convexVertices = new ArrayLinkedList<int>(vertices.Count);
+			ArrayLinkedList<int> concaveVertices = new ArrayLinkedList<int>(vertices.Count);
+
+			for (int i = 0; i < vertices.Count; ++i)
+			{
+				Vertex vertex = vertices[i];
+
+				Vector3 current = vertex.Position;
+				Vector3 prev = vertices[(i - 1 + vertices.Count) % vertices.Count].Position;
+				Vector3 next = vertices[(i + 1) % vertices.Count].Position;
+
+				if ((prev - current).dot2(next - current) >= 0)
+				{
+					convexVertices.Add(i);
+				}
+				else
+				{
+					concaveVertices.Add(i);
+				}
+
+				if (IsEar(vertices, i))
+				{
+					ears.Add(i);
+				}
+			}
+		}
 		public void RemoveObstacle(int obstacleID)
 		{ 
 			Obstacle obstacle = GeomManager.GetObstacle(obstacleID);
