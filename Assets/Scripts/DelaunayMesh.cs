@@ -46,7 +46,7 @@ namespace Delaunay
 		public void Rebuild()
 		{
 			SetUpBounds();
-
+			/*
 			Vector3[] localCircle = new Vector3[7];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
 			for (int i = 0; i < localCircle.Length; ++i)
@@ -60,12 +60,32 @@ namespace Delaunay
 			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
 			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
 			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
-
+			*/
+			/*
 			Vector3[] localSquare = new Vector3[4];
 			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
 			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
 			localSquare[2] = new Vector3(-0.5f, 0f, -0.5f);
 			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
+			*/
+			Vector3[] localSquare = new Vector3[6];
+			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
+			localSquare[1] = new Vector3(0f, 0f, 0.2f);
+			localSquare[2] = new Vector3(-0.5f, 0f, 0.5f);
+			localSquare[3] = new Vector3(-0.5f, 0f, -0.5f);
+			localSquare[4] = new Vector3(0f, 0f, -0.2f);
+			localSquare[5] = new Vector3(0.5f, 0f, -0.5f);
+
+			localSquare.transform(localSquare, item => { return item * 6f; });
+			List<Vertex> square = new List<Vertex>();
+			foreach (Vector3 position in localSquare)
+			{
+				square.Add(Vertex.Create(position));
+			}
+
+			EarClipping(square);
+
+			/*
 			Vector3[] square = new Vector3[localSquare.Length];
 
 			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
@@ -76,8 +96,8 @@ namespace Delaunay
 			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
 			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
 			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
-
-			AddObstacle(borderCorners, false);
+			*/
+			//AddObstacle(borderCorners, false);
 
 			RemoveBounds();
 
@@ -130,163 +150,6 @@ namespace Delaunay
 			}
 		}
 
-		bool IsEar(List<Vertex> vertices, int current)
-		{
-			int prev = (current - 1 + vertices.Count) % vertices.Count;
-			int next = (current + 1) % vertices.Count;
-			Vector3[] points = new Vector3[3];
-
-			for (int i = 0; i < vertices.Count; ++i)
-			{
-				if (i == current || i == prev || i == next) { continue; }
-				points[0] = vertices[prev].Position;
-				points[1] = vertices[current].Position;
-				points[2] = vertices[next].Position;
-
-				if (Utility.PolygonContains(points, vertices[i].Position))
-				{
-					return false;
-				}
-			}
-
-			return true;
-		}
-
-		bool IsReflex(List<Vertex> vertices, int index)
-		{
-			Vertex current = vertices[index];
-			Vertex prev = vertices[(index - 1 + vertices.Count) % vertices.Count];
-			Vertex next = vertices[(index + 1) % vertices.Count];
-			return prev.Position.dot2(next.Position, current.Position) < 0f;
-		}
-
-		void EarClipping(List<Vertex> vertices)
-		{
-			vertices.Sort((lhs, rhs) =>
-			{
-				int cmpZ = lhs.Position.z.CompareTo(rhs.Position.z);
-				if (cmpZ != 0) { return cmpZ; }
-				return lhs.Position.x.CompareTo(rhs.Position.x);
-			});
-
-			ArrayLinkedList<int> ears = new ArrayLinkedList<int>(vertices.Count);
-			ArrayLinkedList<int> reflexVertices = new ArrayLinkedList<int>(vertices.Count);
-			List<int> flags = new List<int>(vertices.Count);
-			for (int i = 0; i < vertices.Count; ++i) { flags.Add(0); }
-
-			for (int i = 0; i < vertices.Count; ++i)
-			{
-				Vertex vertex = vertices[i];
-
-				Vector3 current = vertex.Position;
-				Vector3 prev = vertices[(i - 1 + vertices.Count) % vertices.Count].Position;
-				Vector3 next = vertices[(i + 1) % vertices.Count].Position;
-
-				if (IsReflex(vertices, i))
-				{
-					flags[i] |= 1;
-					reflexVertices.Add(i);
-				}
-
-				if (IsEar(vertices, i))
-				{
-					flags[i] |= 2;
-					ears.Add(i);
-				}
-			}
-
-			EarClipping(vertices, ears, reflexVertices, flags);
-		}
-
-		void EarClipping(List<Vertex> vertices, ArrayLinkedList<int> ears, ArrayLinkedList<int> reflexVertices, List<int> flags)
-		{
-			List<int> removedEars = new List<int>();
-			List<int> addedEars = new List<int>();
-
-			for (int index = ears.First; index >= 0; )
-			{
-				int currentEar = ears[index];
-				int prev = (currentEar - 1 + vertices.Count) % vertices.Count;
-				int next = (currentEar + 1) % vertices.Count;
-
-				Triangle.Create(vertices[prev], vertices[currentEar], vertices[next]);
-				break;
-
-				removedEars.Add(currentEar);
-
-				// TODO: O(n).
-				vertices.RemoveAt(currentEar);
-
-				if ((flags[prev] & 1) != 0)
-				{
-					flags[prev] = IsReflex(vertices, prev) ? (flags[prev] | 1) : (flags[prev] & (~1));
-				}
-				
-				if ((flags[prev] & 1) != 0 || (flags[prev] & 2) != 0)
-				{
-					bool oldState = (flags[prev] & 2) != 0;
-					flags[prev] = IsEar(vertices, prev) ? (flags[prev] | 2) : (flags[prev] & (~2));
-					if (oldState != ((flags[prev] & 2) != 0))
-					{
-						if (oldState)
-						{
-							removedEars.Add(prev);
-						}
-						else
-						{
-							addedEars.Add(prev);
-						}
-					}
-				}
-
-				if ((flags[next] & 1) != 0)
-				{
-					flags[next] = IsReflex(vertices, next) ? (flags[next] | 1) : (flags[next] & (~1));
-				}
-
-				if ((flags[next] & 1) != 0 || (flags[next] & 2) != 0)
-				{
-					bool oldState = (flags[next] & 2) != 0;
-					flags[next] = IsEar(vertices, next) ? (flags[next] | 2) : (flags[next] & (~2));
-					if (oldState != ((flags[next] & 2) != 0))
-					{
-						if (oldState)
-						{
-							removedEars.Add(next);
-						}
-						else
-						{
-							addedEars.Add(next);
-						}
-					}
-				}
-
-				flags.RemoveAt(currentEar);
-
-				bool indexUpdated = false;
-				foreach (int r in removedEars)
-				{
-					index = ears.Remove(r);
-					indexUpdated = true;
-				}
-
-				if (addedEars.Count > 0)
-				{
-					index = ears.Add(addedEars[0]);
-					indexUpdated = true;
-				}
-				for (int i = 1; i < addedEars.Count; ++i)
-				{
-					ears.Add(addedEars[i]);
-				}
-
-				if (!indexUpdated) { index = ears.NextIndex(index); }
-
-				removedEars.Clear();
-				addedEars.Clear();
-			}
-		}
-
 		public void RemoveObstacle(int obstacleID)
 		{ 
 			Obstacle obstacle = GeomManager.GetObstacle(obstacleID);
@@ -313,6 +176,197 @@ namespace Delaunay
 			triangles.ForEach(t => { Triangle.Release(t); });
 
 			EarClipping(polygon);
+		}
+
+		bool IsEar(ArrayLinkedList<EarVertex> vertices, int current)
+		{
+			if (vertices.Count < 3) { return false; }
+
+			int prev = vertices.PrevIndex(current);
+			int next = vertices.NextIndex(current);
+
+			Vector3[] points = new Vector3[]
+			{
+				vertices[prev].vertex.Position, 
+				vertices[current].vertex.Position,
+				vertices[next].vertex.Position 
+			};
+
+			if (Mathf.Approximately(points[0].cross2(points[2], points[1]), 0f))
+			{
+				return false;
+			}
+
+			for (var e = vertices.GetIndexEnumerator(); e.MoveNext(); )
+			{
+				if (e.ListIndex == current || e.ListIndex == prev || e.ListIndex == next)
+				{
+					continue;
+				}
+
+				if (Utility.PolygonContains(points, vertices[e.ListIndex].vertex.Position))
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		bool IsReflex(ArrayLinkedList<EarVertex> vertices, int index)
+		{
+			Vertex current = vertices[index].vertex;
+			Vertex prev = vertices.PrevValue(index).vertex;
+			Vertex next = vertices.NextValue(index).vertex;
+			return next.Position.cross2(prev.Position, current.Position) < 0f;
+		}
+
+		class EarVertex
+		{
+			public Vertex vertex;
+			public int earListIndex = -1;
+			public int mask = 0;
+
+			public enum Mask
+			{
+				IsReflex = 1,
+				IsEar = 2,
+			}
+
+			public bool SetMask(Mask value, bool addMask)
+			{
+				if (addMask)
+				{
+					mask |= (int)value;
+				}
+				else
+				{
+					mask &= (int)(~value);
+				}
+
+				return addMask;
+			}
+
+			public bool TestMask(Mask value)
+			{
+				return (mask & (int)value) != 0;
+			}
+
+			public override string ToString()
+			{
+				return vertex.ID + "&" + mask;
+			}
+		}
+
+		void EarClipping(List<Vertex> polygon)
+		{
+			ArrayLinkedList<EarVertex> vertices = new ArrayLinkedList<EarVertex>(polygon.Count + 2);
+			polygon.ForEach(item => { vertices.Add(new EarVertex() { vertex = item, mask = 0 }); });
+
+			ArrayLinkedList<int> earTips = new ArrayLinkedList<int>(polygon.Count);
+
+			for (int index = 0; index < polygon.Count; ++index)
+			{
+				Vertex vertex = polygon[index];
+
+				Vector3 current = vertex.Position;
+				Vector3 prev = vertices.PrevValue(index).vertex.Position;
+				Vector3 next = vertices.NextValue(index).vertex.Position;
+
+				if (IsReflex(vertices, index))
+				{
+					vertices[index].SetMask(EarVertex.Mask.IsReflex, true);
+				}
+				else if (IsEar(vertices, index))
+				{
+					vertices[index].SetMask(EarVertex.Mask.IsEar, true);
+					vertices[index].earListIndex = earTips.Add(index);
+				}
+			}
+
+			EarClipping(vertices, earTips);
+		}
+
+		void EarClipping(ArrayLinkedList<EarVertex> vertices, ArrayLinkedList<int> earTips)
+		{
+			List<EarVertex> removedEars = new List<EarVertex>(vertices.Count);
+
+			int earTipIndex = -1;
+			for (var e = earTips.GetIndexEnumerator(); e.MoveNext(); )
+			{
+				if (earTipIndex >= 0) { earTips.RemoveAt(earTipIndex); }
+
+				earTipIndex = e.ListIndex;
+
+				int earTipVertexIndex = earTips[earTipIndex];
+				EarVertex earTipVertex = vertices[earTipVertexIndex];
+
+				int prevIndex = vertices.PrevIndex(earTipVertexIndex);
+				EarVertex prevVertex = vertices.PrevValue(earTipVertexIndex);
+
+				int nextIndex = vertices.NextIndex(earTipVertexIndex);
+				EarVertex nextVertex = vertices.NextValue(earTipVertexIndex);
+
+				Triangle.Create(prevVertex.vertex, earTipVertex.vertex, nextVertex.vertex);
+
+				vertices.RemoveAt(earTipVertexIndex);
+
+				int state = UpdateEarVertexState(vertices, prevIndex);
+				if (state > 0)
+				{
+					prevVertex.earListIndex = earTips.Add(prevIndex);
+				}
+				else if (state < 0)
+				{
+					removedEars.Add(prevVertex);
+				}
+
+				state = UpdateEarVertexState(vertices, nextIndex);
+				if (state > 0)
+				{
+					nextVertex.earListIndex = earTips.Add(nextIndex);
+				}
+				else if (state < 0)
+				{
+					removedEars.Add(nextVertex);
+				}
+
+				removedEars.ForEach(item =>
+				{
+					Utility.Verify(item.earListIndex >= 0);
+					earTips.RemoveAt(item.earListIndex);
+					item.earListIndex = -1;
+				});
+
+				removedEars.Clear();
+			}
+
+			if (earTipIndex >= 0) { earTips.RemoveAt(earTipIndex); }
+		}
+
+		int UpdateEarVertexState(ArrayLinkedList<EarVertex> vertices, int vertexIndex)
+		{
+			EarVertex earVertex = vertices[vertexIndex];
+			
+			int result = 0;
+
+			bool isEar = earVertex.TestMask(EarVertex.Mask.IsEar);
+			if (earVertex.TestMask(EarVertex.Mask.IsReflex))
+			{
+				Utility.Verify(!isEar);
+				if (!earVertex.SetMask(EarVertex.Mask.IsReflex, IsReflex(vertices, vertexIndex))
+					&& earVertex.SetMask(EarVertex.Mask.IsEar, IsEar(vertices, vertexIndex)))
+				{
+					result = 1;
+				}
+			}
+			else if (isEar != earVertex.SetMask(EarVertex.Mask.IsEar, IsEar(vertices, vertexIndex)))
+			{
+				result = 1;
+				if (isEar) { result = -result; }
+			}
+
+			return result;
 		}
 
 		void AddObstacle(IEnumerable<Vector3> container, bool isObstacle)

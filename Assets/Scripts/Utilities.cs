@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Xml;
 using UnityEngine;
@@ -20,6 +21,20 @@ namespace Delaunay
 		{
 			return lhs.Position.compare2(rhs.Position);
 		}
+	}
+
+	public class Tuple2<T1, T2>
+	{
+		public Tuple2(T1 first, T2 second)
+		{
+			this.First = first;
+			this.Second = second;
+		}
+
+		public Tuple2() { }
+
+		public T1 First;
+		public T2 Second;
 	}
 
 	public static class Utility
@@ -401,6 +416,36 @@ namespace Delaunay
 
 	public class ArrayLinkedList<T>
 	{
+		public class IndexEnumerator
+		{
+			public IndexEnumerator(ArrayLinkedList<T> list)
+			{
+				this.list = list;
+			}
+
+			public int ListIndex
+			{
+				get { return currentIndex; }
+			}
+
+			public bool MoveNext()
+			{
+				if (currentIndex == int.MinValue)
+				{
+					currentIndex = list.linkedListHead;
+				}
+				else
+				{
+					currentIndex = list.container[currentIndex].next;
+				}
+
+				return currentIndex >= 0;
+			}
+
+			ArrayLinkedList<T> list = null;
+			int currentIndex = int.MinValue;
+		}
+
 		public ArrayLinkedList(int size)
 		{
 			container = new ListNode[size];
@@ -435,11 +480,12 @@ namespace Delaunay
 
 			container[pos].value = value;
 			linkedListTail = pos;
+			++Count;
 
-			return linkedListTail;
+			return pos;
 		}
 
-		public int Remove(int index)
+		public int RemoveAt(int index)
 		{
 			int next = container[index].next;
 
@@ -451,12 +497,32 @@ namespace Delaunay
 
 			PushFreeList(node);
 
+			--Count;
 			return next;
 		}
 
 		public int NextIndex(int current)
 		{
-			return container[current].next;
+			int answer = container[current].next;
+			if (answer < 0) { answer = linkedListHead; }
+			return answer;
+		}
+
+		public int PrevIndex(int current)
+		{
+			int answer = container[current].prev;
+			if (answer < 0) { answer = linkedListTail; }
+			return answer;
+		}
+
+		public T NextValue(int current)
+		{
+			return container[NextIndex(current)].value;
+		}
+
+		public T PrevValue(int current)
+		{
+			return container[PrevIndex(current)].value;
 		}
 
 		public T this[int index]
@@ -469,16 +535,28 @@ namespace Delaunay
 			get { return linkedListHead; }
 		}
 
+		public int Last
+		{
+			get { return linkedListTail; }
+		}
+
+		public int Count { get; private set; }
+
 		public override string ToString()
 		{
 			string text = string.Empty;
-			for (int index = First; index >= 0; index = NextIndex(index))
+			for (int index = First; index >= 0; index = container[index].next)
 			{
 				if (!string.IsNullOrEmpty(text)) { text += " "; }
 				text += this[index];
 			}
 
 			return text;
+		}
+
+		public IndexEnumerator GetIndexEnumerator()
+		{
+			return new IndexEnumerator(this);
 		}
 
 		int PopFreeList()
