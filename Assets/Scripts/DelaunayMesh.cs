@@ -46,7 +46,7 @@ namespace Delaunay
 		public void Rebuild()
 		{
 			SetUpBounds();
-			/*
+
 			Vector3[] localCircle = new Vector3[7];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
 			for (int i = 0; i < localCircle.Length; ++i)
@@ -60,32 +60,13 @@ namespace Delaunay
 			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
 			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
 			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
-			*/
-			/*
+			
 			Vector3[] localSquare = new Vector3[4];
 			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
 			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
 			localSquare[2] = new Vector3(-0.5f, 0f, -0.5f);
 			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
-			*/
-			Vector3[] localSquare = new Vector3[6];
-			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
-			localSquare[1] = new Vector3(0f, 0f, 0.2f);
-			localSquare[2] = new Vector3(-0.5f, 0f, 0.5f);
-			localSquare[3] = new Vector3(-0.5f, 0f, -0.5f);
-			localSquare[4] = new Vector3(0f, 0f, -0.2f);
-			localSquare[5] = new Vector3(0.5f, 0f, -0.5f);
-
-			localSquare.transform(localSquare, item => { return item * 6f; });
-			List<Vertex> square = new List<Vertex>();
-			foreach (Vector3 position in localSquare)
-			{
-				square.Add(Vertex.Create(position));
-			}
-
-			EarClipping(square);
-
-			/*
+		
 			Vector3[] square = new Vector3[localSquare.Length];
 
 			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
@@ -96,8 +77,8 @@ namespace Delaunay
 			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
 			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
 			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
-			*/
-			//AddObstacle(borderCorners, false);
+			
+			AddObstacle(borderCorners, false);
 
 			RemoveBounds();
 
