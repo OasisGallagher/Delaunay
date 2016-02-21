@@ -40,6 +40,12 @@ namespace Delaunay
 			HalfEdge bc = HalfEdge.Create(b, c);
 			HalfEdge ca = HalfEdge.Create(c, a);
 
+			if (ab.Face != null)
+			{
+				Utility.Verify(ab.Face == bc.Face && bc.Face == ca.Face);
+				return ab.Face;
+			}
+
 			ab.Next = bc;
 			bc.Next = ca;
 			ca.Next = ab;
@@ -153,6 +159,25 @@ namespace Delaunay
 				if (value == walkable) { return; }
 				walkable = value;
 				UpdateWalkableMaterial();
+			}
+		}
+
+		public Vertex Representative
+		{
+			get
+			{
+				Vertex answer = A;
+				if (A.Position.compare2(B.Position) > 0)
+				{
+					answer = B;
+				}
+
+				if (answer.Position.compare2(C.Position) > 0)
+				{
+					answer = C;
+				}
+
+				return answer;
 			}
 		}
 

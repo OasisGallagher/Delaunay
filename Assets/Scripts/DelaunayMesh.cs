@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,78 +12,54 @@ namespace Delaunay
 
 	public class DelaunayMesh
 	{
-		List<Vector3> borderCorners = new List<Vector3>();
-		List<Vector3> convexHull = new List<Vector3>();
-
 		Vector3 stAPosition;
 		Vector3 stBPosition;
 		Vector3 stCPosition;
 
+		List<Vector3> convexHull;
+
 		public DelaunayMesh(Rect bound)
 		{
-			const float padding = 0;
-
-			float left = bound.xMin - padding;
-			float top = bound.yMax + padding;
-			float right = bound.xMax + padding;
-			float bottom = bound.yMin - padding;
-
-			borderCorners.Add(new Vector3(right, 0, top));	// Right top.
-			borderCorners.Add(new Vector3(left, 0, top));	// Left top.
-			borderCorners.Add(new Vector3(left, 0, bottom));// Left bottom.
-			borderCorners.Add(new Vector3(right, 0, bottom));// Right bottom.
-
 			float max = Mathf.Max(bound.xMax, bound.yMax);
 
 			stAPosition = new Vector3(0, 0, 4 * max);
 			stBPosition = new Vector3(-4 * max, 0, -4 * max);
 			stCPosition = new Vector3(4 * max, 0, 0);
-
-			Rebuild();
 		}
 
-		public void Rebuild()
-		{
-			SetUpBounds();
+		public void __tmpStart() { SetUpBounds(); }
+		public void __tmpStop() { RemoveBounds(); }
 
-			Vector3[] localCircle = new Vector3[7];
-			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
-			for (int i = 0; i < localCircle.Length; ++i)
+		public void AddObstacle(IEnumerable<Vector3> container, bool isObstacle)
+		{
+			IEnumerator<Vector3> e = container.GetEnumerator();
+			if (!e.MoveNext()) { return; }
+
+			Vertex prevVertex = Vertex.Create(e.Current);
+			Vertex firstVertex = prevVertex;
+
+			List<HalfEdge> obstacleBoundingEdges = new List<HalfEdge>();
+			List<Vertex> vertices = new List<Vertex>();
+
+			for (; e.MoveNext(); )
 			{
-				localCircle[i].Set(Mathf.Cos(i * deltaRadian), 0, Mathf.Sin(i * deltaRadian));
+				vertices.Add(prevVertex);
+
+				Vertex currentVertex = Vertex.Create(e.Current);
+				obstacleBoundingEdges.AddRange(AddConstraintEdge(prevVertex, currentVertex));
+				prevVertex = currentVertex;
 			}
 
-			Vector3[] circle = new Vector3[localCircle.Length];
+			vertices.Add(prevVertex);
+			obstacleBoundingEdges.AddRange(AddConstraintEdge(prevVertex, firstVertex));
 
-			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, stAPosition.y, 0); }), true);
-			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, stAPosition.y, 0); }), true);
-			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, stAPosition.y, 0); }), true);
-			AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, stAPosition.y, 0); }), true);
-			
-			Vector3[] localSquare = new Vector3[4];
-			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
-			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
-			localSquare[2] = new Vector3(-0.5f, 0f, -0.5f);
-			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
-		
-			Vector3[] square = new Vector3[localSquare.Length];
+			if (isObstacle)
+			{
+				Obstacle obstacle = Obstacle.Create(obstacleBoundingEdges);
+				MarkObstacle(obstacle);
+			}
 
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, 5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, stAPosition.y, -5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, 5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, stAPosition.y, -5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, 5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, stAPosition.y, -5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, 5); }), true);
-			AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, stAPosition.y, -5); }), true);
-			
-			AddObstacle(borderCorners, false);
-
-			RemoveBounds();
-
-			List<Vector3> positions = new List<Vector3>();
-			GeomManager.AllVertices.ForEach(vertex => { positions.Add(vertex.Position); });
-			convexHull = ConvexHullComputer.Compute(positions);
+			convexHull = null;
 		}
 
 		public void Clear() { GeomManager.Clear(); }
@@ -140,6 +115,9 @@ namespace Delaunay
 			List<Vertex> polygon = new List<Vertex>(obstacle.BoundingEdges.Count * 2);
 
 			List<Triangle> triangles = new List<Triangle>();
+			List<Vertex> vertices = new List<Vertex>();
+			
+			Vertex benchmark = null;
 			foreach (HalfEdge edge in obstacle.BoundingEdges)
 			{
 				foreach (HalfEdge ray in GeomManager.GetRays(edge.Src))
@@ -150,233 +128,63 @@ namespace Delaunay
 					if (boundingVertices.Contains(ray.Dest)) { continue; }
 					if (polygon.Contains(ray.Dest)) { continue; }
 
-					polygon.Add(ray.Dest);
+					vertices.Add(ray.Dest);
 				}
+
+				vertices.Sort(new PolarAngleComparer(edge.Src.Position,
+					(benchmark ?? FindBenchmark(vertices, triangles)).Position));
+
+				if (vertices.Count > 0)
+				{
+					benchmark = vertices.back();
+				}
+
+				polygon.AddRange(vertices);
+				vertices.Clear();
 			}
 
 			triangles.ForEach(t => { Triangle.Release(t); });
 
-			EarClipping(polygon);
+			CreateTriangles(TriangulationTools.Triangulate(polygon));
 		}
 
-		bool IsEar(ArrayLinkedList<EarVertex> vertices, int current)
+		List<Vector3> ComputeConvexHull()
 		{
-			if (vertices.Count < 3) { return false; }
-
-			int prev = vertices.PrevIndex(current);
-			int next = vertices.NextIndex(current);
-
-			Vector3[] points = new Vector3[]
-			{
-				vertices[prev].vertex.Position, 
-				vertices[current].vertex.Position,
-				vertices[next].vertex.Position 
-			};
-
-			if (Mathf.Approximately(points[0].cross2(points[2], points[1]), 0f))
-			{
-				return false;
-			}
-
-			for (var e = vertices.GetIndexEnumerator(); e.MoveNext(); )
-			{
-				if (e.ListIndex == current || e.ListIndex == prev || e.ListIndex == next)
-				{
-					continue;
-				}
-
-				if (Utility.PolygonContains(points, vertices[e.ListIndex].vertex.Position))
-				{
-					return false;
-				}
-			}
-
-			return true;
+			List<Vector3> positions = new List<Vector3>();
+			GeomManager.AllVertices.ForEach(vertex => { positions.Add(vertex.Position); });
+			return ConvexHullComputer.Compute(positions);
 		}
 
-		bool IsReflex(ArrayLinkedList<EarVertex> vertices, int index)
+		Vertex FindBenchmark(List<Vertex> vertices, List<Triangle> triangles)
 		{
-			Vertex current = vertices[index].vertex;
-			Vertex prev = vertices.PrevValue(index).vertex;
-			Vertex next = vertices.NextValue(index).vertex;
-			return next.Position.cross2(prev.Position, current.Position) < 0f;
+			BitArray bits = new BitArray(vertices.Count);
+			for (int i = 0; i < vertices.Count; ++i)
+			{
+				foreach (HalfEdge e in GeomManager.GetRays(vertices[i]))
+				{
+					int index = vertices.IndexOf(e.Dest);
+					if (index < 0) { continue; }
+					if (triangles.Contains(e.Face)) { bits.Set(index, true); }
+				}
+			}
+
+			for(int i = 0; i < bits.Count; ++i)
+			{
+				if (!bits[i])
+				{
+					return vertices[i];
+				}
+			}
+
+			Utility.Verify(false, "Failed to find benchmark");
+			return null;
 		}
 
-		class EarVertex
+		void CreateTriangles(List<Vertex> vertices)
 		{
-			public Vertex vertex;
-			public int earListIndex = -1;
-			public int mask = 0;
-
-			public enum Mask
+			for (int i = 0; i < vertices.Count; i += 3)
 			{
-				IsReflex = 1,
-				IsEar = 2,
-			}
-
-			public bool SetMask(Mask value, bool addMask)
-			{
-				if (addMask)
-				{
-					mask |= (int)value;
-				}
-				else
-				{
-					mask &= (int)(~value);
-				}
-
-				return addMask;
-			}
-
-			public bool TestMask(Mask value)
-			{
-				return (mask & (int)value) != 0;
-			}
-
-			public override string ToString()
-			{
-				return vertex.ID + "&" + mask;
-			}
-		}
-
-		void EarClipping(List<Vertex> polygon)
-		{
-			ArrayLinkedList<EarVertex> vertices = new ArrayLinkedList<EarVertex>(polygon.Count + 2);
-			polygon.ForEach(item => { vertices.Add(new EarVertex() { vertex = item, mask = 0 }); });
-
-			ArrayLinkedList<int> earTips = new ArrayLinkedList<int>(polygon.Count);
-
-			for (int index = 0; index < polygon.Count; ++index)
-			{
-				Vertex vertex = polygon[index];
-
-				Vector3 current = vertex.Position;
-				Vector3 prev = vertices.PrevValue(index).vertex.Position;
-				Vector3 next = vertices.NextValue(index).vertex.Position;
-
-				if (IsReflex(vertices, index))
-				{
-					vertices[index].SetMask(EarVertex.Mask.IsReflex, true);
-				}
-				else if (IsEar(vertices, index))
-				{
-					vertices[index].SetMask(EarVertex.Mask.IsEar, true);
-					vertices[index].earListIndex = earTips.Add(index);
-				}
-			}
-
-			EarClipping(vertices, earTips);
-		}
-
-		void EarClipping(ArrayLinkedList<EarVertex> vertices, ArrayLinkedList<int> earTips)
-		{
-			List<EarVertex> removedEars = new List<EarVertex>(vertices.Count);
-
-			int earTipIndex = -1;
-			for (var e = earTips.GetIndexEnumerator(); e.MoveNext(); )
-			{
-				if (earTipIndex >= 0) { earTips.RemoveAt(earTipIndex); }
-
-				earTipIndex = e.ListIndex;
-
-				int earTipVertexIndex = earTips[earTipIndex];
-				EarVertex earTipVertex = vertices[earTipVertexIndex];
-
-				int prevIndex = vertices.PrevIndex(earTipVertexIndex);
-				EarVertex prevVertex = vertices.PrevValue(earTipVertexIndex);
-
-				int nextIndex = vertices.NextIndex(earTipVertexIndex);
-				EarVertex nextVertex = vertices.NextValue(earTipVertexIndex);
-
-				Triangle.Create(prevVertex.vertex, earTipVertex.vertex, nextVertex.vertex);
-
-				vertices.RemoveAt(earTipVertexIndex);
-
-				int state = UpdateEarVertexState(vertices, prevIndex);
-				if (state > 0)
-				{
-					prevVertex.earListIndex = earTips.Add(prevIndex);
-				}
-				else if (state < 0)
-				{
-					removedEars.Add(prevVertex);
-				}
-
-				state = UpdateEarVertexState(vertices, nextIndex);
-				if (state > 0)
-				{
-					nextVertex.earListIndex = earTips.Add(nextIndex);
-				}
-				else if (state < 0)
-				{
-					removedEars.Add(nextVertex);
-				}
-
-				removedEars.ForEach(item =>
-				{
-					Utility.Verify(item.earListIndex >= 0);
-					earTips.RemoveAt(item.earListIndex);
-					item.earListIndex = -1;
-				});
-
-				removedEars.Clear();
-			}
-
-			if (earTipIndex >= 0) { earTips.RemoveAt(earTipIndex); }
-		}
-
-		int UpdateEarVertexState(ArrayLinkedList<EarVertex> vertices, int vertexIndex)
-		{
-			EarVertex earVertex = vertices[vertexIndex];
-			
-			int result = 0;
-
-			bool isEar = earVertex.TestMask(EarVertex.Mask.IsEar);
-			if (earVertex.TestMask(EarVertex.Mask.IsReflex))
-			{
-				Utility.Verify(!isEar);
-				if (!earVertex.SetMask(EarVertex.Mask.IsReflex, IsReflex(vertices, vertexIndex))
-					&& earVertex.SetMask(EarVertex.Mask.IsEar, IsEar(vertices, vertexIndex)))
-				{
-					result = 1;
-				}
-			}
-			else if (isEar != earVertex.SetMask(EarVertex.Mask.IsEar, IsEar(vertices, vertexIndex)))
-			{
-				result = 1;
-				if (isEar) { result = -result; }
-			}
-
-			return result;
-		}
-
-		void AddObstacle(IEnumerable<Vector3> container, bool isObstacle)
-		{
-			IEnumerator<Vector3> e = container.GetEnumerator();
-			if (!e.MoveNext()) { return; }
-
-			Vertex prevVertex = Vertex.Create(e.Current);
-			Vertex firstVertex = prevVertex;
-
-			List<HalfEdge> obstacleBoundingEdges = new List<HalfEdge>();
-			List<Vertex> vertices = new List<Vertex>();
-
-			for (; e.MoveNext(); )
-			{
-				vertices.Add(prevVertex);
-
-				Vertex currentVertex = Vertex.Create(e.Current);
-				obstacleBoundingEdges.AddRange(AddConstraintEdge(prevVertex, currentVertex));
-				prevVertex = currentVertex;
-			}
-
-			vertices.Add(prevVertex);
-			obstacleBoundingEdges.AddRange(AddConstraintEdge(prevVertex, firstVertex));
-
-			if (isObstacle)
-			{
-				Obstacle obstacle = Obstacle.Create(obstacleBoundingEdges);
-				MarkObstacle(obstacle);
+				Triangle.Create(vertices[i], vertices[i + 1], vertices[i + 2]);
 			}
 		}
 
@@ -441,8 +249,8 @@ namespace Delaunay
 				}
 			}
 
-			TriangulatePseudopolygonDelaunay(low, dest, src);
-			TriangulatePseudopolygonDelaunay(up, src, dest);
+			CreateTriangles(TriangulationTools.Triangulate(low, dest, src));
+			CreateTriangles(TriangulationTools.Triangulate(up, src, dest));
 
 			HalfEdge constraintEdge = GeomManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
 			Utility.Verify(constraintEdge != null);
@@ -501,46 +309,6 @@ namespace Delaunay
 			return src;
 		}
 
-		void TriangulatePseudopolygonDelaunay(List<Vertex> vertices, Vertex src, Vertex dest)
-		{
-			if (vertices.Count == 0) { return; }
-
-			Vertex c = vertices[0];
-			if (vertices.Count > 1)
-			{
-				foreach (Vertex v in vertices)
-				{
-					if (Utility.PointInCircumCircle(src, dest, c, v))
-					{
-						c = v;
-					}
-				}
-
-				List<Vertex> left = new List<Vertex>();
-				List<Vertex> right = new List<Vertex>();
-				List<Vertex> current = left;
-
-				foreach (Vertex v in vertices)
-				{
-					if (v == c)
-					{
-						current = right;
-						continue;
-					}
-
-					current.Add(v);
-				}
-
-				TriangulatePseudopolygonDelaunay(left, src, c);
-				TriangulatePseudopolygonDelaunay(right, c, dest);
-			}
-
-			if (vertices.Count > 0)
-			{
-				Triangle.Create(src, dest, c);
-			}
-		}
-
 		bool FindCrossedEdge(CrossResult answer, HalfEdge ray, Vertex src, Vertex dest)
 		{
 			List<HalfEdge> cycle = ray.Cycle;
@@ -577,7 +345,7 @@ namespace Delaunay
 
 		void DrawConvexHull()
 		{
-			if (convexHull == null) { return; }
+			convexHull = convexHull ?? ComputeConvexHull();
 
 			for (int i = 1; i < convexHull.Count; ++i)
 			{
@@ -627,7 +395,8 @@ namespace Delaunay
 		{
 			GeomManager.AllTriangles.ForEach(facet =>
 			{
-				if (facet.HasVertex(stAPosition) || facet.HasVertex(stBPosition) || facet.HasVertex(stCPosition))
+				if (facet.gameObject.activeSelf
+					&& facet.HasVertex(stAPosition) || facet.HasVertex(stBPosition) || facet.HasVertex(stCPosition))
 				{
 					Triangle.Release(facet);
 				}
@@ -680,29 +449,18 @@ namespace Delaunay
 
 			Triangle.Release(old);
 
-			ab.Edge = Utility.CycleLink(AB, bv, av.Pair);
-			//ab.BoundingEdges.ForEach(item => { item.Face = ab; });
-			
-			bc.Edge = Utility.CycleLink(BC, cv, bv.Pair);
-			//bc.BoundingEdges.ForEach(item => { item.Face = bc; });
-			
-			ca.Edge = Utility.CycleLink(CA, av, cv.Pair);
-			//ca.BoundingEdges.ForEach(item => { item.Face = ca; });
+			ab.Edge = AB.CycleLink(bv, av.Pair);
+			bc.Edge = BC.CycleLink(cv, bv.Pair);
+			ca.Edge = CA.CycleLink(av, cv.Pair);
 
 			Utility.Verify(av.Face == ca);
 			Utility.Verify(av.Pair.Face == ab);
-			//av.Face = ca;
-			//av.Pair.Face = ab;
 
 			Utility.Verify(bv.Face == ab);
 			Utility.Verify(bv.Pair.Face == bc);
-			//bv.Face = ab;
-			//bv.Pair.Face = bc;
 
 			Utility.Verify(cv.Face == bc);
 			Utility.Verify(cv.Pair.Face == ca);
-			//cv.Face = bc;
-			//cv.Pair.Face = ca;
 
 			FlipIfNeeded(ab.Edge);
 			FlipIfNeeded(bc.Edge);
@@ -731,16 +489,11 @@ namespace Delaunay
 			
 			Triangle.Release(old);
 
-			split1.Edge = Utility.CycleLink(sp1Edge0, ov, v1);
-			//split1.BoundingEdges.ForEach(item => { item.Face = split1; });
-
-			split2.Edge = Utility.CycleLink(sp2Edge0, sp2Edge1, sp2Edge2);
-			//split2.BoundingEdges.ForEach(item => { item.Face = split2; });
+			split1.Edge = sp1Edge0.CycleLink(ov, v1);
+			split2.Edge = sp2Edge0.CycleLink(sp2Edge1, sp2Edge2);
 
 			Utility.Verify(ov.Face == split1);
 			Utility.Verify(ov.Pair.Face == split2);
-			//ov.Face = split1;
-			//ov.Pair.Face = split2;
 
 			Triangle other = hitEdge.Pair.Face;
 
@@ -765,32 +518,19 @@ namespace Delaunay
 				op1Edge0.Face = op1Edge1.Face = op1Edge2.Face = oposite1;
 				Triangle.Release(other);
 
-				oposite2.Edge = Utility.CycleLink(hpn, vp.Pair, v2);
-				//oposite2.BoundingEdges.ForEach(item => { item.Face = oposite2; });
+				oposite2.Edge = hpn.CycleLink(vp.Pair, v2);
 
-				oposite1.Edge = Utility.CycleLink(op1Edge0, op1Edge1, op1Edge2);
-				//oposite1.BoundingEdges.ForEach(item => { item.Face = oposite1; });
+				oposite1.Edge = op1Edge0.CycleLink(op1Edge1, op1Edge2);
 
 				Utility.Verify(vp.Face == oposite1);
 				Utility.Verify(vp.Pair.Face == oposite2);
-
-				//vp.Face = oposite1;
-				//vp.Pair.Face = oposite2;
 			}
 
 			Utility.Verify(v1.Face == split1);
 			Utility.Verify(v1.Pair.Face == oposite1);
 
-			//v1.Face = split1;
-			//v1.Pair.Face = oposite1;
-
 			Utility.Verify(v2.Face == oposite2);
 			Utility.Verify(v2.Pair.Face == split2);
-
-			//v2.Face = oposite2;
-			//v2.Pair.Face = split2;
-
-			//HalfEdge.Release(hitEdge);
 
 			FlipIfNeeded(split1.Edge);
 			FlipIfNeeded(split2.Edge);
@@ -825,21 +565,11 @@ namespace Delaunay
 				HalfEdge bEdges1 = halfEdge.Next;
 				HalfEdge bEdges2 = ab;
 
-				a.Edge = Utility.CycleLink(halfEdge.Next.Next, halfEdge.Pair.Next, ab.Pair);
-				b.Edge = Utility.CycleLink(bEdges0, bEdges1, bEdges2);
+				a.Edge = halfEdge.Next.Next.CycleLink(halfEdge.Pair.Next, ab.Pair);
+				b.Edge = bEdges0.CycleLink(bEdges1, bEdges2);
 
 				a.BoundingEdges.ForEach(item => { item.Face = a; });
 				b.BoundingEdges.ForEach(item => { item.Face = b; });
-
-				/*if (halfEdge.Dest.Edge == halfEdge.Pair)
-				{
-					Utility.FixVertexHalfEdge(halfEdge.Dest);
-				}
-
-				if (halfEdge.Pair.Dest.Edge == halfEdge)
-				{
-					Utility.FixVertexHalfEdge(halfEdge.Pair.Dest);
-				}*/
 
 				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Pair.Next.Next);
 
@@ -850,7 +580,6 @@ namespace Delaunay
 				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Next.Next);
 
 				halfEdge.Face = halfEdge.Pair.Face = null;
-				//HalfEdge.Release(halfEdge);
 			}
 		}
 	}

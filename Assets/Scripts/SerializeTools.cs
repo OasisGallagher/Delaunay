@@ -6,6 +6,18 @@ using System.Xml;
 
 namespace Delaunay
 {
+	public class XmlWriterScope : IDisposable
+	{
+		XmlWriter writer = null;
+		public XmlWriterScope(XmlWriter writer, string localName)
+		{
+			this.writer = writer;
+			writer.WriteStartElement(localName);
+		}
+
+		public void Dispose() { writer.WriteEndElement(); }
+	}
+
 	static class SerializeTools
 	{
 		public static void Save(string path)

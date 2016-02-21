@@ -124,6 +124,21 @@ namespace Delaunay
 			get { return GetEdgeCycle(); }
 		}
 
+		public HalfEdge CycleLink(params HalfEdge[] list)
+		{
+			Utility.Verify(list != null && list.Length > 0);
+
+			HalfEdge current = this;
+			foreach (HalfEdge e in list)
+			{
+				current.Next = e;
+				current = e;
+			}
+
+			current.Next = this;
+			return this;
+		}
+
 		public void WriteXml(XmlWriter writer)
 		{
 			writer.WriteAttributeString("ID", ID.ToString());

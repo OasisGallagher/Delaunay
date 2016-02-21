@@ -10,6 +10,10 @@ namespace Delaunay
 
 		DelaunayMesh delaunayMesh;
 		List<Vector3> currentPath;
+		/*
+		GameObject destination;
+		GameObject player;
+		*/
 		GameObject ballStart, ballDest;
 
 		enum ClickState
@@ -20,6 +24,8 @@ namespace Delaunay
 		}
 
 		ClickState clickState = ClickState.PlantingStartPoint;
+
+		List<Vector3> borderCorners = new List<Vector3>();
 
 		public void __tmpRemoveObstacle(int ID)
 		{
@@ -40,17 +46,76 @@ namespace Delaunay
 
 			ballStart = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallStart"));
 			ballDest = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
-
 			ballStart.SetActive(false);
 			ballDest.SetActive(false);
+			/*
+			destination = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
+			destination.SetActive(false);
+			player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
+			*/
+			borderCorners.Add(new Vector3(rect.xMax, 0, rect.yMax));	// Right top.
+			borderCorners.Add(new Vector3(rect.xMin, 0, rect.yMax));	// Left top.
+			borderCorners.Add(new Vector3(rect.xMin, 0, rect.yMin));// Left bottom.
+			borderCorners.Add(new Vector3(rect.xMax, 0, rect.yMin));// Right bottom.
+
+			DelaunayTest();
+		}
+
+		void DelaunayTest()
+		{
+			delaunayMesh.__tmpStart();
+
+			Vector3[] localCircle = new Vector3[7];
+			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
+			for (int i = 0; i < localCircle.Length; ++i)
+			{
+				localCircle[i].Set(Mathf.Cos(i * deltaRadian), 0, Mathf.Sin(i * deltaRadian));
+			}
+
+			Vector3[] circle = new Vector3[localCircle.Length];
+
+			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, 0, 0); }), true);
+			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, 0, 0); }), true);
+			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, 0, 0); }), true);
+			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, 0, 0); }), true);
+
+			Vector3[] localSquare = new Vector3[4];
+			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
+			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
+			localSquare[2] = new Vector3(-0.5f, 0f, -0.5f);
+			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
+
+			Vector3[] square = new Vector3[localSquare.Length];
+
+			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, 0, 5); }), true);
+			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, 0, -5); }), true);
+			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, 0, 5); }), true);
+			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, 0, -5); }), true);
+			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, 0, 5); }), true);
+			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, 0, -5); }), true);
+			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, 0, 5); }), true);
+			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, 0, -5); }), true);
+			delaunayMesh.AddObstacle(borderCorners, false);
+
+			delaunayMesh.__tmpStop();
 		}
 
 		void Update()
 		{
-			RaycastHit hit;
+			/*
+			Vector3 point = Vector3.zero;
+			if (Input.GetMouseButtonUp(2) && GetScreenMousePosition(out point))
+			{
+				player.transform.position = point;
+			}
 
-			if (Input.GetMouseButtonUp(0)
-				&& Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100))
+			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
+			{
+				print("Move to " + point);
+			}
+			*/
+			Vector3 point = Vector3.zero;
+			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
 			{
 				if (clickState == ClickState.PlantingStartPoint)
 				{
@@ -59,13 +124,13 @@ namespace Delaunay
 
 					currentPath = null;
 
-					ballStart.transform.position = hit.point;
+					ballStart.transform.position = point;
 					clickState = ClickState.PlantingEndPoint;
 				}
 				else if (clickState == ClickState.PlantingEndPoint)
 				{
 					ballDest.SetActive(true);
-					ballDest.transform.position = hit.point;
+					ballDest.transform.position = point;
 					clickState = ClickState.Ready4Pathfinding;
 				}
 			}
@@ -141,7 +206,24 @@ namespace Delaunay
 			if (delaunayMesh != null) { delaunayMesh.Clear(); }
 			ballStart.SetActive(false);
 			ballDest.SetActive(false);
-			currentPath.Clear();
+			//destination.SetActive(false);
+			if (currentPath != null) { currentPath.Clear(); }
+		}
+
+		bool GetScreenMousePosition(out Vector3 point)
+		{
+			RaycastHit hit;
+			point = Vector3.zero;
+			if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100))
+			{
+				Debug.LogError("Raycast failed");
+				return false;
+			}
+
+			point = hit.point;
+			point.y = 0;
+
+			return true;
 		}
 	}
 
