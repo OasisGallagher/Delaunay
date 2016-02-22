@@ -66,22 +66,46 @@ namespace Delaunay
 
 		class FindContainingFacetResult
 		{
-			public int hitEdge = 0;
+			public int hitEdge = -1;
 			public Triangle triangle = null;
 			public List<Triangle> path = null;
 		}
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest)
 		{
-			// TODO: Fix from and to.
 			FindContainingFacetResult findResult = FindFacetContainsVertex(start);
-			Utility.Verify(findResult != null, "invalid from position " + start);
+			if (findResult.triangle != null && !findResult.triangle.Walkable)
+			{
+				int fromTriangleID = findResult.triangle.ID;
+				findResult.triangle = FindWalkableTriangle(findResult.triangle.FindVertex(start));
+				Debug.Log(string.Format(start + "Reposition start point from triangle {0} to {1} ", fromTriangleID, findResult.triangle.ID));
+			}
+			Utility.Verify(findResult.triangle != null, "Invalid start point");
 			Triangle facet1 = findResult.triangle;
 
 			findResult = FindFacetContainsVertex(dest, facet1);
-			Utility.Verify(findResult != null, "invalid to position " + dest);
+			if (findResult.triangle != null && !findResult.triangle.Walkable)
+			{
+				findResult.triangle = FindWalkableTriangle(findResult.triangle.FindVertex(dest));
+				Debug.Log("Reposition dest point to triangle " + findResult.triangle.ID);
+			}
+			Utility.Verify(findResult.triangle != null, "Invalid dest point");
 
-			return Pathfinding.FindPath(start,dest, facet1, findResult.triangle);
+			return Pathfinding.FindPath(start, dest, facet1, findResult.triangle);
+		}
+
+		public Vector3 GetNearestPoint(Vector3 hit)
+		{
+			// TODO:
+			Triangle triangle = null;
+			foreach (Obstacle obstacle in GeomManager.AllObstacles)
+			{
+				triangle = obstacle.Mesh.Find(item => { return item.Contains(hit, false); });
+				if (triangle != null) { break; }
+			}
+
+			if (triangle == null) { return hit; }
+			return GetNearestPoint(triangle, hit);
 		}
 
 		public void OnDrawGizmos(bool showConvexHull)
@@ -146,6 +170,53 @@ namespace Delaunay
 			triangles.ForEach(t => { Triangle.Release(t); });
 
 			CreateTriangles(TriangulationTools.Triangulate(polygon));
+		}
+
+		Triangle FindWalkableTriangle(Vertex src)
+		{
+			foreach (HalfEdge edge in GeomManager.GetRays(src))
+			{
+				if (edge.Face != null && edge.Face.Walkable)
+				{
+					return edge.Face;
+				}
+			}
+
+			return null;
+		}
+
+		Vector3 GetNearestPoint(Triangle triangle, Vector3 hit)
+		{
+			Queue<Triangle> queue = new Queue<Triangle>();
+			List<Triangle> visited = new List<Triangle>() { triangle };
+
+			queue.Enqueue(triangle);
+			for (; queue.Count > 0; )
+			{
+				triangle = queue.Dequeue();
+				if (triangle.Walkable)
+				{
+					break;
+				}
+
+				if (triangle.AB.Pair.Face != null && !visited.Contains(triangle.AB.Pair.Face))
+				{ 
+					queue.Enqueue(triangle.AB.Pair.Face);
+				}
+
+				if (triangle.BC.Pair.Face != null && !visited.Contains(triangle.BC.Pair.Face))
+				{ 
+					queue.Enqueue(triangle.BC.Pair.Face);
+				}
+
+				if (triangle.CA.Pair.Face != null && !visited.Contains(triangle.CA.Pair.Face))
+				{ 
+					queue.Enqueue(triangle.CA.Pair.Face);
+				}
+			}
+
+			Utility.Verify(queue.Count > 0);
+			return triangle.Nearest(hit).Position;
 		}
 
 		List<Vector3> ComputeConvexHull()
@@ -368,7 +439,7 @@ namespace Delaunay
 		{
 			FindContainingFacetResult answer = FindFacetContainsVertex(v.Position);
 
-			if (answer == null) { return false; }
+			if (answer.hitEdge < 0) { return false; }
 
 			Utility.Verify(answer.hitEdge >= 0);
 
@@ -403,7 +474,7 @@ namespace Delaunay
 			});
 		}
 
-		FindContainingFacetResult FindFacetContainsVertex(Vector3 position, Triangle startFacet = null)
+		FindContainingFacetResult FindFacetContainsVertex(Vector3 position, Triangle startFacet = null, bool unconstraint = false)
 		{
 			FindContainingFacetResult answer = new FindContainingFacetResult();
 
@@ -414,7 +485,9 @@ namespace Delaunay
 				if (answer.path != null) { answer.path.Add(startFacet); }
 				if (startFacet.HasVertex(position))
 				{
-					return null;
+					answer.hitEdge = -1;
+					answer.triangle = startFacet;
+					return answer;
 				}
 
 				int iedge = startFacet.GetPointDirection(position);
@@ -428,7 +501,7 @@ namespace Delaunay
 				startFacet = Utility.GetHalfEdgeByDirection(startFacet, iedge).Pair.Face;
 			}
 
-			return null;
+			return answer;
 		}
 
 		void InsertToFacet(Vertex v, Triangle old)

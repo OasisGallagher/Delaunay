@@ -9,21 +9,9 @@ namespace Delaunay
 		public bool ShowConvexHull = false;
 
 		DelaunayMesh delaunayMesh;
-		List<Vector3> currentPath;
-		/*
+		
 		GameObject destination;
 		GameObject player;
-		*/
-		GameObject ballStart, ballDest;
-
-		enum ClickState
-		{
-			PlantingStartPoint,
-			PlantingEndPoint,
-			Ready4Pathfinding,
-		}
-
-		ClickState clickState = ClickState.PlantingStartPoint;
 
 		List<Vector3> borderCorners = new List<Vector3>();
 
@@ -43,16 +31,10 @@ namespace Delaunay
 			Vector3 floorPosition = floor.transform.position;
 			Rect rect = new Rect(floorPosition.x - scale.x - padding, floorPosition.z - scale.z - padding, (scale.x + padding) * 2, (scale.z + padding) * 2);
 			delaunayMesh = new DelaunayMesh(rect);
-
-			ballStart = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallStart"));
-			ballDest = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
-			ballStart.SetActive(false);
-			ballDest.SetActive(false);
-			/*
+			
 			destination = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
-			destination.SetActive(false);
 			player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
-			*/
+
 			borderCorners.Add(new Vector3(rect.xMax, 0, rect.yMax));	// Right top.
 			borderCorners.Add(new Vector3(rect.xMin, 0, rect.yMax));	// Left top.
 			borderCorners.Add(new Vector3(rect.xMin, 0, rect.yMin));// Left bottom.
@@ -98,63 +80,34 @@ namespace Delaunay
 			delaunayMesh.AddObstacle(borderCorners, false);
 
 			delaunayMesh.__tmpStop();
+
+			player.transform.position = delaunayMesh.GetNearestPoint(player.transform.position);
+			destination.transform.position = player.transform.position;
 		}
 
 		void Update()
 		{
-			/*
 			Vector3 point = Vector3.zero;
 			if (Input.GetMouseButtonUp(2) && GetScreenMousePosition(out point))
 			{
-				player.transform.position = point;
+				player.transform.position = delaunayMesh.GetNearestPoint(point);
+				player.GetComponent<Steering>().Path = null;
 			}
 
 			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
 			{
-				print("Move to " + point);
-			}
-			*/
-			Vector3 point = Vector3.zero;
-			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
-			{
-				if (clickState == ClickState.PlantingStartPoint)
-				{
-					ballStart.SetActive(true);
-					ballDest.SetActive(false);
-
-					currentPath = null;
-
-					ballStart.transform.position = point;
-					clickState = ClickState.PlantingEndPoint;
-				}
-				else if (clickState == ClickState.PlantingEndPoint)
-				{
-					ballDest.SetActive(true);
-					ballDest.transform.position = point;
-					clickState = ClickState.Ready4Pathfinding;
-				}
-			}
-
-			if (clickState == ClickState.Ready4Pathfinding)
-			{
-				Vector3 start = ballStart.transform.position;
-				Vector3 dest = ballDest.transform.position;
-				currentPath = delaunayMesh.FindPath(start, dest);
-				if (currentPath == null)
-				{
-					print("no path from " + start + " to " + dest);
-				}
-
-				clickState = ClickState.PlantingStartPoint;
+				Vector3 src = player.transform.position;
+				Vector3 dest = delaunayMesh.GetNearestPoint(point);
+				player.GetComponent<Steering>().Path = delaunayMesh.FindPath(src, dest);
+				destination.transform.position = dest;
 			}
 		}
 
 		void OnDrawGizmos()
 		{
-			if (delaunayMesh != null) { delaunayMesh.OnDrawGizmos(ShowConvexHull); }
-			if (currentPath != null)
+			if (delaunayMesh != null)
 			{
-				DrawCurrentPath();
+				delaunayMesh.OnDrawGizmos(ShowConvexHull);
 			}
 		}
 
@@ -189,25 +142,12 @@ namespace Delaunay
 			GUILayout.EndVertical();
 		}
 
-		void DrawCurrentPath()
-		{
-			for (int i = 1; i < currentPath.Count; ++i)
-			{
-				Debug.DrawLine(currentPath[i - 1] + EditorConstants.kPathRendererOffset,
-					currentPath[i] + EditorConstants.kPathRendererOffset, Color.yellow
-				);
-			}
-		}
-
 		#endregion
 
 		void Clear()
 		{
 			if (delaunayMesh != null) { delaunayMesh.Clear(); }
-			ballStart.SetActive(false);
-			ballDest.SetActive(false);
-			//destination.SetActive(false);
-			if (currentPath != null) { currentPath.Clear(); }
+			destination.SetActive(false);
 		}
 
 		bool GetScreenMousePosition(out Vector3 point)
