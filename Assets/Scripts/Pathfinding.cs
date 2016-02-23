@@ -235,10 +235,10 @@ namespace Delaunay
 
 			portals[index] = portals[index + 1] = dest;
 
-			return StringPull(portals);
+			return StringPull(portals, 0.5f);
 		}
 
-		static List<Vector3> StringPull(Vector3[] portals)
+		static List<Vector3> StringPull(Vector3[] portals, float radius)
 		{
 			Vector3 portalApex = portals[0];
 			Vector3 portalLeft = portals[2];
@@ -247,12 +247,14 @@ namespace Delaunay
 			List<Vector3> answer = new List<Vector3>(1 + portals.Length / 2);
 			answer.Add(portalApex);
 
+			Vector3 normal = Vector3.zero;
 			int apexIndex = 0, leftIndex = 0, rightIndex = 0;
-			for (int i = 1; i < portals.Length / 2; ++i)
+			int edgeCount = portals.Length / 2 - 1;
+			for (int i = 1; i < edgeCount; ++i)
 			{
 				Vector3 left = portals[i * 2];
 				Vector3 right = portals[i * 2 + 1];
-
+				
 				if (right.cross2(portalRight, portalApex) <= 0)
 				{
 					if (portalApex.equals2(portalRight) || right.cross2(portalLeft, portalApex) > 0f)
@@ -262,7 +264,11 @@ namespace Delaunay
 					}
 					else
 					{
-						answer.Add(portalLeft);
+						Vector3 prevLeft = protals[(leftIndex - 1) * 2];
+						Vector3 nextLeft = portals[(leftIndex + 1) * 2];
+						normal = GetNormal(prevLeft, portalLeft, nextLeft);
+
+						answer.Add(portalLeft + normal * radius);
 						portalApex = portalLeft;
 						apexIndex = leftIndex;
 
@@ -283,7 +289,11 @@ namespace Delaunay
 					}
 					else
 					{
-						answer.Add(portalRight);
+						Vector3 prevRight = protals[(rightIndex - 1) * 2 + 1];
+						Vector3 nextRight = portals[(rightIndex + 1) * 2 + 1];
+						normal = GetNormal(prevRight, portalRight, nextRight);
+
+						answer.Add(portalRight + normal * radius);
 						portalApex = portalRight;
 						apexIndex = rightIndex;
 
@@ -296,9 +306,52 @@ namespace Delaunay
 				}
 			}
 
-			answer.Add(portals[portals.Length  -1]);
+			answer.Add(portals[portals.Length - 1]);
 
 			return answer;
+		}
+
+		Vector3 GetNormal(Vector3 prev, Vector3 current, Vector3 next)
+		{
+			// Calculate line angles.
+			float nextAngle = Mathf.Atan2(next.z - current.z, next.x - current.x);
+			float prevAngle = Mathf.Atan2(current.z - prev.z, current.x - prev.x);
+
+			float turn = next.dot2(prev, current);
+			turn = -Mathf.Sign(turn) * Mathf.PI / 2f;
+
+			// Calculate minimum distance between line angles.
+			float distance = nextAngle - prevAngle;
+
+			if (Mathf.Abs(distance) > Mathf.PI)
+			{
+				distance -= distance > 0 ? Mathf.PI * 2 : -Mathf.PI * 2;
+			}
+
+			// Calculate left perpendicular to average angle.
+			float angle = prevAngle + (distance / 2) + turn;
+			return new Vector3((float)Mathf.Cos(angle), 0f, (float)Mathf.Sin(angle));
+		}
+
+		Vector3 GetNormal2(Vector3 prev, Vector3 current, Vector3 next)
+		{
+			Vector3 delta1 = next - current; delta1.y = 0;
+			Vector3 delta2 = prev - current; delta2.y = 0;
+
+			delta1.Normalize();
+			delta2.Normalize();
+
+			Vector3 middle = ((delta1 + delta2) / 2f - current);
+			middle.Normalize();
+
+			float turn = delta1.x * delta2.x + delta1.z * delta2.z;
+			if (turn > 0)
+			{
+				middle.x = 2 * current.x - middle.x;
+				middle.z = 2 * current.z - middle.z;
+			}
+
+			return middle;
 		}
 	}
 }
