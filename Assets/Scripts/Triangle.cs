@@ -224,9 +224,42 @@ namespace Delaunay
 		public Vertex B { get { return AB.Dest; } }
 		public Vertex C { get { return AB.Next.Dest; } }
 
-		public bool Contains(Vertex t)
+		public bool Contains(Vertex t, bool onEdge = true)
 		{
-			return Utility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, t.Position);
+			return Contains(t.Position);
+		}
+
+		public bool Contains(Vector3 p, bool onEdge = true)
+		{
+			return Utility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, p, onEdge);
+		}
+
+		public Vertex Nearest(Vector3 p)
+		{
+			float minSqrMagnitude = (p - A.Position).sqrMagnitude2();
+			float tmpMagnitude = 0;
+			Vertex answer = A;
+			if ((tmpMagnitude = (p - B.Position).sqrMagnitude2()) < minSqrMagnitude)
+			{
+				minSqrMagnitude = tmpMagnitude;
+				answer = B;
+			}
+
+			if ((tmpMagnitude = (p - C.Position).sqrMagnitude2()) < minSqrMagnitude)
+			{
+				minSqrMagnitude = tmpMagnitude;
+				answer = C;
+			}
+
+			return answer;
+		}
+
+		public Vertex FindVertex(Vector3 point)
+		{
+			if (A.Position.equals2(point)) { return A; }
+			if (B.Position.equals2(point)) { return B; }
+			if (C.Position.equals2(point)) { return C; }
+			return null;
 		}
 
 		public int GetPointDirection(Vector3 point)
