@@ -223,7 +223,7 @@ namespace Delaunay
 	{
 		public static List<Vector3> Smooth(Vector3 start, Vector3 dest, List<HalfEdge> edges)
 		{
-			Vector3[] portals = new Vector3[edges.Count * 2 + 4];
+			Vector3[] portals = new Vector3[edges.Count * 2 + 4 + 2];
 			portals[0] = portals[1] = start;
 			int index = 2;
 
@@ -234,10 +234,14 @@ namespace Delaunay
 			}
 
 			portals[index] = portals[index + 1] = dest;
+			portals[index + 2] = portals[index + 3] = dest;
 
 			return StringPull(portals, 0.5f);
 		}
 
+		///<summary>
+		// http://gamedev.stackexchange.com/questions/68302/how-does-the-simple-stupid-funnel-algorithm-work
+		///</summary>
 		static List<Vector3> StringPull(Vector3[] portals, float radius)
 		{
 			Vector3 portalApex = portals[0];
@@ -249,8 +253,8 @@ namespace Delaunay
 
 			Vector3 normal = Vector3.zero;
 			int apexIndex = 0, leftIndex = 0, rightIndex = 0;
-			int edgeCount = portals.Length / 2 - 1;
-			for (int i = 1; i < edgeCount; ++i)
+			int portalCount = portals.Length / 2 - 1;
+			for (int i = 1; i < portalCount; ++i)
 			{
 				Vector3 left = portals[i * 2];
 				Vector3 right = portals[i * 2 + 1];
@@ -264,7 +268,7 @@ namespace Delaunay
 					}
 					else
 					{
-						Vector3 prevLeft = protals[(leftIndex - 1) * 2];
+						Vector3 prevLeft = portals[(leftIndex - 1) * 2];
 						Vector3 nextLeft = portals[(leftIndex + 1) * 2];
 						normal = GetNormal(prevLeft, portalLeft, nextLeft);
 
@@ -289,7 +293,7 @@ namespace Delaunay
 					}
 					else
 					{
-						Vector3 prevRight = protals[(rightIndex - 1) * 2 + 1];
+						Vector3 prevRight = portals[(rightIndex - 1) * 2 + 1];
 						Vector3 nextRight = portals[(rightIndex + 1) * 2 + 1];
 						normal = GetNormal(prevRight, portalRight, nextRight);
 
@@ -311,7 +315,7 @@ namespace Delaunay
 			return answer;
 		}
 
-		Vector3 GetNormal(Vector3 prev, Vector3 current, Vector3 next)
+		static Vector3 GetNormal(Vector3 prev, Vector3 current, Vector3 next)
 		{
 			// Calculate line angles.
 			float nextAngle = Mathf.Atan2(next.z - current.z, next.x - current.x);
@@ -331,27 +335,6 @@ namespace Delaunay
 			// Calculate left perpendicular to average angle.
 			float angle = prevAngle + (distance / 2) + turn;
 			return new Vector3((float)Mathf.Cos(angle), 0f, (float)Mathf.Sin(angle));
-		}
-
-		Vector3 GetNormal2(Vector3 prev, Vector3 current, Vector3 next)
-		{
-			Vector3 delta1 = next - current; delta1.y = 0;
-			Vector3 delta2 = prev - current; delta2.y = 0;
-
-			delta1.Normalize();
-			delta2.Normalize();
-
-			Vector3 middle = ((delta1 + delta2) / 2f - current);
-			middle.Normalize();
-
-			float turn = delta1.x * delta2.x + delta1.z * delta2.z;
-			if (turn > 0)
-			{
-				middle.x = 2 * current.x - middle.x;
-				middle.z = 2 * current.z - middle.z;
-			}
-
-			return middle;
 		}
 	}
 }

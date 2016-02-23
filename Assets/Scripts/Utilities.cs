@@ -140,11 +140,17 @@ namespace Delaunay
 			return f >= a && f <= b;
 		}
 
-		public static bool PolygonContains(IList<Vector3> positions, Vector3 point)
+		public static bool PolygonContains(IList<Vector3> positions, Vector3 point, bool onEdge = true)
 		{
 			for (int i = 1; i <= positions.Count; ++i)
 			{
 				Vector3 currentPosition = (i < positions.Count) ? positions[i] : positions[0];
+				float cr = point.cross2(currentPosition, positions[i - 1]);
+				if (Mathf.Approximately(0f, cr))
+				{
+					return onEdge;
+				}
+
 				if (point.cross2(currentPosition, positions[i - 1]) > 0)
 				{
 					return false;
