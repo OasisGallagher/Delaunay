@@ -177,6 +177,15 @@ namespace Delaunay
 			return (segSrc + ratio * ray - point).magnitude2();
 		}
 
+		public static Vector3 Rotate(Vector3 src, float radian, Vector3 pivot)
+		{
+			src -= pivot;
+			Vector3 answer = Vector3.zero;
+			answer.x = src.x * Mathf.Cos(radian) + src.z * Mathf.Sin(radian);
+			answer.z = src.z * Mathf.Cos(radian) - src.x * Mathf.Sin(radian);
+			return answer + pivot;
+		}
+
 		public static bool PointInCircumCircle(Vertex a, Vertex b, Vertex c, Vertex v)
 		{
 			// https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcircle_equations
