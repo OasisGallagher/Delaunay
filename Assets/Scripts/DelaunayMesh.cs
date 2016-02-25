@@ -367,7 +367,7 @@ namespace Delaunay
 
 				if (!activeContainer.Contains(opposedTriangle.Src)) { activeContainer.Add(opposedTriangle.Src); }
 
-				if (Utility.PointOnSegment(opposedVertex.Position, src.Position, dest.Position))
+				if (MathUtility.PointOnSegment(opposedVertex.Position, src.Position, dest.Position))
 				{
 					crossedTriangles.Add(opposedTriangle);
 					src = opposedVertex;
@@ -386,7 +386,7 @@ namespace Delaunay
 			foreach (HalfEdge edge in cycle)
 			{
 				Vector3 point;
-				LineCrossState crossState = Utility.GetLineCrossPoint(out point,
+				LineCrossState crossState = MathUtility.GetLineCrossPoint(out point,
 					edge.Src.Position, edge.Dest.Position,
 					src.Position, dest.Position
 				);
@@ -449,7 +449,7 @@ namespace Delaunay
 			}
 			else
 			{
-				HalfEdge hitEdge = Utility.GetHalfEdgeByDirection(answer.triangle, answer.hitEdge);
+				HalfEdge hitEdge = answer.triangle.GetEdgeByDirection(answer.hitEdge);
 				InsertOnEdge(v, answer.triangle, hitEdge);
 			}
 
@@ -498,7 +498,7 @@ namespace Delaunay
 					return answer;
 				}
 
-				startFacet = Utility.GetHalfEdgeByDirection(startFacet, iedge).Pair.Face;
+				startFacet = startFacet.GetEdgeByDirection(iedge).Pair.Face;
 			}
 
 			return answer;

@@ -109,6 +109,18 @@ namespace Delaunay
 			{
 				delaunayMesh.OnDrawGizmos(ShowConvexHull);
 			}
+
+			int index = 0;
+			Color[] array = new Color[] { Color.red, Color.green, Color.blue };
+			foreach (Tuple2<Vector3, Vector3> tangent in NonPointObjectFunnel.tmpTangents)
+			{
+				Color oldGizmosColor = Gizmos.color;
+				Gizmos.color = array[index % array.Length];
+				tangent.First.y = tangent.Second.y = EditorConstants.kConvexHullGizmosHeight;
+				Gizmos.DrawLine(tangent.First, tangent.Second);
+				Gizmos.color = oldGizmosColor;
+				++index;
+			}
 		}
 
 		void OnGUI()

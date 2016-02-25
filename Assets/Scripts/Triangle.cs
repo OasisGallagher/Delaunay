@@ -146,6 +146,13 @@ namespace Delaunay
 			return null;
 		}
 
+		public HalfEdge GetEdgeByDirection(int direction)
+		{
+			direction = Mathf.Abs(direction);
+			Utility.Verify(direction >= 1 && direction <= 3);
+			return (direction == 1) ? AB : (direction == 2 ? BC : CA);
+		}
+
 		/// <summary>
 		/// One of the half-edges bordering the face.
 		/// </summary>
@@ -231,7 +238,7 @@ namespace Delaunay
 
 		public bool Contains(Vector3 p, bool onEdge = true)
 		{
-			return Utility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, p, onEdge);
+			return MathUtility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, p, onEdge);
 		}
 
 		public Vertex Nearest(Vector3 p)
@@ -268,7 +275,7 @@ namespace Delaunay
 			if (t0 > 0) { return -1; }
 
 			if (Mathf.Approximately(t0, 0)
-				&& Utility.DiagonalRectContains(point, B.Position, A.Position))
+				&& MathUtility.DiagonalRectContains(point, B.Position, A.Position))
 			{
 				return 1;
 			}
@@ -277,7 +284,7 @@ namespace Delaunay
 			if (t1 > 0) { return -2; }
 
 			if (Mathf.Approximately(t1, 0)
-				&& Utility.DiagonalRectContains(point, C.Position, B.Position))
+				&& MathUtility.DiagonalRectContains(point, C.Position, B.Position))
 			{
 				return 2;
 			}
@@ -286,7 +293,7 @@ namespace Delaunay
 			if (t2 > 0) { return -3; }
 
 			if (Mathf.Approximately(t2, 0)
-				&& Utility.DiagonalRectContains(point, A.Position, C.Position))
+				&& MathUtility.DiagonalRectContains(point, A.Position, C.Position))
 			{
 				return 3;
 			}
@@ -313,7 +320,7 @@ namespace Delaunay
 
 		public bool PointInCircumCircle(Vertex v)
 		{
-			return Utility.PointInCircumCircle(A, B, C, v);
+			return MathUtility.PointInCircumCircle(A, B, C, v);
 		}
 
 		public void WriteXml(XmlWriter writer)

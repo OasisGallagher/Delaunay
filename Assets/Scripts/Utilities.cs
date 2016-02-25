@@ -49,11 +49,16 @@ namespace Delaunay
 	{
 		public Tuple2(T1 first, T2 second)
 		{
-			this.First = first;
-			this.Second = second;
+			Set(first, second);
 		}
 
 		public Tuple2() { }
+
+		public void Set(T1 first, T2 second)
+		{
+			this.First = first;
+			this.Second = second;
+		}
 
 		public T1 First;
 		public T2 Second;
@@ -61,13 +66,42 @@ namespace Delaunay
 
 	public static class Utility
 	{
-		public static HalfEdge GetHalfEdgeByDirection(Triangle triangle, int direction)
+		public static bool Assert(bool condition)
 		{
-			direction = Mathf.Abs(direction);
-			Verify(direction >= 1 && direction <= 3);
-			return (direction == 1) ? triangle.AB : (direction == 2 ? triangle.BC : triangle.CA);
+			return Assert(condition, "Verify failed");
 		}
 
+		public static bool Assert(bool condition, string message, params object[] arguments)
+		{
+			if (!condition)
+			{
+#if DEBUG
+				throw new Exception(string.Format(message ?? "Condition failed", arguments));
+#else
+				Debug.LogError(string.Format(message ?? "Condition failed", arguments));
+#endif
+			}
+			return condition;
+		}
+
+		public static bool Verify(bool condition)
+		{
+			return Verify(condition, "Verify failed");
+		}
+
+		public static bool Verify(bool condition, string message, params object[] arguments)
+		{
+			if (!condition)
+			{
+				throw new Exception(string.Format(message ?? "Condition failed", arguments));
+			}
+
+			return condition;
+		}
+	}
+
+	public static class MathUtility
+	{
 		public static LineCrossState SegmentCross(out Vector2 answer, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
 		{
 			Vector3 r = pd - p;
@@ -82,16 +116,16 @@ namespace Delaunay
 				bool onSeg2 = PointOnSegment(pd, q, qd);
 				bool onSeg3 = PointOnSegment(q, p, pd);
 				bool onSeg4 = PointOnSegment(qd, p, pd);
-				if((onSeg1 && onSeg2) || (onSeg3 && onSeg4))
+				if ((onSeg1 && onSeg2) || (onSeg3 && onSeg4))
 				{
 					return LineCrossState.FullyOverlaps;
 				}
-				
+
 				if ((onSeg1 || onSeg2) && (onSeg3 || onSeg4))
 				{
 					return LineCrossState.PartiallyOverlaps;
 				}
-				
+
 				return LineCrossState.Parallel;
 			}
 
@@ -177,6 +211,15 @@ namespace Delaunay
 			return (segSrc + ratio * ray - point).magnitude2();
 		}
 
+		public static Vector3 Rotate(Vector3 src, float radian, Vector3 pivot)
+		{
+			src -= pivot;
+			Vector3 answer = Vector3.zero;
+			answer.x = src.x * Mathf.Cos(radian) + src.z * Mathf.Sin(radian);
+			answer.z = src.z * Mathf.Cos(radian) - src.x * Mathf.Sin(radian);
+			return answer + pivot;
+		}
+
 		public static bool PointInCircumCircle(Vertex a, Vertex b, Vertex c, Vertex v)
 		{
 			// https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcircle_equations
@@ -203,39 +246,66 @@ namespace Delaunay
 			return det > 0;
 		}
 
-		public static bool Assert(bool condition)
+		public static Vector3 GetTangent(Vector3 center, float radius, Vector3 point, bool clockwise)
 		{
-			return Assert(condition, "Verify failed");
+			float dist = (center - point).magnitude2();
+			Utility.Verify(dist > radius);
+
+			float r = Mathf.Acos(radius / dist);
+			if (clockwise) { r = -r; }
+			point = (point - center).normalized * radius;
+			return MathUtility.Rotate(point, r, Vector3.zero) + center;
 		}
 
-		public static bool Assert(bool condition, string message, params object[] arguments)
+		public static Tuple2<Vector3, Vector3> GetInnerTangent(Vector3 center1, float radius1, Vector3 center2, float radius2, bool closewise)
 		{
-			if (!condition)
+			float dist = (center1 - center2).magnitude2();
+			Utility.Verify(dist > (radius1 + radius2));
+
+			float d = radius1 * dist / (radius1 + radius2);
+			Vector3 ray = center2 - center1;
+			ray = ray.normalized * d;
+			ray += center1;
+
+			return new Tuple2<Vector3, Vector3>(
+				GetTangent(center1, radius1, ray, closewise),
+				GetTangent(center2, radius2, ray, closewise)
+			);
+		}
+
+		public static Tuple2<Vector3, Vector3> GetOutterTangent(Vector3 center1, float radius1, Vector3 center2, float radius2, bool clockwise)
+		{
+			if (Mathf.Approximately(radius1, radius2))
 			{
-#if DEBUG
-				throw new Exception(string.Format(message ?? "Condition failed", arguments));
-#else
-				Debug.LogError(string.Format(message ?? "Condition failed", arguments));
-#endif
+				Vector3 d = center2 - center1;
+				d = d.normalized* radius1;
+				float radian = Mathf.PI / 2f;
+				if (!clockwise) { radian = -radian; }
+				Vector3 rotated = MathUtility.Rotate(d, radian, Vector3.zero);
+				return new Tuple2<Vector3, Vector3>(rotated + center1, rotated + center2);
 			}
-			return condition;
-		}
 
-		public static bool Verify(bool condition)
-		{
-			return Verify(condition, "Verify failed");
-		}
+			float dist = (center1 - center2).magnitude2();
+			Utility.Verify(dist > (radius1 + radius2));
 
-		public static bool Verify(bool condition, string message, params object[] arguments)
-		{
-			if (!condition)
+			dist = dist / Mathf.Abs(radius1 - radius2);
+			Vector3 ray = center1 - center2;
+
+			ray = ray.normalized * dist;
+			if (radius1 > radius2)
 			{
-				throw new Exception(string.Format(message ?? "Condition failed", arguments));
+				ray = -ray;
+				ray += center2;
+			}
+			else
+			{
+				ray += center1;
 			}
 
-			return condition;
+			return new Tuple2<Vector3, Vector3>(
+				GetTangent(center1, radius1, ray, clockwise),
+				GetTangent(center2, radius2, ray, clockwise)
+			);
 		}
 	}
-
-	
 }

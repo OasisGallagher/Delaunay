@@ -102,7 +102,7 @@ namespace Delaunay
 					continue;
 				}
 
-				if (Utility.PolygonContains(points, vertices[e.ListIndex].vertex.Position))
+				if (MathUtility.PolygonContains(points, vertices[e.ListIndex].vertex.Position))
 				{
 					return false;
 				}
@@ -219,7 +219,7 @@ namespace Delaunay
 			{
 				foreach (Vertex v in polygon)
 				{
-					if (Utility.PointInCircumCircle(src, dest, c, v))
+					if (MathUtility.PointInCircumCircle(src, dest, c, v))
 					{
 						c = v;
 					}
