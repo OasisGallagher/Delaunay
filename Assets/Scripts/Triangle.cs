@@ -123,6 +123,11 @@ namespace Delaunay
 			Gizmos.color = oldColor;
 		}
 
+		public float GetWidth(Vertex intersectVertex)
+		{
+			return 0f;
+		}
+
 		public HalfEdge GetOpposite(Vertex from)
 		{
 			foreach (HalfEdge edge in BoundingEdges)

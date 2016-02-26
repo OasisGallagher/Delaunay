@@ -26,6 +26,7 @@ namespace Delaunay
 	{
 		public static List<HalfEdge> FindPath(Vector3 startPosition, Vector3 destPosition, IPathNode startNode, IPathNode destNode)
 		{
+			float radius = 0f;
 			BinaryHeap open = new BinaryHeap();
 			CloseList close = new CloseList();
 
@@ -63,6 +64,17 @@ namespace Delaunay
 					if (startNode.Portal != null)
 					{
 						newG += (startNode.Portal.Center - current.Center).magnitude2();
+					}
+
+					if (current.Face.GetWidth(current.Src) < radius || current.Face.GetWidth(current.Dest) < radius)
+					{ 
+						
+					}
+
+					if (current.Pair.Face != null)
+					{
+						current.Pair.Face.Portal;
+						current.Pair;
 					}
 
 					if (newG + newH < current.Face.G + current.Face.H)
