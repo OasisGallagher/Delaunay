@@ -7,6 +7,9 @@ namespace Delaunay
 	public class Stage : MonoBehaviour
 	{
 		public bool ShowConvexHull = false;
+		public bool __tmpShowTangents = false;
+
+		public float AgentRadius = 0.5f;
 
 		DelaunayMesh delaunayMesh;
 		
@@ -35,10 +38,10 @@ namespace Delaunay
 			destination = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
 			player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
 
-			borderCorners.Add(new Vector3(rect.xMax, 0, rect.yMax));	// Right top.
-			borderCorners.Add(new Vector3(rect.xMin, 0, rect.yMax));	// Left top.
-			borderCorners.Add(new Vector3(rect.xMin, 0, rect.yMin));// Left bottom.
-			borderCorners.Add(new Vector3(rect.xMax, 0, rect.yMin));// Right bottom.
+			borderCorners.Add(new Vector3(rect.xMax, 0, rect.yMax));
+			borderCorners.Add(new Vector3(rect.xMin, 0, rect.yMax));
+			borderCorners.Add(new Vector3(rect.xMin, 0, rect.yMin));
+			borderCorners.Add(new Vector3(rect.xMax, 0, rect.yMin));
 
 			DelaunayTest();
 		}
@@ -98,9 +101,12 @@ namespace Delaunay
 			{
 				Vector3 src = player.transform.position;
 				Vector3 dest = delaunayMesh.GetNearestPoint(point);
-				player.GetComponent<Steering>().Path = delaunayMesh.FindPath(src, dest);
+				player.GetComponent<Steering>().Path = delaunayMesh.FindPath(src, dest, AgentRadius);
 				destination.transform.position = dest;
 			}
+
+			Vector3 scale = new Vector3(AgentRadius, 1, AgentRadius);
+			player.transform.localScale = scale;
 		}
 
 		void OnDrawGizmos()
@@ -110,16 +116,19 @@ namespace Delaunay
 				delaunayMesh.OnDrawGizmos(ShowConvexHull);
 			}
 
-			int index = 0;
-			Color[] array = new Color[] { Color.red, Color.green, Color.blue };
-			foreach (Tuple2<Vector3, Vector3> tangent in NonPointObjectFunnel.tmpTangents)
+			if (__tmpShowTangents)
 			{
-				Color oldGizmosColor = Gizmos.color;
-				Gizmos.color = array[index % array.Length];
-				tangent.First.y = tangent.Second.y = EditorConstants.kConvexHullGizmosHeight;
-				Gizmos.DrawLine(tangent.First, tangent.Second);
-				Gizmos.color = oldGizmosColor;
-				++index;
+				int index = 0;
+				Color[] array = new Color[] { Color.red, Color.green, Color.blue };
+				foreach (Tuple2<Vector3, Vector3> tangent in NonPointObjectFunnel.tmpTangents)
+				{
+					Color oldGizmosColor = Gizmos.color;
+					Gizmos.color = array[index % array.Length];
+					tangent.First.y = tangent.Second.y = EditorConstants.kConvexHullGizmosHeight;
+					Gizmos.DrawLine(tangent.First, tangent.Second);
+					Gizmos.color = oldGizmosColor;
+					++index;
+				}
 			}
 		}
 

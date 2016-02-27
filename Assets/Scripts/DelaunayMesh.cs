@@ -71,7 +71,7 @@ namespace Delaunay
 			public List<Triangle> path = null;
 		}
 
-		public List<Vector3> FindPath(Vector3 start, Vector3 dest)
+		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)
 		{
 			FindContainingFacetResult findResult = FindFacetContainsVertex(start);
 			if (findResult.triangle != null && !findResult.triangle.Walkable)
@@ -91,7 +91,7 @@ namespace Delaunay
 			}
 			Utility.Verify(findResult.triangle != null, "Invalid dest point");
 
-			return Pathfinding.FindPath(start, dest, facet1, findResult.triangle);
+			return Pathfinding.FindPath(start, dest, facet1, findResult.triangle, radius);
 		}
 
 		public Vector3 GetNearestPoint(Vector3 hit)

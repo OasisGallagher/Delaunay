@@ -125,16 +125,27 @@ namespace Delaunay
 
 		public float GetWidth(HalfEdge a, HalfEdge b)
 		{
-			return CalcWidth(a, b);
-			/*
 			Vertex v = GetIntersectVertex(a, b);
-			if (v == A) { return widthA; }
-			if (v == B) { return widthB; }
-			if (v == C) { return widthC; }
+			if (v == A)
+			{
+				if (float.IsNaN(widthA)) { widthA = CalcWidth(a, b); }
+				return widthA;
+			}
 
-			Utility.Verify(false, "Invalid edges");
+			if (v == B)
+			{
+				if (float.IsNaN(widthB)) { widthB = CalcWidth(a, b); }
+				return widthB;
+			}
+
+			if (v == C)
+			{
+				if (float.IsNaN(widthC)) { widthC = CalcWidth(a, b); }
+				return widthC;
+			}
+
+			Utility.Verify(false, "Invalid edges {0} and {1}", a, b);
 			return float.NaN;
-			 */
 		}
 
 		public HalfEdge GetOpposite(Vertex from)
@@ -172,18 +183,11 @@ namespace Delaunay
 		/// </summary>
 		public HalfEdge Edge
 		{
-			get
-			{
-				return halfEdge;
-			}
+			get { return halfEdge; }
 			set
 			{
-				if (halfEdge == value) { return; }
 				halfEdge = value;
-				if (halfEdge != null)
-				{
-				//	UpdateWidth();
-				}
+				widthA = widthB = widthC = float.NaN;
 			}
 		}
 
@@ -473,7 +477,10 @@ namespace Delaunay
 
 		bool walkable = true;
 		HalfEdge halfEdge = null;
-		float widthA, widthB, widthC;
+
+		float widthA = float.NaN;
+		float widthB = float.NaN;
+		float widthC = float.NaN;
 
 		static int triangleID = 0;
 	}
