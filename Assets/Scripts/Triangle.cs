@@ -123,9 +123,18 @@ namespace Delaunay
 			Gizmos.color = oldColor;
 		}
 
-		public float GetWidth(Vertex intersectVertex)
+		public float GetWidth(HalfEdge a, HalfEdge b)
 		{
-			return 0f;
+			return CalcWidth(a, b);
+			/*
+			Vertex v = GetIntersectVertex(a, b);
+			if (v == A) { return widthA; }
+			if (v == B) { return widthB; }
+			if (v == C) { return widthC; }
+
+			Utility.Verify(false, "Invalid edges");
+			return float.NaN;
+			 */
 		}
 
 		public HalfEdge GetOpposite(Vertex from)
@@ -161,7 +170,22 @@ namespace Delaunay
 		/// <summary>
 		/// One of the half-edges bordering the face.
 		/// </summary>
-		public HalfEdge Edge { get; set; }
+		public HalfEdge Edge
+		{
+			get
+			{
+				return halfEdge;
+			}
+			set
+			{
+				if (halfEdge == value) { return; }
+				halfEdge = value;
+				if (halfEdge != null)
+				{
+				//	UpdateWidth();
+				}
+			}
+		}
 
 		public bool Walkable
 		{
@@ -171,25 +195,6 @@ namespace Delaunay
 				if (value == walkable) { return; }
 				walkable = value;
 				UpdateWalkableMaterial();
-			}
-		}
-
-		public Vertex Representative
-		{
-			get
-			{
-				Vertex answer = A;
-				if (A.Position.compare2(B.Position) > 0)
-				{
-					answer = B;
-				}
-
-				if (answer.Position.compare2(C.Position) > 0)
-				{
-					answer = C;
-				}
-
-				return answer;
 			}
 		}
 
@@ -323,6 +328,83 @@ namespace Delaunay
 				|| C.Position.equals2(position);
 		}
 
+		void UpdateWidth()
+		{
+			widthA = CalcWidth(AB, CA);
+			widthB = CalcWidth(BC, AB);
+			widthC = CalcWidth(CA, BC);
+		}
+
+		Vertex GetIntersectVertex(HalfEdge ea, HalfEdge eb)
+		{
+			if (ea.Src == eb.Dest) { return ea.Src; }
+			if (ea.Dest == eb.Src) { return ea.Dest; }
+			Utility.Verify(false, "Edge {0} and {1} has no intersection", ea, eb);
+			return null;
+		}
+
+		float CalcWidth(HalfEdge ea, HalfEdge eb)
+		{
+			Vertex vc = GetIntersectVertex(ea, eb);
+
+			Utility.Verify(vc != null);
+
+			HalfEdge ec = GetOpposite(vc);
+			Vertex va = GetOpposite(ea);
+			Vertex vb = GetOpposite(eb);
+
+			float d = (ea.Src.Position - ea.Dest.Position).magnitude2();
+			d = Mathf.Min(d, (eb.Src.Position - eb.Dest.Position).magnitude2());
+
+			if (vc.Position.dot2(vb.Position, va.Position) <= 0
+				|| vc.Position.dot2(va.Position, vb.Position) <= 0)
+			{
+				return d;
+			}
+
+			if (ec.Constraint)
+			{
+				return MathUtility.MinDistance(vc.Position, ec.Src.Position, ec.Dest.Position);
+			}
+
+			return SearchWidth(vc, this, ec, d);
+		}
+
+		float SearchWidth(Vertex c, Triangle t, HalfEdge e, float d)
+		{
+			Vertex u = e.Src, v = e.Dest;
+			if (c.Position.dot2(v.Position, u.Position) <= 0
+				|| c.Position.dot2(u.Position, v.Position) <= 0)
+			{
+				return d;
+			}
+
+			float d2 = MathUtility.MinDistance(c.Position, e.Src.Position, e.Dest.Position);
+			if (d2 > d)
+			{
+				return d;
+			}
+
+			if (e.Constraint)
+			{
+				return d2;
+			}
+
+			Triangle t2 = e.Pair.Face;
+
+			if (t2 == null)
+			{
+				print("Invalid t2");
+				return d;
+			}
+
+			HalfEdge e2 = t2.GetOpposite(e.Src);
+			HalfEdge e3 = t2.GetOpposite(e.Dest);
+
+			d = SearchWidth(c, t2, e2, d);
+			return SearchWidth(c, t2, e3, d);
+		}
+
 		public bool PointInCircumCircle(Vertex v)
 		{
 			return MathUtility.PointInCircumCircle(A, B, C, v);
@@ -390,6 +472,8 @@ namespace Delaunay
 		}
 
 		bool walkable = true;
+		HalfEdge halfEdge = null;
+		float widthA, widthB, widthC;
 
 		static int triangleID = 0;
 	}

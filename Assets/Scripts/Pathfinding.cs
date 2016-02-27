@@ -66,7 +66,9 @@ namespace Delaunay
 						newG += (startNode.Portal.Center - current.Center).magnitude2();
 					}
 
-					if (current.Face.GetWidth(current.Src) < radius || current.Face.GetWidth(current.Dest) < radius)
+					UnityEngine.Debug.Log(current.Face.GetWidth(current.Face.AB, current.Face.CA));
+
+					/*if (current.Face.GetWidth(current.Src) < radius || current.Face.GetWidth(current.Dest) < radius)
 					{ 
 						
 					}
@@ -75,7 +77,7 @@ namespace Delaunay
 					{
 						current.Pair.Face.Portal;
 						current.Pair;
-					}
+					}*/
 
 					if (newG + newH < current.Face.G + current.Face.H)
 					{
