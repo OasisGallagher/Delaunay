@@ -62,11 +62,11 @@ namespace Delaunay
 
 			for (int index = 0; index < polygon.Count; ++index)
 			{
-				if (ChkIsReflex(vertices, index))
+				if (CheckIsReflex(vertices, index))
 				{
 					vertices[index].SetMask(EarVertex.Mask.IsReflex, true);
 				}
-				else if (ChkIsEar(vertices, index))
+				else if (CheckIsEar(vertices, index))
 				{
 					vertices[index].SetMask(EarVertex.Mask.IsEar, true);
 					vertices[index].earListIndex = earTips.Add(index);
@@ -76,7 +76,7 @@ namespace Delaunay
 			return EarClipping(vertices, earTips);
 		}
 
-		static bool ChkIsEar(ArrayLinkedList<EarVertex> vertices, int current)
+		static bool CheckIsEar(ArrayLinkedList<EarVertex> vertices, int current)
 		{
 			if (vertices.Count < 3) { return false; }
 
@@ -111,7 +111,7 @@ namespace Delaunay
 			return true;
 		}
 
-		static bool ChkIsReflex(ArrayLinkedList<EarVertex> vertices, int index)
+		static bool CheckIsReflex(ArrayLinkedList<EarVertex> vertices, int index)
 		{
 			Vertex current = vertices[index].vertex;
 			Vertex prev = vertices.PrevValue(index).vertex;
@@ -191,13 +191,13 @@ namespace Delaunay
 			if (earVertex.TestMask(EarVertex.Mask.IsReflex))
 			{
 				Utility.Verify(!isEar);
-				if (!earVertex.SetMask(EarVertex.Mask.IsReflex, ChkIsReflex(vertices, vertexIndex))
-					&& earVertex.SetMask(EarVertex.Mask.IsEar, ChkIsEar(vertices, vertexIndex)))
+				if (!earVertex.SetMask(EarVertex.Mask.IsReflex, CheckIsReflex(vertices, vertexIndex))
+					&& earVertex.SetMask(EarVertex.Mask.IsEar, CheckIsEar(vertices, vertexIndex)))
 				{
 					result = 1;
 				}
 			}
-			else if (isEar != earVertex.SetMask(EarVertex.Mask.IsEar, ChkIsEar(vertices, vertexIndex)))
+			else if (isEar != earVertex.SetMask(EarVertex.Mask.IsEar, CheckIsEar(vertices, vertexIndex)))
 			{
 				result = 1;
 				if (isEar) { result = -result; }

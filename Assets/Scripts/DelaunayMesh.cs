@@ -202,16 +202,19 @@ namespace Delaunay
 				if (triangle.AB.Pair.Face != null && !visited.Contains(triangle.AB.Pair.Face))
 				{ 
 					queue.Enqueue(triangle.AB.Pair.Face);
+					visited.Add(triangle.AB.Pair.Face);
 				}
 
 				if (triangle.BC.Pair.Face != null && !visited.Contains(triangle.BC.Pair.Face))
 				{ 
 					queue.Enqueue(triangle.BC.Pair.Face);
+					visited.Add(triangle.BC.Pair.Face);
 				}
 
 				if (triangle.CA.Pair.Face != null && !visited.Contains(triangle.CA.Pair.Face))
 				{ 
 					queue.Enqueue(triangle.CA.Pair.Face);
+					visited.Add(triangle.CA.Pair.Face);
 				}
 			}
 

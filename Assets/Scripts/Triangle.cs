@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public class Triangle : MonoBehaviour, IPathNode
+	public class Triangle : MonoBehaviour
 	{
 		public int ID { get; private set; }
 

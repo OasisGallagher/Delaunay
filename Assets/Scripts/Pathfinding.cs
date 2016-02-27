@@ -3,18 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace Delaunay
 {
-	public interface IPathNode
-	{
-		HalfEdge Portal { get; set; }
-		HalfEdge[] AdjPortals { get; }
-
-		float G { get; set; }
-		float H { get; set; }
-	}
-
 	public static class Pathfinding
 	{
-		public static List<Vector3> FindPath(Vector3 startPosition, Vector3 destPosition, IPathNode startNode, IPathNode destNode, float radius)
+		public static List<Vector3> FindPath(Vector3 startPosition, Vector3 destPosition, Triangle startNode, Triangle destNode, float radius)
 		{
 			List<HalfEdge> portals = AStarPathfinding.FindPath(startPosition, destPosition, startNode, destNode, radius);
 			return PathSmoother.Smooth(startPosition, destPosition, portals, 0.5f);
@@ -23,7 +14,7 @@ namespace Delaunay
 
 	internal static class AStarPathfinding
 	{
-		public static List<HalfEdge> FindPath(Vector3 startPosition, Vector3 destPosition, IPathNode startNode, IPathNode destNode, float radius)
+		public static List<HalfEdge> FindPath(Vector3 startPosition, Vector3 destPosition, Triangle startNode, Triangle destNode, float radius)
 		{
 			BinaryHeap open = new BinaryHeap();
 			CloseList close = new CloseList();
@@ -31,7 +22,7 @@ namespace Delaunay
 			startNode.G = 0;
 			open.Push(startNode);
 
-			IPathNode currentNode = null;
+			Triangle currentNode = null;
 
 			for (; open.Count != 0 && currentNode != destNode; )
 			{
@@ -96,7 +87,7 @@ namespace Delaunay
 			return path;
 		}
 
-		static bool CheckEntranceWidthLimit(IPathNode currentNode, IPathNode startNode, IPathNode destNode, HalfEdge current, float radius)
+		static bool CheckEntranceWidthLimit(Triangle currentNode, Triangle startNode, Triangle destNode, HalfEdge current, float radius)
 		{
 			if (currentNode == destNode)
 			{
@@ -125,9 +116,9 @@ namespace Delaunay
 			return false;
 		}
 
-		static bool CheckCorridorWidthLimit(IPathNode currentNode, IPathNode startNode, IPathNode destNode, HalfEdge current, float radius)
+		static bool CheckCorridorWidthLimit(Triangle currentNode, Triangle startNode, Triangle destNode, HalfEdge current, float radius)
 		{
-			if (current == startNode)
+			if (currentNode == startNode)
 			{
 				// ???
 				return true;
@@ -143,7 +134,7 @@ namespace Delaunay
 			return current.Pair.Face.GetWidth(lastPortal, current.Pair) >= radius;
 		}
 
-		static List<HalfEdge> CreatePath(IPathNode dest)
+		static List<HalfEdge> CreatePath(Triangle dest)
 		{
 			List<HalfEdge> result = new List<HalfEdge>();
 			for (HalfEdge entry; (entry = dest.Portal) != null; dest = entry.Pair.Face)
@@ -161,20 +152,20 @@ namespace Delaunay
 		{
 			public void Dispose()
 			{
-				foreach (IPathNode node in container) { node.Portal = null; }
+				foreach (Triangle node in container) { node.Portal = null; }
 			}
 
-			public void Add(IPathNode item)
+			public void Add(Triangle item)
 			{
 				container.Add(item);
 			}
 
-			public bool Contains(IPathNode item)
+			public bool Contains(Triangle item)
 			{
 				return container.Contains(item);
 			}
 
-			HashSet<IPathNode> container = new HashSet<IPathNode>();
+			HashSet<Triangle> container = new HashSet<Triangle>();
 		}
 
 		internal class BinaryHeap : IDisposable
@@ -184,7 +175,7 @@ namespace Delaunay
 				container.ForEach(item => { item.Portal = null; });
 			}
 
-			public void Push(IPathNode node)
+			public void Push(Triangle node)
 			{
 				container.Add(node);
 
@@ -193,10 +184,10 @@ namespace Delaunay
 
 			public int Count { get { return container.Count; } }
 
-			public IPathNode Pop()
+			public Triangle Pop()
 			{
 				Swap(0, container.Count - 1);
-				IPathNode result = container[container.Count - 1];
+				Triangle result = container[container.Count - 1];
 				container.RemoveAt(container.Count - 1);
 
 				int current = 0;
@@ -239,12 +230,12 @@ namespace Delaunay
 			}
 
 			// TODO: O(n).
-			public int IndexOf(IPathNode node)
+			public int IndexOf(Triangle node)
 			{
 				return container.IndexOf(node);
 			}
 
-			float F(IPathNode node) { return node.G + node.H; }
+			float F(Triangle node) { return node.G + node.H; }
 
 			bool IsHeap()
 			{
@@ -261,7 +252,7 @@ namespace Delaunay
 
 			void Swap(int i, int j)
 			{
-				IPathNode tmp = container[i];
+				Triangle tmp = container[i];
 				container[i] = container[j];
 				container[j] = tmp;
 			}
@@ -272,7 +263,7 @@ namespace Delaunay
 
 			int RightChild(int i) { return 2 * i + 2; }
 
-			List<IPathNode> container = new List<IPathNode>();
+			List<Triangle> container = new List<Triangle>();
 		}
 	}
 }

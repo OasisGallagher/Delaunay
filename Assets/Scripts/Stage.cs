@@ -58,12 +58,12 @@ namespace Delaunay
 			}
 
 			Vector3[] circle = new Vector3[localCircle.Length];
-
+			/*
 			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, 0, 0); }), true);
 			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, 0, 0); }), true);
 			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, 0, 0); }), true);
 			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, 0, 0); }), true);
-
+			*/
 			Vector3[] localSquare = new Vector3[4];
 			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
 			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
@@ -80,8 +80,9 @@ namespace Delaunay
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, 0, -5); }), true);
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, 0, 5); }), true);
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, 0, -5); }), true);
+			
 			delaunayMesh.AddObstacle(borderCorners, false);
-
+			
 			delaunayMesh.__tmpStop();
 
 			player.transform.position = delaunayMesh.GetNearestPoint(player.transform.position);
