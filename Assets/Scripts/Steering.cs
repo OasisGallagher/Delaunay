@@ -39,7 +39,7 @@ namespace Delaunay
 		{
 			if (path == null) { return; }
 			Color oldColor = Gizmos.color;
-			Gizmos.color = Color.blue;
+			Gizmos.color = Color.gray;
 
 			for (int i = 1; i < path.Count; ++i)
 			{

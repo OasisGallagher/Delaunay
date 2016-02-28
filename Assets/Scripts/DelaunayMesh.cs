@@ -117,9 +117,15 @@ namespace Delaunay
 				facet.BoundingEdges.ForEach(edge =>
 				{
 					Vector3 offset = EditorConstants.kEdgeGizmosOffset;
+					bool isPortal = NonPointObjectFunnel.tmpPortals.Find(item =>
+					{
+						return edge == item || edge.Pair == item;
+					}) != null;
+
 					Debug.DrawLine(edge.Src.Position + offset,
 						edge.Dest.Position + offset,
-						(edge.Constraint || edge.Pair.Constraint) ? Color.red : Color.white
+						isPortal ? Color.red : Color.white
+						//(edge.Constraint || edge.Pair.Constraint) ? Color.red : Color.white
 					);
 				});
 			});
@@ -169,7 +175,7 @@ namespace Delaunay
 
 			triangles.ForEach(t => { Triangle.Release(t); });
 
-			CreateTriangles(TriangulationTools.Triangulate(polygon));
+			CreateTriangles(PolygonTriangulation.Triangulate(polygon));
 		}
 
 		Triangle FindWalkableTriangle(Vertex src)
@@ -323,8 +329,8 @@ namespace Delaunay
 				}
 			}
 
-			CreateTriangles(TriangulationTools.Triangulate(low, dest, src));
-			CreateTriangles(TriangulationTools.Triangulate(up, src, dest));
+			CreateTriangles(PolygonTriangulation.Triangulate(low, dest, src));
+			CreateTriangles(PolygonTriangulation.Triangulate(up, src, dest));
 
 			HalfEdge constraintEdge = GeomManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
 			Utility.Verify(constraintEdge != null);

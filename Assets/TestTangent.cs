@@ -16,24 +16,14 @@ namespace Delaunay
 
 		void OnDrawGizmos()
 		{
-			DrawCircle(Center1, Radius1);
-			DrawCircle(Center2, Radius2);
+			MathUtility.DrawGizmosCircle(Center2, Radius2, Color.white);
+			Gizmos.DrawLine(Center1, MathUtility.GetTangent(Center2, 2, Center1, true));
+			/*
+			MathUtility.DrawGizmosCircle(Center1, Radius1);
+			MathUtility.DrawGizmosCircle(Center2, Radius2);
 			Tuple2<Vector3, Vector3> tuple2 = MathUtility.GetOutterTangent(Center1, Radius1, Center2, Radius2, true);
 			Gizmos.DrawLine(tuple2.First, tuple2.Second);
-		}
-
-		static void DrawCircle(Vector3 center, float radius)
-		{
-			Vector3 from = new Vector3(center.x + radius, 0, center.z);
-			for (float i = 1; i < 360; ++i)
-			{
-				float radian = Mathf.Deg2Rad * i;
-				float x = Mathf.Cos(radian) * radius + center.x;
-				float z = Mathf.Sin(radian) * radius + center.z;
-				Vector3 to = new Vector3(x, 0, z);
-				Gizmos.DrawLine(from, to);
-				from = to;
-			}
+			 */
 		}
 	}
 }

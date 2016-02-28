@@ -8,7 +8,7 @@ namespace Delaunay
 		public static List<Vector3> FindPath(Vector3 startPosition, Vector3 destPosition, Triangle startNode, Triangle destNode, float radius)
 		{
 			List<HalfEdge> portals = AStarPathfinding.FindPath(startPosition, destPosition, startNode, destNode, radius);
-			return PathSmoother.Smooth(startPosition, destPosition, portals, 0.5f);
+			return PathSmooth.Smooth(startPosition, destPosition, portals, radius);
 		}
 	}
 
@@ -33,6 +33,11 @@ namespace Delaunay
 					if (!current.Face.Walkable || close.Contains(current.Face))
 					{
 						continue;
+					}
+
+					if (current.Face.ID == 69)
+					{
+						Debug.Log("");
 					}
 
 					if (!CheckEntranceWidthLimit(currentNode, startNode, destNode, current, radius))
@@ -107,8 +112,9 @@ namespace Delaunay
 				other2 = current.Face.CA;
 			}
 
-			if (current.Face.GetWidth(current, other1) >= radius
-				|| current.Face.GetWidth(current, other2) >= radius)
+			float diameter = radius * 2f;
+			if (current.Face.GetWidth(current, other1) >= diameter
+				|| current.Face.GetWidth(current, other2) >= diameter)
 			{
 				return true;
 			}
@@ -131,7 +137,8 @@ namespace Delaunay
 				return true;
 			}
 
-			return current.Pair.Face.GetWidth(lastPortal, current.Pair) >= radius;
+			float diameter = radius * 2f;
+			return current.Pair.Face.GetWidth(lastPortal, current.Pair) >= diameter;
 		}
 
 		static List<HalfEdge> CreatePath(Triangle dest)

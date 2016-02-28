@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public static class TriangulationTools
+	public static class PolygonTriangulation
 	{
 		public static List<Vertex> Triangulate(List<Vertex> polygon)
 		{

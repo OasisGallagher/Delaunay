@@ -59,13 +59,13 @@
     <Compile Include="Assets\Scripts\GeomManager.cs" />
     <Compile Include="Assets\Scripts\HalfEdge.cs" />
     <Compile Include="Assets\Scripts\Obstacle.cs" />
-    <Compile Include="Assets\Scripts\PathSmoother.cs" />
+    <Compile Include="Assets\Scripts\PathSmooth.cs" />
     <Compile Include="Assets\Scripts\Pathfinding.cs" />
+    <Compile Include="Assets\Scripts\PolygonTriangulation.cs" />
     <Compile Include="Assets\Scripts\SerializeTools.cs" />
     <Compile Include="Assets\Scripts\Stage.cs" />
     <Compile Include="Assets\Scripts\Steering.cs" />
     <Compile Include="Assets\Scripts\Triangle.cs" />
-    <Compile Include="Assets\Scripts\Triangulation.cs" />
     <Compile Include="Assets\Scripts\Utilities.cs" />
     <Compile Include="Assets\Scripts\Vertex.cs" />
     <Compile Include="Assets\TestTangent.cs" />

@@ -7,9 +7,13 @@ namespace Delaunay
 	public class Stage : MonoBehaviour
 	{
 		public bool ShowConvexHull = false;
-		public bool __tmpShowTangents = false;
+		public int __tmpTangentCount = 0;
+		public int __tmpApexCount = 0;
 
 		public float AgentRadius = 0.5f;
+		public float AgentSpeed = 8f;
+
+		Vector3? __tmpLastPosition = null;
 
 		DelaunayMesh delaunayMesh;
 		
@@ -50,7 +54,7 @@ namespace Delaunay
 		{
 			delaunayMesh.__tmpStart();
 
-			Vector3[] localCircle = new Vector3[7];
+			Vector3[] localCircle = new Vector3[3];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
 			for (int i = 0; i < localCircle.Length; ++i)
 			{
@@ -58,12 +62,11 @@ namespace Delaunay
 			}
 
 			Vector3[] circle = new Vector3[localCircle.Length];
-			/*
 			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(2, 0, 0); }), true);
 			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-2, 0, 0); }), true);
 			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(-6, 0, 0); }), true);
 			delaunayMesh.AddObstacle(localCircle.transform(circle, item => { return item * 1.5f + new Vector3(6, 0, 0); }), true);
-			*/
+			
 			Vector3[] localSquare = new Vector3[4];
 			localSquare[0] = new Vector3(0.5f, 0f, 0.5f);
 			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
@@ -71,7 +74,7 @@ namespace Delaunay
 			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
 
 			Vector3[] square = new Vector3[localSquare.Length];
-
+			
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, 0, 5); }), true);
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, 0, -5); }), true);
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(2, 0, 5); }), true);
@@ -104,10 +107,13 @@ namespace Delaunay
 				Vector3 dest = delaunayMesh.GetNearestPoint(point);
 				player.GetComponent<Steering>().Path = delaunayMesh.FindPath(src, dest, AgentRadius);
 				destination.transform.position = dest;
+				__tmpLastPosition = src;
 			}
 
-			Vector3 scale = new Vector3(AgentRadius, 1, AgentRadius);
+			Vector3 scale = new Vector3(AgentRadius * 2f, 1, AgentRadius * 2f);
 			player.transform.localScale = scale;
+
+			player.GetComponent<Steering>().Speed = AgentSpeed;
 		}
 
 		void OnDrawGizmos()
@@ -117,19 +123,38 @@ namespace Delaunay
 				delaunayMesh.OnDrawGizmos(ShowConvexHull);
 			}
 
-			if (__tmpShowTangents)
+			Color[] array = new Color[] { Color.red, Color.green, Color.blue };
+			for (int i = 0; i < Mathf.Min(NonPointObjectFunnel.tmpTangents.Count, __tmpTangentCount); ++i)
 			{
-				int index = 0;
-				Color[] array = new Color[] { Color.red, Color.green, Color.blue };
-				foreach (Tuple2<Vector3, Vector3> tangent in NonPointObjectFunnel.tmpTangents)
+				Tuple2<Vector3, Vector3> tangent = NonPointObjectFunnel.tmpTangents[i];
+				Color oldGizmosColor = Gizmos.color;
+				Gizmos.color = array[i % array.Length];
+				Vector3 left = tangent.First;
+				Vector3 right = tangent.Second;
+				left.y = right.y = EditorConstants.kConvexHullGizmosHeight;
+
+				Gizmos.DrawLine(left, right);
+				Gizmos.color = oldGizmosColor;
+			}
+
+			for (int i = 0; i < Mathf.Min(NonPointObjectFunnel.tmpApexes.Count, __tmpApexCount); ++i)
+			{
+				Vector3 point = NonPointObjectFunnel.tmpApexes[i];
+				Color color = Color.white;
+				if (i == 0)
 				{
-					Color oldGizmosColor = Gizmos.color;
-					Gizmos.color = array[index % array.Length];
-					tangent.First.y = tangent.Second.y = EditorConstants.kConvexHullGizmosHeight;
-					Gizmos.DrawLine(tangent.First, tangent.Second);
-					Gizmos.color = oldGizmosColor;
-					++index;
+					color = Color.red;
 				}
+				else if (i == NonPointObjectFunnel.tmpApexes.Count - 1)
+				{
+					color = Color.green;
+				}
+				else
+				{
+					color = (i % 2 != 0) ? Color.magenta : Color.cyan;
+				}
+
+				MathUtility.DrawGizmosCircle(point, AgentRadius, color, EditorConstants.kConvexHullGizmosHeight);
 			}
 		}
 
@@ -157,9 +182,31 @@ namespace Delaunay
 				}
 			}
 
+			if (__tmpLastPosition.HasValue && GUILayout.Button("Toggle"))
+			{
+				Vector3 src = player.transform.position;
+				player.GetComponent<Steering>().Path = delaunayMesh.FindPath(src, __tmpLastPosition.Value, AgentRadius);
+				destination.transform.position = __tmpLastPosition.Value;
+				__tmpLastPosition = src;
+			}
+
 			GUILayout.Label("V: " + GeomManager.AllVertices.Count);
 			GUILayout.Label("E: " + GeomManager.AllEdges.Count);
 			GUILayout.Label("T: " + GeomManager.AllTriangles.Count);
+
+			GUILayout.Label("Tan: " + NonPointObjectFunnel.tmpTangents.Count);
+			GUILayout.Label("Apex: " + NonPointObjectFunnel.tmpApexes.Count);
+
+			Color oldGUIColor = GUI.color;
+			GUI.color = Color.red;
+			GUILayout.Label("Start");
+			GUI.color = Color.green;
+			GUILayout.Label("Dest");
+			GUI.color = Color.magenta;
+			GUILayout.Label("Left");
+			GUI.color = Color.cyan;
+			GUILayout.Label("Right");
+			GUI.color = oldGUIColor;
 
 			GUILayout.EndVertical();
 		}

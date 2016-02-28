@@ -45,14 +45,13 @@ namespace Delaunay
 		Vector3 benchmark;
 	}
 
-	public class Tuple2<T1, T2>
+	public struct Tuple2<T1, T2>
 	{
 		public Tuple2(T1 first, T2 second)
 		{
-			Set(first, second);
+			this.First = first;
+			this.Second = second;
 		}
-
-		public Tuple2() { }
 
 		public void Set(T1 first, T2 second)
 		{
@@ -102,6 +101,23 @@ namespace Delaunay
 
 	public static class MathUtility
 	{
+		public static void DrawGizmosCircle(Vector3 center, float radius, Color color, float y = 0f)
+		{
+			Color oldColor = Gizmos.color;
+			Gizmos.color = color;
+			Vector3 from = new Vector3(center.x + radius, y, center.z);
+			for (float i = 1; i < 360; ++i)
+			{
+				float radian = Mathf.Deg2Rad * i;
+				float x = Mathf.Cos(radian) * radius + center.x;
+				float z = Mathf.Sin(radian) * radius + center.z;
+				Vector3 to = new Vector3(x, y, z);
+				Gizmos.DrawLine(from, to);
+				from = to;
+			}
+			Gizmos.color = oldColor;
+		}
+
 		public static LineCrossState SegmentCross(out Vector2 answer, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
 		{
 			Vector3 r = pd - p;
@@ -180,12 +196,12 @@ namespace Delaunay
 			{
 				Vector3 currentPosition = (i < positions.Count) ? positions[i] : positions[0];
 				float cr = point.cross2(currentPosition, positions[i - 1]);
-				if (Mathf.Approximately(0f, cr))
+				if (Mathf.Approximately(0f, cr) && DiagonalRectContains(point, currentPosition, positions[i - 1]))
 				{
 					return onEdge;
 				}
 
-				if (point.cross2(currentPosition, positions[i - 1]) > 0)
+				if (cr > 0)
 				{
 					return false;
 				}
@@ -249,7 +265,7 @@ namespace Delaunay
 		public static Vector3 GetTangent(Vector3 center, float radius, Vector3 point, bool clockwise)
 		{
 			float dist = (center - point).magnitude2();
-			Utility.Verify(dist > radius);
+			Utility.Verify(dist >= radius);
 
 			float r = Mathf.Acos(radius / dist);
 			if (clockwise) { r = -r; }
@@ -260,7 +276,7 @@ namespace Delaunay
 		public static Tuple2<Vector3, Vector3> GetInnerTangent(Vector3 center1, float radius1, Vector3 center2, float radius2, bool closewise)
 		{
 			float dist = (center1 - center2).magnitude2();
-			Utility.Verify(dist > (radius1 + radius2));
+			Utility.Verify(dist >= (radius1 + radius2));
 
 			float d = radius1 * dist / (radius1 + radius2);
 			Vector3 ray = center2 - center1;
@@ -286,7 +302,7 @@ namespace Delaunay
 			}
 
 			float dist = (center1 - center2).magnitude2();
-			Utility.Verify(dist > (radius1 + radius2));
+			Utility.Verify(dist >= (radius1 + radius2));
 
 			dist = dist / Mathf.Abs(radius1 - radius2);
 			Vector3 ray = center1 - center2;

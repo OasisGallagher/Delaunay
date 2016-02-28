@@ -3,21 +3,29 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	internal static class PathSmoother
+	internal static class PathSmooth
 	{
 		public static List<Vector3> Smooth(Vector3 start, Vector3 dest, List<HalfEdge> edges, float radius)
 		{
 			List<Vector3> portals = new List<Vector3>(edges.Count * 2 + 4) { start, start };
 			portals[0] = portals[1] = start;
 
+			NonPointObjectFunnel.tmpApexes.Clear();
+			NonPointObjectFunnel.tmpApexes.Add(start);
+
 			foreach (HalfEdge edge in edges)
 			{
 				portals.Add(edge.Src.Position);
 				portals.Add(edge.Dest.Position);
+
+				NonPointObjectFunnel.tmpApexes.Add(edge.Src.Position);
+				NonPointObjectFunnel.tmpApexes.Add(edge.Dest.Position);
 			}
 
 			portals.Add(dest);
 			portals.Add(dest);
+			NonPointObjectFunnel.tmpApexes.Add(dest);
+			NonPointObjectFunnel.tmpPortals = edges;
 
 			NonPointObjectFunnel.tmpTangents.Clear();
 
@@ -121,12 +129,14 @@ namespace Delaunay
 				//Vector3 tempA = portalApex, tempB = left;
 				//GetTangentPoints(out tempA, out tempB, tempA, tempB, currentType, nextLeft, radius);
 				tuple = GetTangentPoints(currentType, tuple.First, nextLeft, tuple.Second, radius);
+				tmpTangents.Add(tuple);
 				Vector3 currentLSegment = tuple.Second - tuple.First;
 
 				//tempA = portalApex; tempB = right;
 				tuple.Set(portalApex, right);
 				//GetTangentPoints(out tempA, out tempB, tempA, tempB, currentType, nextRight, radius);
 				tuple = GetTangentPoints(currentType, tuple.First, nextRight, tuple.Second, radius);
+				tmpTangents.Add(tuple);
 				Vector3 currentRSegment = tuple.Second - tuple.First;
 
 				//Right side
@@ -136,8 +146,7 @@ namespace Delaunay
 				{
 					// Does it NOT cross the left side?
 					// Is the apex the same as portal right? (if true, no chance but to move)
-					if (
-						portalApex.equals2(portalRight) ||
+					if (portalApex.equals2(portalRight) ||
 						previousValidLSegment.cross2(currentRSegment) <= 0
 						//MyMath2D.CrossProduct2D(previousValidLSegment, currentRSegment) < MyMath2D.tolerance
 					)
@@ -278,9 +287,6 @@ namespace Delaunay
 		{
 			List<Vector3> path = new List<Vector3>();
 
-			// My channel actually goes from path end to path start, so I need to
-			// invert all the apexes sides...
-
 			// Add first node
 			//path.Add(contactVertices[contactVertices.Count - 1].position);
 			path.Add(contactVertices[0].position);
@@ -292,6 +298,8 @@ namespace Delaunay
 
 				path.Add(tuple.First);
 				path.Add(tuple.Second);
+				//path.Add(contactVertices[i - 1].position);
+				//path.Add(contactVertices[i].position);
 			}
 
 			return path;
@@ -303,10 +311,12 @@ namespace Delaunay
 		}
 
 		public static List<Tuple2<Vector3, Vector3>> tmpTangents = new List<Tuple2<Vector3, Vector3>>();
+		public static List<Vector3> tmpApexes = new List<Vector3>();
+		public static List<HalfEdge> tmpPortals = new List<HalfEdge>();
 
 		static Tuple2<Vector3, Vector3> GetTangentPoints(ApexType type1, Vector3 center1, ApexType type2, Vector3 center2, float radius)
 		{
-			Tuple2<Vector3, Vector3> answer = null;
+			Tuple2<Vector3, Vector3> answer;
 			if (type1 == ApexType.Point && type2 == ApexType.Point)
 			{
 				answer = new Tuple2<Vector3, Vector3>(center1, center2);
@@ -318,7 +328,7 @@ namespace Delaunay
 			}
 			else if (type2 == ApexType.Point)
 			{
-				Vector3 tmp = MathUtility.GetTangent(center1, radius, center2, type2 == ApexType.Right);
+				Vector3 tmp = MathUtility.GetTangent(center1, radius, center2, type1 == ApexType.Right);
 				answer = new Tuple2<Vector3, Vector3>(tmp, center2);
 			}
 			else if (type1 == type2)
@@ -330,7 +340,6 @@ namespace Delaunay
 				answer = MathUtility.GetInnerTangent(center1, radius, center2, radius, type1 == ApexType.Right);
 			}
 
-			tmpTangents.Add(answer);
 			return answer;
 		}
 	}
