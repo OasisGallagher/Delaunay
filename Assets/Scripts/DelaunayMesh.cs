@@ -7,7 +7,7 @@ namespace Delaunay
 	class CrossResult
 	{
 		public HalfEdge edge;
-		public LineCrossState crossState = LineCrossState.Parallel;
+		public CrossState crossState = CrossState.Parallel;
 	}
 
 	public class DelaunayMesh
@@ -64,34 +64,33 @@ namespace Delaunay
 
 		public void Clear() { GeomManager.Clear(); }
 
-		class FindContainingFacetResult
+		class ContainedFacet
 		{
 			public int hitEdge = -1;
 			public Triangle triangle = null;
-			public List<Triangle> path = null;
 		}
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)
 		{
-			FindContainingFacetResult findResult = FindFacetContainsVertex(start);
-			if (findResult.triangle != null && !findResult.triangle.Walkable)
+			Tuple2<int, Triangle> findResult = FindFacetContainsVertex(start);
+			if (findResult.Second != null && !findResult.Second.Walkable)
 			{
-				int fromTriangleID = findResult.triangle.ID;
-				findResult.triangle = FindWalkableTriangle(findResult.triangle.FindVertex(start));
-				Debug.Log(string.Format(start + "Reposition start point from triangle {0} to {1} ", fromTriangleID, findResult.triangle.ID));
+				int fromTriangleID = findResult.Second.ID;
+				findResult.Second = FindWalkableTriangle(findResult.Second.FindVertex(start));
+				Debug.Log(string.Format(start + "Reposition start point from triangle {0} to {1} ", fromTriangleID, findResult.Second.ID));
 			}
-			Utility.Verify(findResult.triangle != null, "Invalid start point");
-			Triangle facet1 = findResult.triangle;
+			Utility.Verify(findResult.Second != null, "Invalid start point");
+			Triangle facet1 = findResult.Second;
 
 			findResult = FindFacetContainsVertex(dest, facet1);
-			if (findResult.triangle != null && !findResult.triangle.Walkable)
+			if (findResult.Second != null && !findResult.Second.Walkable)
 			{
-				findResult.triangle = FindWalkableTriangle(findResult.triangle.FindVertex(dest));
-				Debug.Log("Reposition dest point to triangle " + findResult.triangle.ID);
+				findResult.Second = FindWalkableTriangle(findResult.Second.FindVertex(dest));
+				Debug.Log("Reposition dest point to triangle " + findResult.Second.ID);
 			}
-			Utility.Verify(findResult.triangle != null, "Invalid dest point");
+			Utility.Verify(findResult.Second != null, "Invalid dest point");
 
-			return Pathfinding.FindPath(start, dest, facet1, findResult.triangle, radius);
+			return Pathfinding.FindPath(start, dest, facet1, findResult.Second, radius);
 		}
 
 		public Vector3 GetNearestPoint(Vector3 hit)
@@ -178,6 +177,21 @@ namespace Delaunay
 			CreateTriangles(PolygonTriangulation.Triangulate(polygon));
 		}
 
+		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
+		{
+			Tuple2<int, Triangle> result = FindFacetContainsVertex(from);
+			Utility.Verify(result.Second != null, "Can not find facet contains " + from);
+			if (result.First < 0)
+			{
+				Vertex vertex = result.Second.FindVertex(from);
+				HalfEdge edge = result.Second.GetOpposite(vertex);
+				Vector2 crossPoint = Vector2.zero;
+				CrossState crossState = MathUtility.SegmentCross(out crossPoint, from, to, edge.Src.Position, edge.Dest.Position);
+			}
+
+			return Vector3.zero;
+		}
+
 		Triangle FindWalkableTriangle(Vertex src)
 		{
 			foreach (HalfEdge edge in GeomManager.GetRays(src))
@@ -225,7 +239,7 @@ namespace Delaunay
 			}
 
 			Utility.Verify(queue.Count > 0);
-			return triangle.Nearest(hit).Position;
+			return MathUtility.Nearest(hit, triangle.A.Position, triangle.B.Position, triangle.C.Position);
 		}
 
 		List<Vector3> ComputeConvexHull()
@@ -293,16 +307,16 @@ namespace Delaunay
 				if (FindCrossedEdge(crossResult, ray, src, dest)) { break; }
 			}
 
-			Utility.Verify(crossResult.crossState != LineCrossState.Parallel);
+			Utility.Verify(crossResult.crossState != CrossState.Parallel);
 
-			if (crossResult.crossState == LineCrossState.FullyOverlaps)
+			if (crossResult.crossState == CrossState.FullyOverlaps)
 			{
 				crossResult.edge.Constraint = true;
 				src = crossResult.edge.Dest;
 				return crossResult.edge;
 			}
 
-			Utility.Verify(crossResult.crossState == LineCrossState.CrossOnSegment);
+			Utility.Verify(crossResult.crossState == CrossState.CrossOnSegment);
 
 			return ConstraintCrossEdges(ref src, dest, crossResult.edge);
 		}
@@ -395,17 +409,17 @@ namespace Delaunay
 			foreach (HalfEdge edge in cycle)
 			{
 				Vector3 point;
-				LineCrossState crossState = MathUtility.GetLineCrossPoint(out point,
+				CrossState crossState = MathUtility.GetLineCrossPoint(out point,
 					edge.Src.Position, edge.Dest.Position,
 					src.Position, dest.Position
 				);
 
-				if (crossState == LineCrossState.FullyOverlaps
-					|| (crossState == LineCrossState.CrossOnSegment && !point.equals2(edge.Src.Position) && !point.equals2(edge.Dest.Position)))
+				if (crossState == CrossState.FullyOverlaps
+					|| (crossState == CrossState.CrossOnSegment && !point.equals2(edge.Src.Position) && !point.equals2(edge.Dest.Position)))
 				{
 					answer.crossState = crossState;
 					answer.edge = edge;
-					if (crossState == LineCrossState.FullyOverlaps 
+					if (crossState == CrossState.FullyOverlaps 
 						&& (dest.Position.equals2(edge.Src.Position) || src.Position.equals2(edge.Dest.Position)))
 					{
 						answer.edge = answer.edge.Pair;
@@ -446,20 +460,20 @@ namespace Delaunay
 
 		bool Append(Vertex v)
 		{
-			FindContainingFacetResult answer = FindFacetContainsVertex(v.Position);
+			Tuple2<int, Triangle> answer = FindFacetContainsVertex(v.Position);
 
-			if (answer.hitEdge < 0) { return false; }
+			if (answer.First < 0) { return false; }
 
-			Utility.Verify(answer.hitEdge >= 0);
+			Utility.Verify(answer.First >= 0);
 
-			if (answer.hitEdge == 0)
+			if (answer.First == 0)
 			{
-				InsertToFacet(v, answer.triangle);
+				InsertToFacet(v, answer.Second);
 			}
 			else
 			{
-				HalfEdge hitEdge = answer.triangle.GetEdgeByDirection(answer.hitEdge);
-				InsertOnEdge(v, answer.triangle, hitEdge);
+				HalfEdge hitEdge = answer.Second.GetEdgeByDirection(answer.First);
+				InsertOnEdge(v, answer.Second, hitEdge);
 			}
 
 			return true;
@@ -483,27 +497,25 @@ namespace Delaunay
 			});
 		}
 
-		FindContainingFacetResult FindFacetContainsVertex(Vector3 position, Triangle startFacet = null, bool unconstraint = false)
+		Tuple2<int, Triangle> FindFacetContainsVertex(Vector3 position, Triangle startFacet = null)
 		{
-			FindContainingFacetResult answer = new FindContainingFacetResult();
+			Tuple2<int, Triangle> answer = new Tuple2<int, Triangle>();
 
 			startFacet = startFacet ?? GeomManager.AllTriangles[0];
 
 			for (; startFacet != null; )
 			{
-				if (answer.path != null) { answer.path.Add(startFacet); }
+				// answer.path.Add(startFacet);
 				if (startFacet.HasVertex(position))
 				{
-					answer.hitEdge = -1;
-					answer.triangle = startFacet;
+					answer.Set(-1, startFacet);
 					return answer;
 				}
 
 				int iedge = startFacet.GetPointDirection(position);
 				if (iedge >= 0)
 				{
-					answer.hitEdge = iedge;
-					answer.triangle = startFacet;
+					answer.Set(iedge, startFacet);
 					return answer;
 				}
 

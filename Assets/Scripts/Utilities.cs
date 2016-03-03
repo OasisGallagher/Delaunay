@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public enum LineCrossState
+	public enum CrossState
 	{
 		Parallel,
 		FullyOverlaps,
@@ -118,7 +118,68 @@ namespace Delaunay
 			Gizmos.color = oldColor;
 		}
 
-		public static LineCrossState SegmentCross(out Vector2 answer, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
+		public static Vector3 Nearest(Vector3 position, params Vector3[] list)
+		{
+			Vector3 answer = position;
+			float minSqrDist = float.PositiveInfinity;
+			
+			foreach (Vector3 item in list)
+			{
+				float sqrDist = (item - position).sqrMagnitude2();
+				if (sqrDist < minSqrDist)
+				{
+					answer = item;
+					minSqrDist = sqrDist;
+				}
+			}
+
+			return answer;
+		}
+
+		public static float GetInscribeCircleRadius(Vector3 va, Vector3 vb, Vector3 vc)
+		{
+			float la = (va - vb).magnitude2();
+			float lb = (vb - vc).magnitude2();
+			float lc = (vc - va).magnitude2();
+			float tmp = Mathf.Sqrt((la + lb - lc) * (la - lb + lc) * (-la + lb + lc) / (la + lb + lc)) / 2f;
+			return tmp;
+		}
+
+		public static bool Place(out Vector3 answer, Vector3 va, Vector3 vb, Vector3 vc, Vector3 reference, float radius)
+		{
+			answer = Vector3.zero;
+
+			if (GetInscribeCircleRadius(va, vb, vc) < radius)
+			{
+				return false;
+			}
+
+			Vector3 nearestVertex = MathUtility.Nearest(reference, va, vb, vc);
+			Vector3 other1 = va, other2 = vb;
+			if (nearestVertex == va)
+			{
+				other1 = vb;
+				other2 = vc;
+			}
+			else if (nearestVertex == vb)
+			{
+				other1 = va;
+				other2 = vc;
+			}
+
+			float magnitude = (other1 - nearestVertex).magnitude2() * (other2 - nearestVertex).magnitude2();
+			float radian = other1.cross2(other2, nearestVertex) / magnitude;
+			radian /= 2;
+
+			magnitude = Mathf.Asin(radian) * radius;
+
+			answer = (other1 - nearestVertex).normalized * magnitude;
+			answer = Rotate(answer, radian, Vector3.zero) + nearestVertex;
+
+			return true;
+		}
+
+		public static CrossState SegmentCross(out Vector2 answer, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
 		{
 			Vector3 r = pd - p;
 			Vector3 s = qd - q;
@@ -134,32 +195,32 @@ namespace Delaunay
 				bool onSeg4 = PointOnSegment(qd, p, pd);
 				if ((onSeg1 && onSeg2) || (onSeg3 && onSeg4))
 				{
-					return LineCrossState.FullyOverlaps;
+					return CrossState.FullyOverlaps;
 				}
 
 				if ((onSeg1 || onSeg2) && (onSeg3 || onSeg4))
 				{
-					return LineCrossState.PartiallyOverlaps;
+					return CrossState.PartiallyOverlaps;
 				}
 
-				return LineCrossState.Parallel;
+				return CrossState.Parallel;
 			}
 
 			float t = (q - p).cross2(s);
 			answer.Set(t / crs, (q - p).cross2(r) / crs);
 
 			return (InRange(answer.x) && InRange(answer.y))
-			   ? LineCrossState.CrossOnSegment : LineCrossState.CrossOnExtLine;
+			   ? CrossState.CrossOnSegment : CrossState.CrossOnExtLine;
 		}
 
-		public static LineCrossState GetLineCrossPoint(out Vector3 point, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
+		public static CrossState GetLineCrossPoint(out Vector3 point, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
 		{
 			point = Vector3.zero;
 
 			Vector2 segCrossAnswer = Vector2.zero;
-			LineCrossState crossState = SegmentCross(out segCrossAnswer, p, pd, q, qd);
+			CrossState crossState = SegmentCross(out segCrossAnswer, p, pd, q, qd);
 
-			if (crossState == LineCrossState.Parallel || crossState == LineCrossState.FullyOverlaps)
+			if (crossState == CrossState.Parallel || crossState == CrossState.FullyOverlaps)
 			{
 				return crossState;
 			}

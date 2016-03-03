@@ -255,26 +255,6 @@ namespace Delaunay
 			return MathUtility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, p, onEdge);
 		}
 
-		public Vertex Nearest(Vector3 p)
-		{
-			float minSqrMagnitude = (p - A.Position).sqrMagnitude2();
-			float tmpMagnitude = 0;
-			Vertex answer = A;
-			if ((tmpMagnitude = (p - B.Position).sqrMagnitude2()) < minSqrMagnitude)
-			{
-				minSqrMagnitude = tmpMagnitude;
-				answer = B;
-			}
-
-			if ((tmpMagnitude = (p - C.Position).sqrMagnitude2()) < minSqrMagnitude)
-			{
-				minSqrMagnitude = tmpMagnitude;
-				answer = C;
-			}
-
-			return answer;
-		}
-
 		public Vertex FindVertex(Vector3 point)
 		{
 			if (A.Position.equals2(point)) { return A; }
