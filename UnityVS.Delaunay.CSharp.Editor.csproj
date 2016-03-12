@@ -5,17 +5,19 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{E55E65D9-A453-4CE2-51CF-2A19E634804B}</ProjectGuid>
+    <ProjectGuid>{05F42A26-F934-F252-77C2-C06EEA3F73A9}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace></RootNamespace>
-    <AssemblyName>Assembly-CSharp</AssemblyName>
+    <RootNamespace>
+    </RootNamespace>
+    <AssemblyName>Assembly-CSharp-Editor</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{E097FAD1-6243-4DAD-9C02-E9B9EFC3FFC1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <TargetFrameworkIdentifier>.NETFramework</TargetFrameworkIdentifier>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <TargetFrameworkProfile>Unity Subset v3.5</TargetFrameworkProfile>
-    <CompilerResponseFile></CompilerResponseFile>
-    <UnityProjectType>Game:1</UnityProjectType>
+    <TargetFrameworkProfile>Unity Full v3.5</TargetFrameworkProfile>
+    <CompilerResponseFile>
+    </CompilerResponseFile>
+    <UnityProjectType>Editor:5</UnityProjectType>
     <UnityBuildTarget>StandaloneWindows:5</UnityBuildTarget>
     <UnityVersion>4.5.2f1</UnityVersion>
   </PropertyGroup>
@@ -49,27 +51,28 @@
       <HintPath>Library\UnityAssemblies\UnityEditor.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="UnityEditor.Graphs">
+      <HintPath>Library\UnityAssemblies\UnityEditor.Graphs.dll</HintPath>
+    </Reference>
+    <Reference Include="SyntaxTree.VisualStudio.Unity.Bridge">
+      <HintPath>Assets\UnityVS\Editor\SyntaxTree.VisualStudio.Unity.Bridge.dll</HintPath>
+    </Reference>
+    <Reference Include="SyntaxTree.VisualStudio.Unity.Messaging">
+      <HintPath>Assets\UnityVS\Editor\SyntaxTree.VisualStudio.Unity.Messaging.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityVS.VersionSpecific">
+      <HintPath>Assets\UnityVS\Editor\UnityVS.VersionSpecific.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\Code\ArrayLinkedList.cs" />
-    <Compile Include="Assets\Scripts\Code\Constants.cs" />
-    <Compile Include="Assets\Scripts\Code\ConvexHull.cs" />
-    <Compile Include="Assets\Scripts\Code\DelaunayMesh.cs" />
-    <Compile Include="Assets\Scripts\Code\Extentions.cs" />
-    <Compile Include="Assets\Scripts\Code\GeomManager.cs" />
-    <Compile Include="Assets\Scripts\Code\HalfEdge.cs" />
-    <Compile Include="Assets\Scripts\Code\Obstacle.cs" />
-    <Compile Include="Assets\Scripts\Code\PathSmooth.cs" />
-    <Compile Include="Assets\Scripts\Code\Pathfinding.cs" />
-    <Compile Include="Assets\Scripts\Code\PolygonTriangulation.cs" />
-    <Compile Include="Assets\Scripts\Code\SerializeTools.cs" />
-    <Compile Include="Assets\Scripts\Code\Stage.cs" />
-    <Compile Include="Assets\Scripts\Code\Steering.cs" />
-    <Compile Include="Assets\Scripts\Code\TestTangent.cs" />
-    <Compile Include="Assets\Scripts\Code\TiledMap.cs" />
-    <Compile Include="Assets\Scripts\Code\Triangle.cs" />
-    <Compile Include="Assets\Scripts\Code\Utilities.cs" />
-    <Compile Include="Assets\Scripts\Code\Vertex.cs" />
+    <ProjectReference Include="UnityVS.Delaunay.CSharp.csproj">
+      <Project>{E55E65D9-A453-4CE2-51CF-2A19E634804B}</Project>
+      <Name>UnityVS.Delaunay.CSharp</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Assets\Scripts\Editor\StageEditor.cs.cs" />
+    <Compile Include="Assets\Scripts\Editor\TriangleEditor.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\SyntaxTree\UnityVS\2013\UnityVS.CSharp.targets" />
 </Project>

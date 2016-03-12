@@ -10,24 +10,14 @@ namespace Delaunay
 			List<Vector3> portals = new List<Vector3>(edges.Count * 2 + 4) { start, start };
 			portals[0] = portals[1] = start;
 
-			NonPointObjectFunnel.tmpApexes.Clear();
-			NonPointObjectFunnel.tmpApexes.Add(start);
-
 			foreach (HalfEdge edge in edges)
 			{
 				portals.Add(edge.Src.Position);
 				portals.Add(edge.Dest.Position);
-
-				NonPointObjectFunnel.tmpApexes.Add(edge.Src.Position);
-				NonPointObjectFunnel.tmpApexes.Add(edge.Dest.Position);
 			}
 
 			portals.Add(dest);
 			portals.Add(dest);
-			NonPointObjectFunnel.tmpApexes.Add(dest);
-			NonPointObjectFunnel.tmpPortals = edges;
-
-			NonPointObjectFunnel.tmpTangents.Clear();
 
 			return NonPointObjectFunnel.Funnel(portals, radius);
 		}
@@ -126,30 +116,21 @@ namespace Delaunay
 
 				// Build radius-inflated line segments
 				Tuple2<Vector3, Vector3> tuple = new Tuple2<Vector3, Vector3>(portalApex, left);
-				//Vector3 tempA = portalApex, tempB = left;
-				//GetTangentPoints(out tempA, out tempB, tempA, tempB, currentType, nextLeft, radius);
 				tuple = GetTangentPoints(currentType, tuple.First, nextLeft, tuple.Second, radius);
-				tmpTangents.Add(tuple);
 				Vector3 currentLSegment = tuple.Second - tuple.First;
 
-				//tempA = portalApex; tempB = right;
 				tuple.Set(portalApex, right);
-				//GetTangentPoints(out tempA, out tempB, tempA, tempB, currentType, nextRight, radius);
 				tuple = GetTangentPoints(currentType, tuple.First, nextRight, tuple.Second, radius);
-				tmpTangents.Add(tuple);
 				Vector3 currentRSegment = tuple.Second - tuple.First;
 
 				//Right side
 				// Does new 'right' reduce the funnel?
-				//if (MyMath2D.CrossProduct2D(previousValidRSegment, currentRSegment) > -MyMath2D.tolerance)
 				if (previousValidRSegment.cross2(currentRSegment) >= 0)
 				{
 					// Does it NOT cross the left side?
 					// Is the apex the same as portal right? (if true, no chance but to move)
 					if (portalApex.equals2(portalRight) ||
-						previousValidLSegment.cross2(currentRSegment) <= 0
-						//MyMath2D.CrossProduct2D(previousValidLSegment, currentRSegment) < MyMath2D.tolerance
-					)
+						previousValidLSegment.cross2(currentRSegment) <= 0)
 					{
 						portalRight = right;
 						previousValidRSegment = currentRSegment;
@@ -309,10 +290,6 @@ namespace Delaunay
 		{
 			return GetTangentPoints(apex1.type, apex1.position, apex2.type, apex2.position, radius);
 		}
-
-		public static List<Tuple2<Vector3, Vector3>> tmpTangents = new List<Tuple2<Vector3, Vector3>>();
-		public static List<Vector3> tmpApexes = new List<Vector3>();
-		public static List<HalfEdge> tmpPortals = new List<HalfEdge>();
 
 		static Tuple2<Vector3, Vector3> GetTangentPoints(ApexType type1, Vector3 center1, ApexType type2, Vector3 center2, float radius)
 		{

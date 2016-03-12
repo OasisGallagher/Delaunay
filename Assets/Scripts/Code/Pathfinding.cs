@@ -35,11 +35,6 @@ namespace Delaunay
 						continue;
 					}
 
-					if (current.Face.ID == 69)
-					{
-						Debug.Log("");
-					}
-
 					if (!CheckEntranceWidthLimit(currentNode, startNode, destNode, current, radius))
 					{
 						continue;

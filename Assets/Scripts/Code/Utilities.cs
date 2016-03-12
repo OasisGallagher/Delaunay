@@ -169,12 +169,12 @@ namespace Delaunay
 
 			float magnitude = (other1 - nearestVertex).magnitude2() * (other2 - nearestVertex).magnitude2();
 			float radian = other1.cross2(other2, nearestVertex) / magnitude;
-			radian /= 2;
 
-			magnitude = Mathf.Asin(radian) * radius;
+			radian = Mathf.Asin(radian) / 2f;
+			magnitude = Mathf.Abs(radius / Mathf.Sin(radian));
 
 			answer = (other1 - nearestVertex).normalized * magnitude;
-			answer = Rotate(answer, radian, Vector3.zero) + nearestVertex;
+			answer = Rotate(answer, -radian, Vector3.zero) + nearestVertex;
 
 			return true;
 		}
@@ -270,7 +270,7 @@ namespace Delaunay
 
 			return true;
 		}
-
+		
 		public static float MinDistance(Vector3 point, Vector3 segSrc, Vector3 segDest)
 		{
 			Vector3 ray = segDest - segSrc;
@@ -328,6 +328,11 @@ namespace Delaunay
 			float dist = (center - point).magnitude2();
 			Utility.Verify(dist >= radius);
 
+			if (Mathf.Approximately(dist, radius))
+			{
+				return point;
+			}
+
 			float r = Mathf.Acos(radius / dist);
 			if (clockwise) { r = -r; }
 			point = (point - center).normalized * radius;
@@ -338,6 +343,12 @@ namespace Delaunay
 		{
 			float dist = (center1 - center2).magnitude2();
 			Utility.Verify(dist >= (radius1 + radius2));
+
+			if (Mathf.Approximately(dist, radius1 + radius2))
+			{
+				Vector3 point = (center2 - center1).normalized * radius1 + center1;
+				return new Tuple2<Vector3, Vector3>(point, point);
+			}
 
 			float d = radius1 * dist / (radius1 + radius2);
 			Vector3 ray = center2 - center1;
@@ -355,7 +366,7 @@ namespace Delaunay
 			if (Mathf.Approximately(radius1, radius2))
 			{
 				Vector3 d = center2 - center1;
-				d = d.normalized* radius1;
+				d = d.normalized * radius1;
 				float radian = Mathf.PI / 2f;
 				if (!clockwise) { radian = -radian; }
 				Vector3 rotated = MathUtility.Rotate(d, radian, Vector3.zero);

@@ -93,18 +93,26 @@ namespace Delaunay
 			return Pathfinding.FindPath(start, dest, facet1, findResult.Second, radius);
 		}
 
-		public Vector3 GetNearestPoint(Vector3 hit)
+		public Vector3 GetNearestPoint(Vector3 hit, float radius)
 		{
 			// TODO:
-			Triangle triangle = null;
+			Triangle triangle = FindFacetContainsVertex(hit).Second;
+			/*
 			foreach (Obstacle obstacle in GeomManager.AllObstacles)
 			{
-				triangle = obstacle.Mesh.Find(item => { return item.Contains(hit, false); });
+				triangle = obstacle.Mesh.Find(item =>
+				{
+					return MathUtility.MinDistance(hit, item.A.Position, item.B.Position) < radius
+					|| MathUtility.MinDistance(hit, item.B.Position, item.C.Position) < radius
+					|| MathUtility.MinDistance(hit, item.C.Position, item.A.Position) < radius;
+				});
+
 				if (triangle != null) { break; }
 			}
 
 			if (triangle == null) { return hit; }
-			return GetNearestPoint(triangle, hit);
+			 */
+			return GetNearestPoint(triangle, hit, radius);
 		}
 
 		public void OnDrawGizmos(bool showConvexHull)
@@ -116,15 +124,10 @@ namespace Delaunay
 				facet.BoundingEdges.ForEach(edge =>
 				{
 					Vector3 offset = EditorConstants.kEdgeGizmosOffset;
-					bool isPortal = NonPointObjectFunnel.tmpPortals.Find(item =>
-					{
-						return edge == item || edge.Pair == item;
-					}) != null;
 
 					Debug.DrawLine(edge.Src.Position + offset,
 						edge.Dest.Position + offset,
-						isPortal ? Color.red : Color.white
-						//(edge.Constraint || edge.Pair.Constraint) ? Color.red : Color.white
+						(edge.Constraint || edge.Pair.Constraint) ? Color.red : Color.white
 					);
 				});
 			});
@@ -205,16 +208,18 @@ namespace Delaunay
 			return null;
 		}
 
-		Vector3 GetNearestPoint(Triangle triangle, Vector3 hit)
+		Vector3 GetNearestPoint(Triangle triangle, Vector3 hit, float radius)
 		{
 			Queue<Triangle> queue = new Queue<Triangle>();
 			List<Triangle> visited = new List<Triangle>() { triangle };
 
 			queue.Enqueue(triangle);
+			Vector3 answer = Vector3.zero;
+
 			for (; queue.Count > 0; )
 			{
 				triangle = queue.Dequeue();
-				if (triangle.Walkable)
+				if (triangle.Walkable && triangle.Place(out answer, hit, radius))
 				{
 					break;
 				}
@@ -238,8 +243,7 @@ namespace Delaunay
 				}
 			}
 
-			Utility.Verify(queue.Count > 0);
-			return MathUtility.Nearest(hit, triangle.A.Position, triangle.B.Position, triangle.C.Position);
+			return answer;
 		}
 
 		List<Vector3> ComputeConvexHull()

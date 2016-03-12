@@ -7,18 +7,17 @@ namespace Delaunay
 	public class Stage : MonoBehaviour
 	{
 		public bool ShowConvexHull = false;
-		public int __tmpTangentCount = 0;
-		public int __tmpApexCount = 0;
-
+		
 		public float AgentRadius = 0.5f;
 		public float AgentSpeed = 8f;
-
-		Vector3? __tmpLastPosition = null;
 
 		DelaunayMesh delaunayMesh;
 		
 		GameObject destination;
 		GameObject player;
+
+		bool createObstacle = false;
+		List<Vector3> newObstacle = new List<Vector3>();
 
 		List<Vector3> borderCorners = new List<Vector3>();
 
@@ -38,7 +37,7 @@ namespace Delaunay
 			Vector3 floorPosition = floor.transform.position;
 			Rect rect = new Rect(floorPosition.x - scale.x - padding, floorPosition.z - scale.z - padding, (scale.x + padding) * 2, (scale.z + padding) * 2);
 			delaunayMesh = new DelaunayMesh(rect);
-			
+
 			destination = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
 			player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
 
@@ -53,7 +52,7 @@ namespace Delaunay
 		void DelaunayTest()
 		{
 			delaunayMesh.__tmpStart();
-
+			/*
 			Vector3[] localCircle = new Vector3[3];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
 			for (int i = 0; i < localCircle.Length; ++i)
@@ -72,7 +71,7 @@ namespace Delaunay
 			localSquare[1] = new Vector3(-0.5f, 0f, 0.5f);
 			localSquare[2] = new Vector3(-0.5f, 0f, -0.5f);
 			localSquare[3] = new Vector3(0.5f, 0f, -0.5f);
-
+			
 			Vector3[] square = new Vector3[localSquare.Length];
 			
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-2, 0, 5); }), true);
@@ -83,12 +82,12 @@ namespace Delaunay
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(-6, 0, -5); }), true);
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, 0, 5); }), true);
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, 0, -5); }), true);
-			
+			*/
 			delaunayMesh.AddObstacle(borderCorners, false);
 			
 			delaunayMesh.__tmpStop();
 
-			player.transform.position = delaunayMesh.GetNearestPoint(player.transform.position);
+			player.transform.position = delaunayMesh.GetNearestPoint(player.transform.position, AgentRadius);
 			destination.transform.position = player.transform.position;
 		}
 
@@ -97,17 +96,24 @@ namespace Delaunay
 			Vector3 point = Vector3.zero;
 			if (Input.GetMouseButtonUp(2) && GetScreenMousePosition(out point))
 			{
-				player.transform.position = delaunayMesh.GetNearestPoint(point);
-				player.GetComponent<Steering>().Path = null;
+				if (createObstacle)
+				{
+					point.y = 0f;
+					newObstacle.Add(point);
+				}
+				else
+				{
+					player.transform.position = delaunayMesh.GetNearestPoint(point, AgentRadius);
+					player.GetComponent<Steering>().Path = null;
+				}
 			}
 
 			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
 			{
 				Vector3 src = player.transform.position;
-				Vector3 dest = delaunayMesh.GetNearestPoint(point);
+				Vector3 dest = delaunayMesh.GetNearestPoint(point, AgentRadius);
 				player.GetComponent<Steering>().Path = delaunayMesh.FindPath(src, dest, AgentRadius);
 				destination.transform.position = dest;
-				__tmpLastPosition = src;
 			}
 
 			Vector3 scale = new Vector3(AgentRadius * 2f, 1, AgentRadius * 2f);
@@ -123,38 +129,9 @@ namespace Delaunay
 				delaunayMesh.OnDrawGizmos(ShowConvexHull);
 			}
 
-			Color[] array = new Color[] { Color.red, Color.green, Color.blue };
-			for (int i = 0; i < Mathf.Min(NonPointObjectFunnel.tmpTangents.Count, __tmpTangentCount); ++i)
+			foreach (Vector3 position in newObstacle)
 			{
-				Tuple2<Vector3, Vector3> tangent = NonPointObjectFunnel.tmpTangents[i];
-				Color oldGizmosColor = Gizmos.color;
-				Gizmos.color = array[i % array.Length];
-				Vector3 left = tangent.First;
-				Vector3 right = tangent.Second;
-				left.y = right.y = EditorConstants.kConvexHullGizmosHeight;
-
-				Gizmos.DrawLine(left, right);
-				Gizmos.color = oldGizmosColor;
-			}
-
-			for (int i = 0; i < Mathf.Min(NonPointObjectFunnel.tmpApexes.Count, __tmpApexCount); ++i)
-			{
-				Vector3 point = NonPointObjectFunnel.tmpApexes[i];
-				Color color = Color.white;
-				if (i == 0)
-				{
-					color = Color.red;
-				}
-				else if (i == NonPointObjectFunnel.tmpApexes.Count - 1)
-				{
-					color = Color.green;
-				}
-				else
-				{
-					color = (i % 2 != 0) ? Color.magenta : Color.cyan;
-				}
-
-				MathUtility.DrawGizmosCircle(point, AgentRadius, color, EditorConstants.kConvexHullGizmosHeight);
+				Gizmos.DrawWireSphere(position + EditorConstants.kTriangleMeshOffset, 0.2f);
 			}
 		}
 
@@ -182,31 +159,20 @@ namespace Delaunay
 				}
 			}
 
-			if (__tmpLastPosition.HasValue && GUILayout.Button("Toggle"))
+			bool toggle = GUILayout.Toggle(createObstacle, "Plant");
+			if (toggle != createObstacle)
 			{
-				Vector3 src = player.transform.position;
-				player.GetComponent<Steering>().Path = delaunayMesh.FindPath(src, __tmpLastPosition.Value, AgentRadius);
-				destination.transform.position = __tmpLastPosition.Value;
-				__tmpLastPosition = src;
+				createObstacle = toggle;
+				if (newObstacle.Count > 0)
+				{
+					delaunayMesh.AddObstacle(newObstacle, true);
+					newObstacle.Clear();
+				}
 			}
 
 			GUILayout.Label("V: " + GeomManager.AllVertices.Count);
 			GUILayout.Label("E: " + GeomManager.AllEdges.Count);
 			GUILayout.Label("T: " + GeomManager.AllTriangles.Count);
-
-			GUILayout.Label("Tan: " + NonPointObjectFunnel.tmpTangents.Count);
-			GUILayout.Label("Apex: " + NonPointObjectFunnel.tmpApexes.Count);
-
-			Color oldGUIColor = GUI.color;
-			GUI.color = Color.red;
-			GUILayout.Label("Start");
-			GUI.color = Color.green;
-			GUILayout.Label("Dest");
-			GUI.color = Color.magenta;
-			GUILayout.Label("Left");
-			GUI.color = Color.cyan;
-			GUILayout.Label("Right");
-			GUI.color = oldGUIColor;
 
 			GUILayout.EndVertical();
 		}
@@ -233,28 +199,6 @@ namespace Delaunay
 			point.y = 0;
 
 			return true;
-		}
-	}
-
-	[UnityEditor.CustomEditor(typeof(Stage))]
-	public class StageEditor : UnityEditor.Editor
-	{
-		public override void OnInspectorGUI()
-		{
-			base.OnInspectorGUI();
-			foreach (Obstacle obstacle in GeomManager.AllObstacles)
-			{
-				bool active = GUILayout.Toggle(obstacle.__tmpActive, "Obstacle " + obstacle.ID);
-				if (active != obstacle.__tmpActive)
-				{
-					obstacle.__tmpActive = active;
-					if (!obstacle.__tmpActive)
-					{
-						(target as Stage).__tmpRemoveObstacle(obstacle.ID);
-					}
-					//obstacle.Mesh.ForEach(item => { item.gameObject.SetActive(active); });
-				}
-			}
 		}
 	}
 }

@@ -88,6 +88,27 @@ namespace Delaunay
 
 		void Start()
 		{
+			RebuildMesh();
+		}
+
+		void OnDrawGizmosSelected()
+		{
+			Color oldColor = Gizmos.color;
+
+			Gizmos.color = Color.red;
+			Gizmos.DrawSphere(A.Position + Vector3.up * 0.6f, 0.3f);
+
+			Gizmos.color = Color.green;
+			Gizmos.DrawSphere(B.Position + Vector3.up * 0.6f, 0.3f);
+
+			Gizmos.color = Color.blue;
+			Gizmos.DrawSphere(C.Position + Vector3.up * 0.6f, 0.3f);
+
+			Gizmos.color = oldColor;
+		}
+
+		public void RebuildMesh()
+		{
 			Vector3 position = Edge.Dest.Position;
 			gameObject.transform.position = position;
 
@@ -105,22 +126,6 @@ namespace Delaunay
 			meshFilter.mesh.uv = EditorConstants.kUV;
 
 			UpdateWalkableMaterial();
-		}
-
-		void OnDrawGizmosSelected()
-		{
-			Color oldColor = Gizmos.color;
-
-			Gizmos.color = Color.red;
-			Gizmos.DrawSphere(A.Position + Vector3.up * 0.6f, 0.3f);
-
-			Gizmos.color = Color.green;
-			Gizmos.DrawSphere(B.Position + Vector3.up * 0.6f, 0.3f);
-
-			Gizmos.color = Color.blue;
-			Gizmos.DrawSphere(C.Position + Vector3.up * 0.6f, 0.3f);
-
-			Gizmos.color = oldColor;
 		}
 
 		public float GetWidth(HalfEdge a, HalfEdge b)
@@ -146,6 +151,11 @@ namespace Delaunay
 
 			Utility.Verify(false, "Invalid edges {0} and {1}", a, b);
 			return float.NaN;
+		}
+
+		public bool Place(out Vector3 center, Vector3 reference, float radius)
+		{
+			return MathUtility.Place(out center, A.Position, B.Position, C.Position, reference, radius);
 		}
 
 		public HalfEdge GetOpposite(Vertex from)
@@ -200,6 +210,11 @@ namespace Delaunay
 				walkable = value;
 				UpdateWalkableMaterial();
 			}
+		}
+
+		public Vector3 Center
+		{
+			get { return (A.Position + B.Position + C.Position) / 3f; }
 		}
 
 		public Vector3 CircumCircleCenter
@@ -463,18 +478,5 @@ namespace Delaunay
 		float widthC = float.NaN;
 
 		static int triangleID = 0;
-	}
-
-	[UnityEditor.CustomEditor(typeof(Triangle))]
-	public class TriangleEditor : UnityEditor.Editor
-	{
-		public override void OnInspectorGUI()
-		{
-			Triangle triangle = target as Triangle;
-			GUILayout.Label("Walkable:" + triangle.Walkable);
-			GUILayout.Label("A:" + triangle.A);
-			GUILayout.Label("B:" + triangle.B);
-			GUILayout.Label("C:" + triangle.C);
-		}
 	}
 }
