@@ -50,10 +50,6 @@ namespace Delaunay
 
 			if (modifiedVertex != null)
 			{
-				foreach (HalfEdge edge in GeomManager.GetRays(modifiedVertex))
-				{
-					if (edge.Face != null) { edge.Face.RebuildMesh(); }
-				}
 			}
 		}
 	}

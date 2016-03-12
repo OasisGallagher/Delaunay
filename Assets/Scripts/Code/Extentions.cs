@@ -10,6 +10,17 @@ namespace Delaunay
 			return target[target.Count - 1];
 		}
 
+		public static string[] toStrArray<T>(this IList<T> target)
+		{
+			string[] answer = new string[target.Count];
+			for (int i = 0; i < target.Count; ++i)
+			{
+				answer[i] = target[i].ToString();
+			}
+
+			return answer;
+		}
+
 		public static T extremum<T>(this IList<T> target, IComparer<T> comparer)
 		{
 			T answer = target[0];

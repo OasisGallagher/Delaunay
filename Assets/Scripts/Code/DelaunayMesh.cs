@@ -115,29 +115,6 @@ namespace Delaunay
 			return GetNearestPoint(triangle, hit, radius);
 		}
 
-		public void OnDrawGizmos(bool showConvexHull)
-		{
-			GeomManager.AllTriangles.ForEach(facet =>
-			{
-				if (!facet.gameObject.activeSelf) { return; }
-
-				facet.BoundingEdges.ForEach(edge =>
-				{
-					Vector3 offset = EditorConstants.kEdgeGizmosOffset;
-
-					Debug.DrawLine(edge.Src.Position + offset,
-						edge.Dest.Position + offset,
-						(edge.Constraint || edge.Pair.Constraint) ? Color.red : Color.white
-					);
-				});
-			});
-			
-			if (showConvexHull)
-			{
-				DrawConvexHull();
-			}
-		}
-
 		public void RemoveObstacle(int obstacleID)
 		{ 
 			Obstacle obstacle = GeomManager.GetObstacle(obstacleID);

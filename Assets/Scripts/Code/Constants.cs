@@ -36,7 +36,7 @@ namespace Delaunay
 		public static readonly Vector3 kHalfEdgeGizmosOffset = new Vector3(0, 0.3f, 0);
 		public static readonly Vector3 kEdgeGizmosOffset = new Vector3(0, 0.3f, 0);
 		public static readonly int[] kTriangleIndices = new int[] { 0, 2, 1 };
-		public static readonly Vector2[] kUV = new Vector2[] { Vector2.zero, Vector2.zero, Vector2.zero };
+		public static readonly Vector2[] kUVTriangle = new Vector2[] { Vector2.zero, Vector2.zero, Vector2.zero };
 
 		public static readonly VertexComparer kVertexComparer = new VertexComparer();
 

@@ -16,7 +16,7 @@ namespace Delaunay
 		GameObject destination;
 		GameObject player;
 
-		bool createObstacle = false;
+		bool createObstacle = true;
 		List<Vector3> newObstacle = new List<Vector3>();
 
 		List<Vector3> borderCorners = new List<Vector3>();
@@ -52,6 +52,8 @@ namespace Delaunay
 		void DelaunayTest()
 		{
 			delaunayMesh.__tmpStart();
+
+			//delaunayMesh.AddObstacle(triangle, true);
 			/*
 			Vector3[] localCircle = new Vector3[3];
 			float deltaRadian = 2 * Mathf.PI / localCircle.Length;
@@ -90,6 +92,18 @@ namespace Delaunay
 			player.transform.position = delaunayMesh.GetNearestPoint(player.transform.position, AgentRadius);
 			destination.transform.position = player.transform.position;
 		}
+		
+		void __tmpAddNewObstacle()
+		{
+			Vector3[] triangle = new Vector3[]
+			{
+				new Vector3(-2.0f, 0.0f, 1.6f),
+				new Vector3(1.1f, 0.0f, -1.8f),
+				new Vector3(4.2f, 0.0f, 1.5f)
+			};
+
+			delaunayMesh.AddObstacle(triangle, true);
+		}
 
 		void Update()
 		{
@@ -106,6 +120,8 @@ namespace Delaunay
 					player.transform.position = delaunayMesh.GetNearestPoint(point, AgentRadius);
 					player.GetComponent<Steering>().Path = null;
 				}
+
+				__tmpAddNewObstacle();
 			}
 
 			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
@@ -124,11 +140,6 @@ namespace Delaunay
 
 		void OnDrawGizmos()
 		{
-			if (delaunayMesh != null)
-			{
-				delaunayMesh.OnDrawGizmos(ShowConvexHull);
-			}
-
 			foreach (Vector3 position in newObstacle)
 			{
 				Gizmos.DrawWireSphere(position + EditorConstants.kTriangleMeshOffset, 0.2f);
@@ -165,6 +176,7 @@ namespace Delaunay
 				createObstacle = toggle;
 				if (newObstacle.Count > 0)
 				{
+					print(string.Join("\t", newObstacle.toStrArray()));
 					delaunayMesh.AddObstacle(newObstacle, true);
 					newObstacle.Clear();
 				}

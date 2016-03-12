@@ -12,9 +12,6 @@ namespace Delaunay
 		{
 			GameObject go = new GameObject();
 
-			go.AddComponent<MeshFilter>();
-			go.AddComponent<MeshRenderer>();
-
 			Triangle answer = go.AddComponent<Triangle>();
 			answer.Edge = src.Edge;
 
@@ -24,9 +21,6 @@ namespace Delaunay
 		public static Triangle Create(XmlReader reader, IDictionary<int, HalfEdge> container)
 		{
 			GameObject go = new GameObject();
-
-			go.AddComponent<MeshFilter>();
-			go.AddComponent<MeshRenderer>();
 
 			Triangle answer = go.AddComponent<Triangle>();
 
@@ -51,9 +45,6 @@ namespace Delaunay
 			ca.Next = ab;
 
 			GameObject go = new GameObject();
-
-			go.AddComponent<MeshFilter>();
-			go.AddComponent<MeshRenderer>();
 
 			Triangle answer = go.AddComponent<Triangle>();
 
@@ -88,7 +79,6 @@ namespace Delaunay
 
 		void Start()
 		{
-			RebuildMesh();
 		}
 
 		void OnDrawGizmosSelected()
@@ -105,27 +95,6 @@ namespace Delaunay
 			Gizmos.DrawSphere(C.Position + Vector3.up * 0.6f, 0.3f);
 
 			Gizmos.color = oldColor;
-		}
-
-		public void RebuildMesh()
-		{
-			Vector3 position = Edge.Dest.Position;
-			gameObject.transform.position = position;
-
-			MeshFilter meshFilter = gameObject.GetComponent<MeshFilter>();
-
-			meshFilter.mesh.vertices = new Vector3[] {
-				A.Position - position + EditorConstants.kTriangleMeshOffset, 
-				B.Position - position + EditorConstants.kTriangleMeshOffset, 
-				C.Position - position + EditorConstants.kTriangleMeshOffset 
-			};
-
-			meshFilter.mesh.triangles = new int[] { 0, 2, 1 };
-			meshFilter.mesh.RecalculateNormals();
-
-			meshFilter.mesh.uv = EditorConstants.kUV;
-
-			UpdateWalkableMaterial();
 		}
 
 		public float GetWidth(HalfEdge a, HalfEdge b)
@@ -206,9 +175,7 @@ namespace Delaunay
 			get { return walkable; }
 			set
 			{
-				if (value == walkable) { return; }
 				walkable = value;
-				UpdateWalkableMaterial();
 			}
 		}
 
@@ -462,12 +429,6 @@ namespace Delaunay
 			}
 
 			return answer.ToArray();
-		}
-
-		void UpdateWalkableMaterial()
-		{
-			MeshRenderer meshRenderer = gameObject.GetComponent<MeshRenderer>();
-			meshRenderer.material = Walkable ? EditorConstants.kWalkableMaterial : EditorConstants.kBlockMaterial;
 		}
 
 		bool walkable = true;
