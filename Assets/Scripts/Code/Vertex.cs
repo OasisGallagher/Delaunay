@@ -79,6 +79,6 @@ namespace Delaunay
 			Position.Set(float.Parse(reader["X"]), float.Parse(reader["Y"]), float.Parse(reader["Z"]));
 		}
 
-		static int vertexID = 0;
+		public static int vertexID = 0;
 	}
 }

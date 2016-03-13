@@ -8,6 +8,7 @@ namespace Delaunay
 		public Color BlockFaceColor = Color.red;
 		public Color WalkableFaceColor = Color.gray;
 		public Color EdgeColor = Color.black;
+		public float ShrinkAmount = 0.1f;
 
 		Material simpleMaterial;
 
@@ -26,32 +27,39 @@ namespace Delaunay
 
 		void OnPostRender()
 		{
+			simpleMaterial.SetPass(0);
+
+			GL.Begin(GL.TRIANGLES);
+			Vector3[] shinkedTriangle = new Vector3[3];
 			GeomManager.AllTriangles.ForEach(face =>
 			{
 				if (face.gameObject.activeSelf)
 				{
-					DrawTriangle(face.A.Position, face.B.Position, face.C.Position, face.Walkable ? WalkableFaceColor : BlockFaceColor);
+					shinkedTriangle[0] = face.A.Position;
+					shinkedTriangle[1] = face.B.Position;
+					shinkedTriangle[2] = face.C.Position;
+					MathUtility.Shink(shinkedTriangle, ShrinkAmount);
+					GL.Color(face.Walkable ? WalkableFaceColor : BlockFaceColor);
+					GL.Vertex(shinkedTriangle[0] + EditorConstants.kTriangleMeshOffset);
+					GL.Vertex(shinkedTriangle[1] + EditorConstants.kTriangleMeshOffset);
+					GL.Vertex(shinkedTriangle[2] + EditorConstants.kTriangleMeshOffset);
 				}
 			});
-		}
 
-		void DrawTriangle(Vector3 va, Vector3 vb, Vector3 vc, Color faceColor)
-		{
-			simpleMaterial.SetPass(0);
-
-			GL.Begin(GL.TRIANGLES);
-			GL.Color(faceColor);
-			GL.Vertex(va);
-			GL.Vertex(vb);
-			GL.Vertex(vc);
 			GL.End();
 
 			GL.Begin(GL.LINES);
 			GL.Color(EdgeColor);
-			GL.Vertex(va);
-			GL.Vertex(vb);
-			GL.Vertex(vc);
-			GL.Vertex(va);
+			GeomManager.AllEdges.ForEach(edge =>
+			{
+				bool forward = edge.Src.Position.compare2(edge.Dest.Position) < 0;
+				if (forward)
+				{
+					GL.Vertex(edge.Src.Position + EditorConstants.kTriangleMeshOffset);
+					GL.Vertex(edge.Dest.Position + EditorConstants.kTriangleMeshOffset);
+				}
+			});
+
 			GL.End();
 		}
 	}

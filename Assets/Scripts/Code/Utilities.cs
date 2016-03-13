@@ -118,6 +118,53 @@ namespace Delaunay
 			Gizmos.color = oldColor;
 		}
 
+		public static Vector3 Centroid(Vector3 a, Vector3 b, Vector3 c)
+		{
+			return (a + b + c) / 2f;
+		}
+
+		public static Vector3 Circumcentre(Vector3 a, Vector3 b, Vector3 c)
+		{
+			float t1 = a.x * a.x + a.z * a.z;
+			float t2 = b.x * b.x + b.z * b.z;
+			float t3 = c.x * c.x + c.z * c.z;
+			float tmp = a.x * b.z + b.x * c.z + c.x * a.z - a.x * c.z - b.x * a.z - c.x * b.z;
+			tmp *= 2f;
+
+			float x = (t2 * c.z + t1 * b.z + t3 * a.z - t2 * a.z - t3 * b.z - t1 * c.z) / tmp;
+			float z = (t3 * b.x + t2 * a.x + t1 * c.x - t1 * b.x - t2 * c.x - t3 * a.x) / tmp;
+			return new Vector3(x, (a.y + b.y + c.y) / 3f, z);
+		}
+
+		public static Vector3 Incentre(Vector3 a, Vector3 b, Vector3 c)
+		{
+			Vector3 dt1 = b - a;
+			Vector3 dt2 = c - b;
+			Vector3 dt3 = c - a;
+
+			Vector3 p1 = dt1.normalized * dt3.magnitude;
+			p1 = a + (p1 + dt3) / 2f;
+
+			Vector3 p2 = dt2.normalized * dt1.magnitude;
+			p2 = b + (p2 - dt1) / 2f;
+
+			Vector3 center = Vector3.zero;
+			GetLineCrossPoint(out center, a, p1, b, p2);
+			return center;
+		}
+
+		public static void Shink(Vector3[] triangle, float value)
+		{
+			float r = GetInscribeCircleRadius(triangle[0], triangle[1], triangle[2]);
+			value /= r;
+
+			Vector3 center = Incentre(triangle[0], triangle[1], triangle[2]);
+
+			triangle[0] = triangle[0] + (center - triangle[0]) * value;
+			triangle[1] = triangle[1] + (center - triangle[1]) * value;
+			triangle[2] = triangle[2] + (center - triangle[2]) * value;
+		}
+
 		public static Vector3 Nearest(Vector3 position, params Vector3[] list)
 		{
 			Vector3 answer = position;
@@ -141,8 +188,7 @@ namespace Delaunay
 			float la = (va - vb).magnitude2();
 			float lb = (vb - vc).magnitude2();
 			float lc = (vc - va).magnitude2();
-			float tmp = Mathf.Sqrt((la + lb - lc) * (la - lb + lc) * (-la + lb + lc) / (la + lb + lc)) / 2f;
-			return tmp;
+			return Mathf.Sqrt((la + lb - lc) * (la - lb + lc) * (-la + lb + lc) / (la + lb + lc)) / 2f;
 		}
 
 		public static bool Place(out Vector3 answer, Vector3 va, Vector3 vb, Vector3 vc, Vector3 reference, float radius)

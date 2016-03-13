@@ -220,6 +220,6 @@ namespace Delaunay
 		bool isConstraint;
 		Triangle face;
 
-		static int halfEdgeID = 0;
+		public static int halfEdgeID = 0;
 	}
 }

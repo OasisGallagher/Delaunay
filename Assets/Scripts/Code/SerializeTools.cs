@@ -89,6 +89,21 @@ namespace Delaunay
 				}
 			}
 
+			for (; reader.Read(); )
+			{
+				if (reader.NodeType == XmlNodeType.EndElement
+					&& reader.Name == EditorConstants.kXmlAllTriangles)
+				{
+					break;
+				}
+
+				if (reader.NodeType != XmlNodeType.Element) { continue; }
+				if (reader.Name == EditorConstants.kXmlObstacle)
+				{
+					Obstacle.Create(reader, container);
+				}
+			}
+
 			reader.Close();
 
 			foreach (HalfEdge edge in container.Values)
@@ -125,6 +140,11 @@ namespace Delaunay
 				{
 					WriteAllTriangles(writer);
 				}
+
+				using (new XmlWriterScope(writer, EditorConstants.kXmlAllObstacles))
+				{
+					WriteAllObstacles(writer);
+				}
 			}
 
 			writer.WriteEndDocument();
@@ -160,6 +180,17 @@ namespace Delaunay
 				using (new XmlWriterScope(writer, EditorConstants.kXmlTriangle))
 				{
 					triangle.WriteXml(writer);
+				}
+			});
+		}
+
+		static void WriteAllObstacles(XmlWriter writer)
+		{
+			GeomManager.AllObstacles.ForEach(obstacle =>
+			{
+				using (new XmlWriterScope(writer, EditorConstants.kXmlObstacle))
+				{
+					obstacle.WriteXml(writer);
 				}
 			});
 		}

@@ -74,6 +74,7 @@ namespace Delaunay
 		void Awake()
 		{
 			ID = triangleID++;
+			Walkable = true;
 			gameObject.name = "Triangle_" + ID;
 		}
 
@@ -170,35 +171,7 @@ namespace Delaunay
 			}
 		}
 
-		public bool Walkable
-		{
-			get { return walkable; }
-			set
-			{
-				walkable = value;
-			}
-		}
-
-		public Vector3 Center
-		{
-			get { return (A.Position + B.Position + C.Position) / 3f; }
-		}
-
-		public Vector3 CircumCircleCenter
-		{
-			get
-			{
-				float t1 = A.Position.x * A.Position.x + A.Position.z * A.Position.z;
-				float t2 = B.Position.x * B.Position.x + B.Position.z * B.Position.z;
-				float t3 = C.Position.x * C.Position.x + C.Position.z * C.Position.z;
-				float tmp = A.Position.x * B.Position.z + B.Position.x * C.Position.z + C.Position.x * A.Position.z - A.Position.x * C.Position.z - B.Position.x * A.Position.z - C.Position.x * B.Position.z;
-				tmp *= 2f;
-
-				float x = (t2 * C.Position.z + t1 * B.Position.z + t3 * A.Position.z - t2 * A.Position.z - t3 * B.Position.z - t1 * C.Position.z) / tmp;
-				float z = (t3 * B.Position.x + t2 * A.Position.x + t1 * C.Position.x - t1 * B.Position.x - t2 * C.Position.x - t3 * A.Position.x) / tmp;
-				return new Vector3(x, (A.Position.y + B.Position.y + C.Position.y) / 3f, z);
-			}
-		}
+		public bool Walkable { get; set; }
 
 		public List<HalfEdge> BoundingEdges
 		{
@@ -390,16 +363,6 @@ namespace Delaunay
 			}
 		}
 
-		#region Pathfinding
-		public HalfEdge Portal { get; set; }
-
-		public HalfEdge[] AdjPortals { get { return GetAdjPortals(); } }
-
-		public float G { get; set; }
-
-		public float H { get; set; }
-		#endregion
-
 		void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
 		{
 			ID = int.Parse(reader["ID"]);
@@ -414,6 +377,16 @@ namespace Delaunay
 
 			Walkable = reader.ReadElementContentAsBoolean();
 		}
+
+		#region Pathfinding
+		public HalfEdge Portal { get; set; }
+
+		public HalfEdge[] AdjPortals { get { return GetAdjPortals(); } }
+
+		public float G { get; set; }
+
+		public float H { get; set; }
+		#endregion
 
 		HalfEdge[] GetAdjPortals()
 		{
@@ -431,13 +404,12 @@ namespace Delaunay
 			return answer.ToArray();
 		}
 
-		bool walkable = true;
 		HalfEdge halfEdge = null;
 
 		float widthA = float.NaN;
 		float widthB = float.NaN;
 		float widthC = float.NaN;
 
-		static int triangleID = 0;
+		public static int triangleID = 0;
 	}
 }

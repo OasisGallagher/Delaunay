@@ -85,7 +85,7 @@ namespace Delaunay
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, 0, 5); }), true);
 			delaunayMesh.AddObstacle(localSquare.transform(square, item => { return item * 2f + new Vector3(6, 0, -5); }), true);
 			*/
-			delaunayMesh.AddObstacle(borderCorners, false);
+			delaunayMesh.AddBorder(borderCorners);
 			
 			delaunayMesh.__tmpStop();
 
@@ -93,18 +93,6 @@ namespace Delaunay
 			destination.transform.position = player.transform.position;
 		}
 		
-		void __tmpAddNewObstacle()
-		{
-			Vector3[] triangle = new Vector3[]
-			{
-				new Vector3(-2.0f, 0.0f, 1.6f),
-				new Vector3(1.1f, 0.0f, -1.8f),
-				new Vector3(4.2f, 0.0f, 1.5f)
-			};
-
-			delaunayMesh.AddObstacle(triangle, true);
-		}
-
 		void Update()
 		{
 			Vector3 point = Vector3.zero;
@@ -112,16 +100,20 @@ namespace Delaunay
 			{
 				if (createObstacle)
 				{
-					point.y = 0f;
-					newObstacle.Add(point);
+					if (AddNewObstacleVertex(point))
+					{
+						newObstacle.Add(point);
+					}
+					else
+					{
+						Debug.LogError("Invalid point " + point);
+					}
 				}
 				else
 				{
 					player.transform.position = delaunayMesh.GetNearestPoint(point, AgentRadius);
 					player.GetComponent<Steering>().Path = null;
 				}
-
-				__tmpAddNewObstacle();
 			}
 
 			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
@@ -143,6 +135,13 @@ namespace Delaunay
 			foreach (Vector3 position in newObstacle)
 			{
 				Gizmos.DrawWireSphere(position + EditorConstants.kTriangleMeshOffset, 0.2f);
+			}
+
+			for (int i = 1; i < newObstacle.Count; ++i)
+			{
+				Gizmos.DrawLine(newObstacle[i - 1] + EditorConstants.kTriangleMeshOffset,
+					newObstacle[i] + EditorConstants.kTriangleMeshOffset
+				);
 			}
 		}
 
@@ -167,6 +166,10 @@ namespace Delaunay
 					Clear();
 					SerializeTools.Load(path);
 					print(path + " loaded.");
+					Vertex.vertexID = 10000;
+					Triangle.triangleID = 10000;
+					HalfEdge.halfEdgeID = 10000;
+					Obstacle.obstacleID = 10000;
 				}
 			}
 
@@ -177,7 +180,7 @@ namespace Delaunay
 				if (newObstacle.Count > 0)
 				{
 					print(string.Join("\t", newObstacle.toStrArray()));
-					delaunayMesh.AddObstacle(newObstacle, true);
+					delaunayMesh.AddObstacle(newObstacle);
 					newObstacle.Clear();
 				}
 			}
@@ -195,6 +198,24 @@ namespace Delaunay
 		{
 			if (delaunayMesh != null) { delaunayMesh.Clear(); }
 			destination.SetActive(false);
+		}
+
+		bool AddNewObstacleVertex(Vector3 point)
+		{
+			if (newObstacle.Count == 0) { return true; }
+			Vector3 cross = Vector3.zero;
+			for (int i = 1; i < newObstacle.Count; ++i)
+			{
+				CrossState state = MathUtility.GetLineCrossPoint(out cross, newObstacle[i],
+					newObstacle[i - 1], point, newObstacle.back());
+
+				if (state == CrossState.CrossOnSegment && !cross.equals2(newObstacle.back()))
+				{
+					return false;
+				}
+			}
+
+			return true;
 		}
 
 		bool GetScreenMousePosition(out Vector3 point)

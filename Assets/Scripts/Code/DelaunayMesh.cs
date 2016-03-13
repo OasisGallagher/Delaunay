@@ -16,8 +16,6 @@ namespace Delaunay
 		Vector3 stBPosition;
 		Vector3 stCPosition;
 
-		List<Vector3> convexHull;
-
 		public DelaunayMesh(Rect bound)
 		{
 			float max = Mathf.Max(bound.xMax, bound.yMax);
@@ -30,36 +28,17 @@ namespace Delaunay
 		public void __tmpStart() { SetUpBounds(); }
 		public void __tmpStop() { RemoveBounds(); }
 
-		public void AddObstacle(IEnumerable<Vector3> container, bool isObstacle)
+		public void AddBorder(IEnumerable<Vector3> vertices)
 		{
-			IEnumerator<Vector3> e = container.GetEnumerator();
-			if (!e.MoveNext()) { return; }
+			AddPolygon(vertices);
+		}
 
-			Vertex prevVertex = Vertex.Create(e.Current);
-			Vertex firstVertex = prevVertex;
-
-			List<HalfEdge> obstacleBoundingEdges = new List<HalfEdge>();
-			List<Vertex> vertices = new List<Vertex>();
-
-			for (; e.MoveNext(); )
-			{
-				vertices.Add(prevVertex);
-
-				Vertex currentVertex = Vertex.Create(e.Current);
-				obstacleBoundingEdges.AddRange(AddConstraintEdge(prevVertex, currentVertex));
-				prevVertex = currentVertex;
-			}
-
-			vertices.Add(prevVertex);
-			obstacleBoundingEdges.AddRange(AddConstraintEdge(prevVertex, firstVertex));
-
-			if (isObstacle)
-			{
-				Obstacle obstacle = Obstacle.Create(obstacleBoundingEdges);
-				MarkObstacle(obstacle);
-			}
-
-			convexHull = null;
+		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
+		{
+			List<HalfEdge> polygonBoundingEdges = AddPolygon(vertices);
+			Obstacle obstacle = Obstacle.Create(polygonBoundingEdges);
+			MarkObstacle(obstacle);
+			return obstacle;
 		}
 
 		public void Clear() { GeomManager.Clear(); }
@@ -95,8 +74,9 @@ namespace Delaunay
 
 		public Vector3 GetNearestPoint(Vector3 hit, float radius)
 		{
+			return hit;
 			// TODO:
-			Triangle triangle = FindFacetContainsVertex(hit).Second;
+		//	Triangle triangle = FindFacetContainsVertex(hit).Second;
 			/*
 			foreach (Obstacle obstacle in GeomManager.AllObstacles)
 			{
@@ -112,7 +92,7 @@ namespace Delaunay
 
 			if (triangle == null) { return hit; }
 			 */
-			return GetNearestPoint(triangle, hit, radius);
+			//return GetNearestPoint(triangle, hit, radius);
 		}
 
 		public void RemoveObstacle(int obstacleID)
@@ -183,6 +163,33 @@ namespace Delaunay
 			}
 
 			return null;
+		}
+
+		List<HalfEdge> AddPolygon(IEnumerable<Vector3> container)
+		{
+			IEnumerator<Vector3> e = container.GetEnumerator();
+			List<HalfEdge> polygonBoundingEdges = new List<HalfEdge>();
+
+			if (!e.MoveNext()) { return polygonBoundingEdges; }
+
+			Vertex prevVertex = Vertex.Create(e.Current);
+			Vertex firstVertex = prevVertex;
+
+			List<Vertex> vertices = new List<Vertex>();
+
+			for (; e.MoveNext(); )
+			{
+				vertices.Add(prevVertex);
+
+				Vertex currentVertex = Vertex.Create(e.Current);
+				polygonBoundingEdges.AddRange(AddConstraintEdge(prevVertex, currentVertex));
+				prevVertex = currentVertex;
+			}
+
+			vertices.Add(prevVertex);
+			polygonBoundingEdges.AddRange(AddConstraintEdge(prevVertex, firstVertex));
+
+			return polygonBoundingEdges;
 		}
 
 		Vector3 GetNearestPoint(Triangle triangle, Vector3 hit, float radius)
@@ -416,27 +423,6 @@ namespace Delaunay
 		void MarkObstacle(Obstacle obstacle)
 		{
 			obstacle.Mesh.ForEach(triangle => { triangle.Walkable = false; });
-		}
-
-		void DrawConvexHull()
-		{
-			convexHull = convexHull ?? ComputeConvexHull();
-
-			for (int i = 1; i < convexHull.Count; ++i)
-			{
-				Vector3 prev = convexHull[i - 1];
-				Vector3 current = convexHull[i];
-				prev.y = current.y = EditorConstants.kConvexHullGizmosHeight;
-				Debug.DrawLine(prev, current, Color.green);
-			}
-
-			if (convexHull.Count >= 2)
-			{
-				Vector3 prev = convexHull[(convexHull.Count - 1) % convexHull.Count];
-				Vector3 current = convexHull[0];
-				prev.y = current.y = EditorConstants.kConvexHullGizmosHeight;
-				Debug.DrawLine(prev, current, Color.green);
-			}
 		}
 
 		bool Append(Vertex v)
