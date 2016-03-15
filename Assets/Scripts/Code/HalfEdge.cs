@@ -7,6 +7,8 @@ namespace Delaunay
 {
 	public class HalfEdge
 	{
+		public static IDGenerator HalfEdgeIDGenerator = new IDGenerator();
+
 		public static HalfEdge Create(Vertex src, Vertex dest)
 		{
 			HalfEdge self = GeomManager.GetRays(src).Find(item => { return item.Dest == dest; });
@@ -99,10 +101,8 @@ namespace Delaunay
 
 		HalfEdge()
 		{
-			ID = halfEdgeID++;
+			ID = HalfEdgeIDGenerator.Value;
 		}
-
-		public static void ResetIDGenerator() { halfEdgeID = 0; }
 
 		public bool Constraint
 		{
@@ -219,7 +219,5 @@ namespace Delaunay
 
 		bool isConstraint;
 		Triangle face;
-
-		public static int halfEdgeID = 0;
 	}
 }

@@ -166,10 +166,6 @@ namespace Delaunay
 					Clear();
 					SerializeTools.Load(path);
 					print(path + " loaded.");
-					Vertex.vertexID = 10000;
-					Triangle.triangleID = 10000;
-					HalfEdge.halfEdgeID = 10000;
-					Obstacle.obstacleID = 10000;
 				}
 			}
 

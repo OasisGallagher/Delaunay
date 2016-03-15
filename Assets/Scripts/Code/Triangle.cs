@@ -8,6 +8,8 @@ namespace Delaunay
 	{
 		public int ID { get; private set; }
 
+		public static IDGenerator TriangleIDGenerator = new IDGenerator();
+
 		public static Triangle Create(Triangle src)
 		{
 			GameObject go = new GameObject();
@@ -15,6 +17,7 @@ namespace Delaunay
 			Triangle answer = go.AddComponent<Triangle>();
 			answer.Edge = src.Edge;
 
+			GeomManager.AddTriangle(answer);
 			return answer;
 		}
 
@@ -25,6 +28,8 @@ namespace Delaunay
 			Triangle answer = go.AddComponent<Triangle>();
 
 			answer.ReadXml(reader, container);
+			GeomManager.AddTriangle(answer);
+
 			return answer;
 		}
 
@@ -51,11 +56,14 @@ namespace Delaunay
 			ab.Face = bc.Face = ca.Face = answer;
 			answer.Edge = ab;
 
+			GeomManager.AddTriangle(answer);
 			return answer;
 		}
 
 		public static void Release(Triangle triangle)
 		{
+			GeomManager.RemoveTriangle(triangle);
+
 			triangle.BoundingEdges.ForEach(e => 
 			{
 				if (e.Face == triangle)
@@ -69,11 +77,9 @@ namespace Delaunay
 			GameObject.DestroyImmediate(triangle.gameObject);
 		}
 
-		public static void ResetIDGenerator() { triangleID = 0; }
-
 		void Awake()
 		{
-			ID = triangleID++;
+			ID = TriangleIDGenerator.Value;
 			Walkable = true;
 			gameObject.name = "Triangle_" + ID;
 		}
@@ -103,19 +109,19 @@ namespace Delaunay
 			Vertex v = GetIntersectVertex(a, b);
 			if (v == A)
 			{
-				if (float.IsNaN(widthA)) { widthA = CalcWidth(a, b); }
+				if (float.IsNaN(widthA)) { widthA = CalculateWidth(a, b); }
 				return widthA;
 			}
 
 			if (v == B)
 			{
-				if (float.IsNaN(widthB)) { widthB = CalcWidth(a, b); }
+				if (float.IsNaN(widthB)) { widthB = CalculateWidth(a, b); }
 				return widthB;
 			}
 
 			if (v == C)
 			{
-				if (float.IsNaN(widthC)) { widthC = CalcWidth(a, b); }
+				if (float.IsNaN(widthC)) { widthC = CalculateWidth(a, b); }
 				return widthC;
 			}
 
@@ -269,9 +275,9 @@ namespace Delaunay
 
 		void UpdateWidth()
 		{
-			widthA = CalcWidth(AB, CA);
-			widthB = CalcWidth(BC, AB);
-			widthC = CalcWidth(CA, BC);
+			widthA = CalculateWidth(AB, CA);
+			widthB = CalculateWidth(BC, AB);
+			widthC = CalculateWidth(CA, BC);
 		}
 
 		Vertex GetIntersectVertex(HalfEdge ea, HalfEdge eb)
@@ -282,7 +288,7 @@ namespace Delaunay
 			return null;
 		}
 
-		float CalcWidth(HalfEdge ea, HalfEdge eb)
+		float CalculateWidth(HalfEdge ea, HalfEdge eb)
 		{
 			Vertex vc = GetIntersectVertex(ea, eb);
 
@@ -409,7 +415,5 @@ namespace Delaunay
 		float widthA = float.NaN;
 		float widthB = float.NaN;
 		float widthC = float.NaN;
-
-		public static int triangleID = 0;
 	}
 }

@@ -16,6 +16,8 @@ namespace Delaunay
 
 		public Vector3 Position;
 
+		public static IDGenerator VertexIDGenerator = new IDGenerator();
+
 		public static Vertex Create(Vector3 position)
 		{
 			Utility.Verify(GeomManager.FindVertex(position) == null, "Duplicate vertex at position " + position);
@@ -34,11 +36,9 @@ namespace Delaunay
 
 		Vertex(Vector3 position)
 		{
-			ID = vertexID++;
+			ID = VertexIDGenerator.Value;
 			this.Position = position;
 		}
-
-		public static void ResetIDGenerator() { vertexID = 0; }
 
 		public override string ToString()
 		{
@@ -78,7 +78,5 @@ namespace Delaunay
 			reader.Read();
 			Position.Set(float.Parse(reader["X"]), float.Parse(reader["Y"]), float.Parse(reader["Z"]));
 		}
-
-		public static int vertexID = 0;
 	}
 }

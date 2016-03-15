@@ -118,9 +118,14 @@ namespace Delaunay
 			Gizmos.color = oldColor;
 		}
 
+		public static Vector3 Centroid(Vector3[] a)
+		{
+			return Centroid(a[0], a[1], a[2]);
+		}
+
 		public static Vector3 Centroid(Vector3 a, Vector3 b, Vector3 c)
 		{
-			return (a + b + c) / 2f;
+			return (a + b + c) / 3f;
 		}
 
 		public static Vector3 Circumcentre(Vector3 a, Vector3 b, Vector3 c)

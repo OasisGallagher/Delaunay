@@ -7,6 +7,9 @@ namespace Delaunay
 	public class Obstacle
 	{
 		public int ID { get; private set; }
+
+		public static IDGenerator ObstacleIDGenerator = new IDGenerator();
+
 		public bool __tmpActive;
 		public static Obstacle Create(List<HalfEdge> boundingEdges)
 		{
@@ -31,7 +34,7 @@ namespace Delaunay
 
 		Obstacle()
 		{
-			ID = obstacleID++;
+			ID = ObstacleIDGenerator.Value;
 		}
 
 		public List<HalfEdge> BoundingEdges
@@ -110,6 +113,5 @@ namespace Delaunay
 
 		List<Triangle> mesh = null;
 		List<HalfEdge> boundingEdges = null;
-		public static int obstacleID = 0;
 	}
 }

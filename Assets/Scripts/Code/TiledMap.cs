@@ -4,37 +4,70 @@ namespace Delaunay
 {
 	public class Tile
 	{
-		public Triangle Facet;
+		public Triangle Face;
 	}
 
 	public class TiledMap
 	{
-		Tile[,] tiles = null;
-		float tileSize;
-		int rowCount, columnCount;
-		public TiledMap(float size, int nRow, int nCol)
+		public float TileSize
 		{
-			InitTiles(size, nRow, nCol);
+			get { return tileSize; }
 		}
 
-		void InitTiles(float size, int nRow, int nCol)
+		public int RowCount
 		{
-			tiles = new Tile[nRow, nCol];
-			for (int i = 0; i < nRow; ++i)
+			get { return rowCount; }
+		}
+
+		public int ColumnCount
+		{
+			get { return columnCount; }
+		}
+
+		public Vector3 Origin
+		{
+			get { return origin; }
+		}
+
+		Tile[,] tiles = null;
+		int rowCount, columnCount;
+		Vector3 origin;
+		float tileSize;
+
+		public TiledMap(Vector3 origin, float tileSize, int rowCount, int columnCount)
+		{
+			this.rowCount = rowCount;
+			this.columnCount = columnCount;
+			this.tileSize = tileSize;
+			this.origin = origin;
+
+			InitTiles(tileSize, rowCount, columnCount);
+		}
+
+		public Tile GetTile(Vector3 position)
+		{
+			position -= origin;
+			position /= TileSize;
+			int x = Mathf.FloorToInt(position.x);
+			int z = Mathf.FloorToInt(position.z);
+			if (x > columnCount || z > rowCount)
 			{
-				for (int j = 0; j < nCol; ++j)
+				return null;
+			}
+
+			return tiles[x, z];
+		}
+
+		void InitTiles(float size, int rowCount, int columnCount)
+		{
+			tiles = new Tile[rowCount, columnCount];
+			for (int i = 0; i < rowCount; ++i)
+			{
+				for (int j = 0; j < columnCount; ++j)
 				{
 					tiles[i, j] = new Tile();
 				}
 			}
-
-			tileSize = size;
-
-		}
-
-		Tile GetTile(Vector3 position)
-		{
-			return null;
 		}
 	}
 }

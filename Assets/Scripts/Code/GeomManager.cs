@@ -10,6 +10,7 @@ namespace Delaunay
 	{
 		static HalfEdgeContainer halfEdgeContainer = new HalfEdgeContainer(EditorConstants.kVertexComparer);
 		static ObstacleContainer obstacleContainer = new ObstacleContainer();
+		static TiledMap tiledMap = new TiledMap(Vector3.zero, 1f, 128, 128);
 
 		public static void AddEdge(HalfEdge edge)
 		{
@@ -40,6 +41,60 @@ namespace Delaunay
 			obstacleContainer.Remove(obstacle);
 		}
 
+		public static void AddTriangle(Triangle triangle)
+		{
+			Vector3[] list = new Vector3[] { triangle.A.Position, triangle.B.Position, triangle.C.Position };
+			Vector3 center = MathUtility.Centroid(list);
+			Tile tile = tiledMap.GetTile(center);
+			Utility.Verify(tile != null, "Invalid tile at position " + center);
+			if (tile != null && MathUtility.PolygonContains(list, center))
+			{
+				tile.Face = triangle;
+			}
+		}
+
+		public static void RemoveTriangle(Triangle triangle)
+		{
+			Vector3[] list = new Vector3[] { triangle.A.Position, triangle.B.Position, triangle.C.Position };
+			Vector3 center = MathUtility.Centroid(list);
+			Tile tile = tiledMap.GetTile(center);
+			Utility.Verify(tile != null, "Invalid tile at position " + center);
+			if (tile != null && tile.Face == triangle)
+			{
+				tile.Face = null;
+			}
+		}
+
+		public static Tuple2<int, Triangle> FindVertexContainedTriangle(Vector3 position)
+		{
+			Tuple2<int, Triangle> answer = new Tuple2<int, Triangle>();
+
+			Tile startTile = tiledMap.GetTile(position);
+			Triangle face = startTile != null ? startTile.Face : null;
+
+			face = face ?? GeomManager.AllTriangles[0];
+
+			for (; face != null; )
+			{
+				if (face.HasVertex(position))
+				{
+					answer.Set(-1, face);
+					return answer;
+				}
+
+				int iedge = face.GetPointDirection(position);
+				if (iedge >= 0)
+				{
+					answer.Set(iedge, face);
+					return answer;
+				}
+
+				face = face.GetEdgeByDirection(iedge).Pair.Face;
+			}
+
+			return answer;
+		}
+
 		public static Obstacle GetObstacle(int ID)
 		{
 			return obstacleContainer.Find(item => { return item.ID == ID; });
@@ -63,10 +118,12 @@ namespace Delaunay
 			});
 
 			halfEdgeContainer.Clear();
+			obstacleContainer.Clear();
 
-			Vertex.ResetIDGenerator();
-			HalfEdge.ResetIDGenerator();
-			Triangle.ResetIDGenerator();
+			Vertex.VertexIDGenerator.Current = 0;
+			HalfEdge.HalfEdgeIDGenerator.Current = 0;
+			Triangle.TriangleIDGenerator.Current = 0;
+			Obstacle.ObstacleIDGenerator.Current = 0;
 		}
 
 		public static Vertex FindVertex(Vector3 position)
@@ -132,6 +189,11 @@ namespace Delaunay
 		public static List<Obstacle> AllObstacles
 		{
 			get { return obstacleContainer; }
+		}
+
+		public static TiledMap Map
+		{
+			get { return tiledMap; }
 		}
 
 		static List<Triangle> CollectTriangles()

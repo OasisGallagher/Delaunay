@@ -52,6 +52,12 @@ namespace Delaunay
 				}
 
 				if (reader.NodeType != XmlNodeType.Element) { continue; }
+
+				if (reader.Name == EditorConstants.kXmlAllVertices)
+				{
+					Vertex.VertexIDGenerator.ReadXml(reader);
+				}
+
 				if (reader.Name == EditorConstants.kXmlVertex)
 				{
 					Vertex.Create(reader);
@@ -68,6 +74,12 @@ namespace Delaunay
 				}
 
 				if (reader.NodeType != XmlNodeType.Element) { continue; }
+
+				if (reader.Name == EditorConstants.kXmlAllEdges)
+				{
+					HalfEdge.HalfEdgeIDGenerator.ReadXml(reader);
+				}
+
 				if (reader.Name == EditorConstants.kXmlEdge)
 				{
 					HalfEdge.Create(reader, container);
@@ -83,6 +95,12 @@ namespace Delaunay
 				}
 
 				if (reader.NodeType != XmlNodeType.Element) { continue; }
+
+				if (reader.Name == EditorConstants.kXmlAllTriangles)
+				{
+					Triangle.TriangleIDGenerator.ReadXml(reader);
+				}
+
 				if (reader.Name == EditorConstants.kXmlTriangle)
 				{
 					Triangle.Create(reader, container);
@@ -92,12 +110,18 @@ namespace Delaunay
 			for (; reader.Read(); )
 			{
 				if (reader.NodeType == XmlNodeType.EndElement
-					&& reader.Name == EditorConstants.kXmlAllTriangles)
+					&& reader.Name == EditorConstants.kXmlObstacle)
 				{
 					break;
 				}
 
 				if (reader.NodeType != XmlNodeType.Element) { continue; }
+
+				if (reader.Name == EditorConstants.kXmlObstacle)
+				{
+					Obstacle.ObstacleIDGenerator.ReadXml(reader);
+				}
+
 				if (reader.Name == EditorConstants.kXmlObstacle)
 				{
 					Obstacle.Create(reader, container);
@@ -128,21 +152,25 @@ namespace Delaunay
 			{
 				using (new XmlWriterScope(writer, EditorConstants.kXmlAllVertices))
 				{
+					Vertex.VertexIDGenerator.WriteXml(writer);
 					WriteAllVertices(writer);
 				}
 
 				using (new XmlWriterScope(writer, EditorConstants.kXmlAllEdges))
 				{
+					HalfEdge.HalfEdgeIDGenerator.WriteXml(writer);
 					WriteAllEdges(writer);
 				}
 
 				using (new XmlWriterScope(writer, EditorConstants.kXmlAllTriangles))
 				{
+					Triangle.TriangleIDGenerator.WriteXml(writer);
 					WriteAllTriangles(writer);
 				}
 
 				using (new XmlWriterScope(writer, EditorConstants.kXmlAllObstacles))
 				{
+					Obstacle.ObstacleIDGenerator.WriteXml(writer);
 					WriteAllObstacles(writer);
 				}
 			}

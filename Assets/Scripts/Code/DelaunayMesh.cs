@@ -51,7 +51,7 @@ namespace Delaunay
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)
 		{
-			Tuple2<int, Triangle> findResult = FindFacetContainsVertex(start);
+			Tuple2<int, Triangle> findResult = GeomManager.FindVertexContainedTriangle(start);
 			if (findResult.Second != null && !findResult.Second.Walkable)
 			{
 				int fromTriangleID = findResult.Second.ID;
@@ -61,7 +61,7 @@ namespace Delaunay
 			Utility.Verify(findResult.Second != null, "Invalid start point");
 			Triangle facet1 = findResult.Second;
 
-			findResult = FindFacetContainsVertex(dest, facet1);
+			findResult = GeomManager.FindVertexContainedTriangle(dest);
 			if (findResult.Second != null && !findResult.Second.Walkable)
 			{
 				findResult.Second = FindWalkableTriangle(findResult.Second.FindVertex(dest));
@@ -139,7 +139,7 @@ namespace Delaunay
 
 		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
 		{
-			Tuple2<int, Triangle> result = FindFacetContainsVertex(from);
+			Tuple2<int, Triangle> result = GeomManager.FindVertexContainedTriangle(from);
 			Utility.Verify(result.Second != null, "Can not find facet contains " + from);
 			if (result.First < 0)
 			{
@@ -427,7 +427,7 @@ namespace Delaunay
 
 		bool Append(Vertex v)
 		{
-			Tuple2<int, Triangle> answer = FindFacetContainsVertex(v.Position);
+			Tuple2<int, Triangle> answer = GeomManager.FindVertexContainedTriangle(v.Position);
 
 			if (answer.First < 0) { return false; }
 
@@ -462,34 +462,6 @@ namespace Delaunay
 					Triangle.Release(facet);
 				}
 			});
-		}
-
-		Tuple2<int, Triangle> FindFacetContainsVertex(Vector3 position, Triangle startFacet = null)
-		{
-			Tuple2<int, Triangle> answer = new Tuple2<int, Triangle>();
-
-			startFacet = startFacet ?? GeomManager.AllTriangles[0];
-
-			for (; startFacet != null; )
-			{
-				// answer.path.Add(startFacet);
-				if (startFacet.HasVertex(position))
-				{
-					answer.Set(-1, startFacet);
-					return answer;
-				}
-
-				int iedge = startFacet.GetPointDirection(position);
-				if (iedge >= 0)
-				{
-					answer.Set(iedge, startFacet);
-					return answer;
-				}
-
-				startFacet = startFacet.GetEdgeByDirection(iedge).Pair.Face;
-			}
-
-			return answer;
 		}
 
 		void InsertToFacet(Vertex v, Triangle old)
