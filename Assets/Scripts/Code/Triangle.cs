@@ -10,12 +10,12 @@ namespace Delaunay
 
 		public static IDGenerator TriangleIDGenerator = new IDGenerator();
 
-		public static Triangle Create(Triangle src)
+		public static Triangle Create(HalfEdge edge)
 		{
 			GameObject go = new GameObject();
 
 			Triangle answer = go.AddComponent<Triangle>();
-			answer.Edge = src.Edge;
+			answer.Edge = edge;
 
 			GeomManager.AddTriangle(answer);
 			return answer;

@@ -76,11 +76,7 @@ namespace Delaunay
 			Tuple2<int, Triangle> answer = new Tuple2<int, Triangle>();
 
 			Tile startTile = tiledMap[position];
-			if (startTile != null && startTile.Face != null)
-			{
-				Debug.Log("................");
-			}
-
+			
 			Triangle face = startTile != null ? startTile.Face : null;
 
 			face = face ?? GeomManager.AllTriangles[0];
@@ -249,7 +245,6 @@ namespace Delaunay
 
 		static TiledMapRegion FindTriangleBoundingRectOverlappedTiles(Triangle triangle)
 		{
-			Vector3[] list = new Vector3[] { triangle.A.Position, triangle.B.Position, triangle.C.Position };
 			float xMin = Mathf.Min(triangle.A.Position.x, triangle.B.Position.x, triangle.C.Position.x);
 			float xMax = Mathf.Max(triangle.A.Position.x, triangle.B.Position.x, triangle.C.Position.x);
 			float zMin = Mathf.Min(triangle.A.Position.z, triangle.B.Position.z, triangle.C.Position.z);

@@ -2,7 +2,6 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	[System.Flags]
 	public enum DebugDrawMask
 	{
 		DebugDrawTriangles = 1,
@@ -103,8 +102,26 @@ namespace Delaunay
 			float width = (map.ColumnCount * map.TileSize);
 			float height = (map.RowCount * map.TileSize);
 
+			GL.Begin(GL.QUADS);
+			for (int i = 0; i < map.RowCount; ++i)
+			{
+				for (int j = 0; j < map.ColumnCount; ++j)
+				{
+					Tile tile = map[i, j];
+					GL.Color(tile.Face != null ? TileColor : Color.clear);
+					Vector3 center = map.GetTileCenter(i, j) + EditorConstants.kTriangleMeshOffset;
+					Vector3 deltaX = new Vector3(map.TileSize / 2f, 0, 0);
+					Vector3 deltaZ = new Vector3(0, 0, map.TileSize / 2f);
+					GL.Vertex(center - deltaX - deltaZ);
+					GL.Vertex(center - deltaX + deltaZ);
+					GL.Vertex(center + deltaX + deltaZ);
+					GL.Vertex(center + deltaX - deltaZ);
+				}
+			}
+			GL.End();
+
 			GL.Begin(GL.LINES);
-			GL.Color(TileColor);
+			GL.Color(Color.black);
 
 			for (int i = 0; i < map.RowCount + 1; ++i)
 			{

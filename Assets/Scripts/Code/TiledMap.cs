@@ -6,6 +6,11 @@ namespace Delaunay
 	public class Tile
 	{
 		public Triangle Face;
+		public override string ToString()
+		{
+			if (Face != null) { return Face.ToString(); }
+			return base.ToString();
+		}
 	}
 
 	public struct Region
@@ -18,10 +23,8 @@ namespace Delaunay
 	{
 		Region region;
 		int x, z;
-		TiledMap map;
 		public TiledMapRegion(TiledMap map, Region region)
 		{
-			this.map = map;
 			this.region = region;
 			x = region.xMin - 1;
 			z = region.zMax;

@@ -466,25 +466,20 @@ namespace Delaunay
 
 		void InsertToFacet(Vertex v, Triangle old)
 		{
-			Triangle ab = Triangle.Create(old);
-			Triangle bc = Triangle.Create(old);
-			Triangle ca = Triangle.Create(old);
-
+			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
 			HalfEdge av = HalfEdge.Create(old.A, v);
 			HalfEdge bv = HalfEdge.Create(old.B, v);
 			HalfEdge cv = HalfEdge.Create(old.C, v);
 
-			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
+			Triangle ab = Triangle.Create(AB.CycleLink(bv, av.Pair));
+			Triangle bc = Triangle.Create(BC.CycleLink(cv, bv.Pair));
+			Triangle ca = Triangle.Create(CA.CycleLink(av, cv.Pair));
 
 			AB.Face = bv.Face = av.Pair.Face = ab;
 			BC.Face = cv.Face = bv.Pair.Face = bc;
 			CA.Face = av.Face = cv.Pair.Face = ca;
 
 			Triangle.Release(old);
-
-			ab.Edge = AB.CycleLink(bv, av.Pair);
-			bc.Edge = BC.CycleLink(cv, bv.Pair);
-			ca.Edge = CA.CycleLink(av, cv.Pair);
 
 			Utility.Verify(av.Face == ca);
 			Utility.Verify(av.Pair.Face == ab);
@@ -502,28 +497,23 @@ namespace Delaunay
 
 		void InsertOnEdge(Vertex v, Triangle old, HalfEdge hitEdge)
 		{
-			Triangle split1 = Triangle.Create(old);
-			Triangle split2 = Triangle.Create(old);
-
 			Vertex opositeVertex = hitEdge.Next.Dest;
-
 			HalfEdge ov = HalfEdge.Create(opositeVertex, v);
 			HalfEdge v1 = HalfEdge.Create(v, hitEdge.Dest);
 			HalfEdge v2 = HalfEdge.Create(v, hitEdge.Pair.Dest);
 
 			HalfEdge sp1Edge0 = hitEdge.Next;
-
 			HalfEdge sp2Edge0 = hitEdge.Next.Next;
 			HalfEdge sp2Edge1 = v2.Pair;
 			HalfEdge sp2Edge2 = ov.Pair;
+
+			Triangle split1 = Triangle.Create(sp1Edge0.CycleLink(ov, v1));
+			Triangle split2 = Triangle.Create(sp2Edge0.CycleLink(sp2Edge1, sp2Edge2));
 
 			sp1Edge0.Face = ov.Face = v1.Face = split1;
 			sp2Edge0.Face = sp2Edge1.Face = sp2Edge2.Face = split2;
 			
 			Triangle.Release(old);
-
-			split1.Edge = sp1Edge0.CycleLink(ov, v1);
-			split2.Edge = sp2Edge0.CycleLink(sp2Edge1, sp2Edge2);
 
 			Utility.Verify(ov.Face == split1);
 			Utility.Verify(ov.Pair.Face == split2);
@@ -538,22 +528,25 @@ namespace Delaunay
 				Vertex p = hitEdge.Pair.Next.Dest;
 
 				HalfEdge vp = HalfEdge.Create(v, p);
-
-				oposite1 = Triangle.Create(other);
-				oposite2 = Triangle.Create(other);
-
 				HalfEdge hpn = hitEdge.Pair.Next;
 				HalfEdge op1Edge0 = hpn.Next;
 				HalfEdge op1Edge1 = v1.Pair;
 				HalfEdge op1Edge2 = vp;
 
+				oposite1 = Triangle.Create(op1Edge0.CycleLink(op1Edge1, op1Edge2));
+				oposite2 = Triangle.Create(hpn.CycleLink(vp.Pair, v2));
+
+// 				HalfEdge hpn = hitEdge.Pair.Next;
+// 				HalfEdge op1Edge0 = hpn.Next;
+// 				HalfEdge op1Edge1 = v1.Pair;
+// 				HalfEdge op1Edge2 = vp;
+
 				hpn.Face = vp.Pair.Face = v2.Face = oposite2;
 				op1Edge0.Face = op1Edge1.Face = op1Edge2.Face = oposite1;
 				Triangle.Release(other);
 
-				oposite2.Edge = hpn.CycleLink(vp.Pair, v2);
-
-				oposite1.Edge = op1Edge0.CycleLink(op1Edge1, op1Edge2);
+// 				oposite2.Edge = hpn.CycleLink(vp.Pair, v2);
+// 				oposite1.Edge = op1Edge0.CycleLink(op1Edge1, op1Edge2);
 
 				Utility.Verify(vp.Face == oposite1);
 				Utility.Verify(vp.Pair.Face == oposite2);
