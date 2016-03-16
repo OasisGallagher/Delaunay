@@ -10,7 +10,7 @@ namespace Delaunay
 	{
 		static HalfEdgeContainer halfEdgeContainer = new HalfEdgeContainer(EditorConstants.kVertexComparer);
 		static ObstacleContainer obstacleContainer = new ObstacleContainer();
-		static TiledMap tiledMap = new TiledMap(Vector3.zero, 1f, 128, 128);
+		static TiledMap tiledMap = new TiledMap(new Vector3(-10, 0, -10), 1f, 20, 20);
 
 		public static void AddEdge(HalfEdge edge)
 		{
@@ -44,24 +44,30 @@ namespace Delaunay
 		public static void AddTriangle(Triangle triangle)
 		{
 			Vector3[] list = new Vector3[] { triangle.A.Position, triangle.B.Position, triangle.C.Position };
-			Vector3 center = MathUtility.Centroid(list);
-			Tile tile = tiledMap.GetTile(center);
-			Utility.Verify(tile != null, "Invalid tile at position " + center);
-			if (tile != null && MathUtility.PolygonContains(list, center))
+			TiledMapRegion tmr = FindTriangleBoundingRectOverlappedTiles(triangle);
+
+			for (; tmr.MoveNext(); )
 			{
-				tile.Face = triangle;
+				Tuple2<int, int> current = tmr.Current;
+				Tile tile = tiledMap[current.First, current.Second];
+				Vector3 center = tiledMap.GetTileCenter(current.First, current.Second);
+				if (MathUtility.PolygonContains(list, center))
+				{
+					tile.Face = triangle;
+				}
 			}
 		}
 
 		public static void RemoveTriangle(Triangle triangle)
 		{
-			Vector3[] list = new Vector3[] { triangle.A.Position, triangle.B.Position, triangle.C.Position };
-			Vector3 center = MathUtility.Centroid(list);
-			Tile tile = tiledMap.GetTile(center);
-			Utility.Verify(tile != null, "Invalid tile at position " + center);
-			if (tile != null && tile.Face == triangle)
+			TiledMapRegion tmr = FindTriangleBoundingRectOverlappedTiles(triangle);
+			for (; tmr.MoveNext(); )
 			{
-				tile.Face = null;
+				Tile tile = tiledMap[tmr.Current.First, tmr.Current.Second];
+				if (tile.Face == triangle)
+				{
+					tile.Face = null;
+				}
 			}
 		}
 
@@ -69,7 +75,12 @@ namespace Delaunay
 		{
 			Tuple2<int, Triangle> answer = new Tuple2<int, Triangle>();
 
-			Tile startTile = tiledMap.GetTile(position);
+			Tile startTile = tiledMap[position];
+			if (startTile != null && startTile.Face != null)
+			{
+				Debug.Log("................");
+			}
+
 			Triangle face = startTile != null ? startTile.Face : null;
 
 			face = face ?? GeomManager.AllTriangles[0];
@@ -234,6 +245,17 @@ namespace Delaunay
 			}
 
 			return answer;
+		}
+
+		static TiledMapRegion FindTriangleBoundingRectOverlappedTiles(Triangle triangle)
+		{
+			Vector3[] list = new Vector3[] { triangle.A.Position, triangle.B.Position, triangle.C.Position };
+			float xMin = Mathf.Min(triangle.A.Position.x, triangle.B.Position.x, triangle.C.Position.x);
+			float xMax = Mathf.Max(triangle.A.Position.x, triangle.B.Position.x, triangle.C.Position.x);
+			float zMin = Mathf.Min(triangle.A.Position.z, triangle.B.Position.z, triangle.C.Position.z);
+			float zMax = Mathf.Max(triangle.A.Position.z, triangle.B.Position.z, triangle.C.Position.z);
+
+			return tiledMap.GetTiles(xMin, xMax, zMin, zMax);
 		}
 	}
 }

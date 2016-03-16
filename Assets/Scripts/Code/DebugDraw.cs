@@ -7,7 +7,7 @@ namespace Delaunay
 	{
 		DebugDrawTriangles = 1,
 		DebugDrawEdges = 2,
-		DebugDrawTiles = 3,
+		DebugDrawTiles = 4,
 	}
 
 	[RequireComponent(typeof(Camera))]

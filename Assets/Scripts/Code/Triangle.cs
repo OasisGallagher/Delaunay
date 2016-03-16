@@ -392,6 +392,8 @@ namespace Delaunay
 		public float G { get; set; }
 
 		public float H { get; set; }
+
+		public uint Flag { get; set; }
 		#endregion
 
 		HalfEdge[] GetAdjPortals()

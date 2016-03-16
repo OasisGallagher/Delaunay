@@ -8,9 +8,9 @@ namespace Delaunay
 	{
 		public override void OnInspectorGUI()
 		{
+			base.OnInspectorGUI();
 			DebugDraw component = target as DebugDraw;
 			component.DrawMask = (DebugDrawMask)EditorGUILayout.EnumMaskField("Draw Mask", component.DrawMask);
-			base.OnInspectorGUI();
 		}
 	}
 }
