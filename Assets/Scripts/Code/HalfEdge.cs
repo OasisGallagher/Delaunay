@@ -62,7 +62,19 @@ namespace Delaunay
 		/// <summary>
 		/// Vertex at the end of the half-edge.
 		/// </summary>
-		public Vertex Dest { get; set; }
+		Vertex mDest;
+		public Vertex Dest
+		{
+			get { return mDest; }
+			set
+			{
+				if (ID == 9 || ID == 8)
+				{
+					Debug.Log("");
+				}
+				mDest = value;
+			}
+		}// { get; set; }
 
 		/// <summary>
 		/// Next half-edge around the face.

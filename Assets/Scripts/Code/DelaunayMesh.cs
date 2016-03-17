@@ -457,7 +457,7 @@ namespace Delaunay
 			GeomManager.AllTriangles.ForEach(facet =>
 			{
 				if (facet.gameObject.activeSelf
-					&& facet.HasVertex(stAPosition) || facet.HasVertex(stBPosition) || facet.HasVertex(stCPosition))
+					&& (facet.HasVertex(stAPosition) || facet.HasVertex(stBPosition) || facet.HasVertex(stCPosition)))
 				{
 					Triangle.Release(facet);
 				}
@@ -536,17 +536,9 @@ namespace Delaunay
 				oposite1 = Triangle.Create(op1Edge0.CycleLink(op1Edge1, op1Edge2));
 				oposite2 = Triangle.Create(hpn.CycleLink(vp.Pair, v2));
 
-// 				HalfEdge hpn = hitEdge.Pair.Next;
-// 				HalfEdge op1Edge0 = hpn.Next;
-// 				HalfEdge op1Edge1 = v1.Pair;
-// 				HalfEdge op1Edge2 = vp;
-
 				hpn.Face = vp.Pair.Face = v2.Face = oposite2;
 				op1Edge0.Face = op1Edge1.Face = op1Edge2.Face = oposite1;
 				Triangle.Release(other);
-
-// 				oposite2.Edge = hpn.CycleLink(vp.Pair, v2);
-// 				oposite1.Edge = op1Edge0.CycleLink(op1Edge1, op1Edge2);
 
 				Utility.Verify(vp.Face == oposite1);
 				Utility.Verify(vp.Pair.Face == oposite2);

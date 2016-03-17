@@ -15,7 +15,7 @@ namespace Delaunay
 			GameObject go = new GameObject();
 
 			Triangle answer = go.AddComponent<Triangle>();
-			answer.Edge = edge;
+			answer.halfEdge = edge;
 
 			GeomManager.AddTriangle(answer);
 			return answer;
@@ -54,7 +54,7 @@ namespace Delaunay
 			Triangle answer = go.AddComponent<Triangle>();
 
 			ab.Face = bc.Face = ca.Face = answer;
-			answer.Edge = ab;
+			answer.halfEdge = ab;
 
 			GeomManager.AddTriangle(answer);
 			return answer;
@@ -64,16 +64,16 @@ namespace Delaunay
 		{
 			GeomManager.RemoveTriangle(triangle);
 
-			triangle.BoundingEdges.ForEach(e => 
+			foreach(HalfEdge edge in triangle.BoundingEdges)
 			{
-				if (e.Face == triangle)
+				if (edge.Face == triangle)
 				{
-					e.Face = null;
-					e.Next = null;
+					edge.Face = null;
+					edge.Next = null;
 				}
-			});
+			}
 
-			triangle.Edge = null;
+			triangle.halfEdge = null;
 			GameObject.DestroyImmediate(triangle.gameObject);
 		}
 
@@ -172,7 +172,11 @@ namespace Delaunay
 			get { return halfEdge; }
 			set
 			{
+				if (halfEdge == value) { return; }
+				if (halfEdge != null) { GeomManager.RemoveTriangle(this); }
+
 				halfEdge = value;
+				GeomManager.AddTriangle(this);
 				widthA = widthB = widthC = float.NaN;
 			}
 		}
@@ -377,7 +381,7 @@ namespace Delaunay
 
 			int edge = reader.ReadElementContentAsInt();
 
-			Edge = container[edge];
+			halfEdge = container[edge];
 
 			BoundingEdges.ForEach(e => { e.Face = this; });
 
