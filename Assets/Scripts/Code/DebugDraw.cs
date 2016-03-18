@@ -1,143 +1,103 @@
+using UnityEditor;
 using UnityEngine;
 
 namespace Delaunay
 {
-	public enum DebugDrawMask
+	public class DebugDraw
 	{
-		DebugDrawTriangles = 1,
-		DebugDrawEdges = 2,
-		DebugDrawTiles = 4,
-	}
-
-	[RequireComponent(typeof(Camera))]
-	public class DebugDraw : MonoBehaviour
-	{
-		[HideInInspector]
-		public DebugDrawMask DrawMask;
-
-		public Color BlockFaceColor = Color.red;
-		public Color WalkableFaceColor = Color.gray;
-		public Color EdgeColor = Color.black;
-		public Color TileColor = Color.black;
-
-		public float Shrink = 0.1f;
-
-		Material simpleMaterial;
-
-		void Awake()
+		enum DebugDrawMask
 		{
-			simpleMaterial = new Material(
-				"Shader \"Lines/Colored Blended\" {"
-				+ "SubShader { Pass { "
-				+ "	BindChannels { Bind \"Color\",color } "
-				+ "	Blend SrcAlpha OneMinusSrcAlpha "
-				+ "	ZWrite Off Cull Off Fog { Mode Off } "
-				+ "} } }");
-			simpleMaterial.hideFlags = HideFlags.HideAndDontSave;
-			simpleMaterial.shader.hideFlags = HideFlags.HideAndDontSave;
+			DebugDrawTriangles = 1,
+			DebugDrawEdges = 2,
+			DebugDrawTiles = 4,
 		}
 
-		void OnPostRender()
-		{
-			simpleMaterial.SetPass(0);
+		DebugDrawMask drawMask;
+		Color blockFaceColor = Color.red;
+		Color walkableFaceColor = Color.gray;
+		Color edgeColor = Color.black;
 
-			if ((DrawMask & DebugDrawMask.DebugDrawTriangles) != 0)
+		Color freeTileFaceColor = new Color(77 / 255f, 64 / 255f, 176 / 255f, 1f);
+		Color usedTileFaceColor = new Color(159 / 255f, 53 / 255f, 53 / 255f, 22 / 255f);
+		Color tileEdgeColor = new Color(4 / 255f, 4 / 255f, 4 / 255f, 76 / 255f);
+
+		public void OnGUI()
+		{
+			EditorGUILayout.BeginVertical("Box");
+			drawMask = (DebugDrawMask)EditorGUILayout.EnumMaskField("Draw mask", drawMask);
+			blockFaceColor = EditorGUILayout.ColorField("Block face color", blockFaceColor);
+			walkableFaceColor = EditorGUILayout.ColorField("Walkable face color", walkableFaceColor);
+			edgeColor = EditorGUILayout.ColorField("Edge color", edgeColor);
+			freeTileFaceColor = EditorGUILayout.ColorField("Free tile face color", freeTileFaceColor);
+			usedTileFaceColor = EditorGUILayout.ColorField("Used tile face color", usedTileFaceColor);
+			tileEdgeColor = EditorGUILayout.ColorField("Tile edge color", tileEdgeColor);
+			EditorGUILayout.EndVertical();
+		}
+
+		public void Draw()
+		{
+			if ((drawMask & DebugDrawMask.DebugDrawTriangles) != 0)
 			{
-				DrawTriangles();
+				GeomManager.AllTriangles.ForEach(face =>
+				{
+					if (face.gameObject.activeSelf)
+					{
+						Color color = face.Walkable ? walkableFaceColor : blockFaceColor;
+						Vector3[] verts = new Vector3[]
+						{
+							face.A.Position + EditorConstants.kTriangleMeshOffset,
+							face.B.Position + EditorConstants.kTriangleMeshOffset,
+							face.C.Position + EditorConstants.kTriangleMeshOffset,
+							face.A.Position + EditorConstants.kTriangleMeshOffset,
+						};
+
+						Handles.DrawSolidRectangleWithOutline(verts, color, color);
+					}
+				});
 			}
 
-			if ((DrawMask & DebugDrawMask.DebugDrawEdges) != 0)
+			if ((drawMask & DebugDrawMask.DebugDrawEdges) != 0)
 			{
-				DrawEdges();
+				Color handlesOldColor = Handles.color;
+				Handles.color = edgeColor;
+				GeomManager.AllEdges.ForEach(edge =>
+				{
+					bool forward = edge.Src.Position.compare2(edge.Dest.Position) < 0;
+					if (forward)
+					{
+						Handles.DrawLine(edge.Src.Position + EditorConstants.kTriangleMeshOffset,
+							edge.Dest.Position + EditorConstants.kTriangleMeshOffset
+						);
+					}
+				});
+
+				Handles.color = handlesOldColor;
 			}
 
-			if ((DrawMask & DebugDrawMask.DebugDrawTiles) != 0)
+			if ((drawMask & DebugDrawMask.DebugDrawTiles) != 0)
 			{
-				DrawTiles();
-			}
-		}
+				TiledMap map = GeomManager.Map;
 
-		void DrawEdges()
-		{
-			GL.Begin(GL.LINES);
-			GL.Color(EdgeColor);
-			GeomManager.AllEdges.ForEach(edge =>
-			{
-				bool forward = edge.Src.Position.compare2(edge.Dest.Position) < 0;
-				if (forward)
+				for (int i = 0; i < map.RowCount; ++i)
 				{
-					GL.Vertex(edge.Src.Position + EditorConstants.kTriangleMeshOffset);
-					GL.Vertex(edge.Dest.Position + EditorConstants.kTriangleMeshOffset);
-				}
-			});
+					for (int j = 0; j < map.ColumnCount; ++j)
+					{
+						Tile tile = map[i, j];
+						Vector3 center = map.GetTileCenter(i, j) + EditorConstants.kTriangleMeshOffset;
+						Vector3 deltaX = new Vector3(map.TileSize / 2f, 0, 0);
+						Vector3 deltaZ = new Vector3(0, 0, map.TileSize / 2f);
+						Vector3[] verts = new Vector3[]
+						{
+							center - deltaX - deltaZ,
+							center - deltaX + deltaZ,
+							center + deltaX + deltaZ,
+							center + deltaX - deltaZ
+						};
 
-			GL.End();
-		}
-
-		void DrawTriangles()
-		{
-			GL.Begin(GL.TRIANGLES);
-			Vector3[] shinkedTriangle = new Vector3[3];
-			GeomManager.AllTriangles.ForEach(face =>
-			{
-				if (face.gameObject.activeSelf)
-				{
-					shinkedTriangle[0] = face.A.Position;
-					shinkedTriangle[1] = face.B.Position;
-					shinkedTriangle[2] = face.C.Position;
-					MathUtility.Shink(shinkedTriangle, Shrink);
-					GL.Color(face.Walkable ? WalkableFaceColor : BlockFaceColor);
-					GL.Vertex(shinkedTriangle[0] + EditorConstants.kTriangleMeshOffset);
-					GL.Vertex(shinkedTriangle[1] + EditorConstants.kTriangleMeshOffset);
-					GL.Vertex(shinkedTriangle[2] + EditorConstants.kTriangleMeshOffset);
-				}
-			});
-
-			GL.End();
-		}
-
-		void DrawTiles()
-		{
-			TiledMap map = GeomManager.Map;
-			float width = (map.ColumnCount * map.TileSize);
-			float height = (map.RowCount * map.TileSize);
-
-			GL.Begin(GL.QUADS);
-			for (int i = 0; i < map.RowCount; ++i)
-			{
-				for (int j = 0; j < map.ColumnCount; ++j)
-				{
-					Tile tile = map[i, j];
-					GL.Color(tile.Face != null ? TileColor : Color.clear);
-					Vector3 center = map.GetTileCenter(i, j) + EditorConstants.kTriangleMeshOffset;
-					Vector3 deltaX = new Vector3(map.TileSize / 2f, 0, 0);
-					Vector3 deltaZ = new Vector3(0, 0, map.TileSize / 2f);
-					GL.Vertex(center - deltaX - deltaZ);
-					GL.Vertex(center - deltaX + deltaZ);
-					GL.Vertex(center + deltaX + deltaZ);
-					GL.Vertex(center + deltaX - deltaZ);
+						Handles.DrawSolidRectangleWithOutline(verts, tile.Face != null ? usedTileFaceColor : freeTileFaceColor, tileEdgeColor);
+					}
 				}
 			}
-			GL.End();
-
-			GL.Begin(GL.LINES);
-			GL.Color(Color.black);
-
-			for (int i = 0; i < map.RowCount + 1; ++i)
-			{
-				Vector3 start = map.Origin + i * map.TileSize * Vector3.forward + EditorConstants.kTriangleMeshOffset;
-				GL.Vertex(start);
-				GL.Vertex(start + width * Vector3.right);
-			}
-
-			for (int i = 0; i < map.ColumnCount + 1; ++i)
-			{
-				Vector3 start = map.Origin + i * map.TileSize * Vector3.right + EditorConstants.kTriangleMeshOffset;
-				GL.Vertex(start);
-				GL.Vertex(start + height * Vector3.forward);
-			}
-
-			GL.End();
 		}
 	}
 }

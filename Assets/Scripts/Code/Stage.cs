@@ -6,8 +6,6 @@ namespace Delaunay
 {
 	public class Stage : MonoBehaviour
 	{
-		public bool ShowConvexHull = false;
-		
 		public float AgentRadius = 0.5f;
 		public float AgentSpeed = 8f;
 

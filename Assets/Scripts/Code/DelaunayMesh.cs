@@ -76,7 +76,7 @@ namespace Delaunay
 		{
 			return hit;
 			// TODO:
-		//	Triangle triangle = FindFacetContainsVertex(hit).Second;
+			//	Triangle triangle = FindFacetContainsVertex(hit).Second;
 			/*
 			foreach (Obstacle obstacle in GeomManager.AllObstacles)
 			{
@@ -96,7 +96,7 @@ namespace Delaunay
 		}
 
 		public void RemoveObstacle(int obstacleID)
-		{ 
+		{
 			Obstacle obstacle = GeomManager.GetObstacle(obstacleID);
 			List<Vertex> boundingVertices = new List<Vertex>(obstacle.BoundingEdges.Count);
 			obstacle.BoundingEdges.ForEach(item => { boundingVertices.Add(item.Src); });
@@ -105,7 +105,7 @@ namespace Delaunay
 
 			List<Triangle> triangles = new List<Triangle>();
 			List<Vertex> vertices = new List<Vertex>();
-			
+
 			Vertex benchmark = null;
 			foreach (HalfEdge edge in obstacle.BoundingEdges)
 			{
@@ -209,19 +209,19 @@ namespace Delaunay
 				}
 
 				if (triangle.AB.Pair.Face != null && !visited.Contains(triangle.AB.Pair.Face))
-				{ 
+				{
 					queue.Enqueue(triangle.AB.Pair.Face);
 					visited.Add(triangle.AB.Pair.Face);
 				}
 
 				if (triangle.BC.Pair.Face != null && !visited.Contains(triangle.BC.Pair.Face))
-				{ 
+				{
 					queue.Enqueue(triangle.BC.Pair.Face);
 					visited.Add(triangle.BC.Pair.Face);
 				}
 
 				if (triangle.CA.Pair.Face != null && !visited.Contains(triangle.CA.Pair.Face))
-				{ 
+				{
 					queue.Enqueue(triangle.CA.Pair.Face);
 					visited.Add(triangle.CA.Pair.Face);
 				}
@@ -250,7 +250,7 @@ namespace Delaunay
 				}
 			}
 
-			for(int i = 0; i < bits.Count; ++i)
+			for (int i = 0; i < bits.Count; ++i)
 			{
 				if (!bits[i])
 				{
@@ -342,7 +342,7 @@ namespace Delaunay
 			return constraintEdge;
 		}
 
-		Vertex CollectCrossedTriangles(List<HalfEdge> crossedTriangles, 
+		Vertex CollectCrossedTriangles(List<HalfEdge> crossedTriangles,
 			List<Vertex> up, List<Vertex> low, Vertex src, Vertex dest, HalfEdge start)
 		{
 			Vector3 srcDest = dest.Position - src.Position;
@@ -407,7 +407,7 @@ namespace Delaunay
 				{
 					answer.crossState = crossState;
 					answer.edge = edge;
-					if (crossState == CrossState.FullyOverlaps 
+					if (crossState == CrossState.FullyOverlaps
 						&& (dest.Position.equals2(edge.Src.Position) || src.Position.equals2(edge.Dest.Position)))
 					{
 						answer.edge = answer.edge.Pair;
@@ -456,8 +456,8 @@ namespace Delaunay
 		{
 			GeomManager.AllTriangles.ForEach(facet =>
 			{
-				if (facet.gameObject.activeSelf
-					&& (facet.HasVertex(stAPosition) || facet.HasVertex(stBPosition) || facet.HasVertex(stCPosition)))
+				if (!facet.gameObject.activeSelf) { return; }
+				if (facet.HasVertex(stAPosition) || facet.HasVertex(stBPosition) || facet.HasVertex(stCPosition))
 				{
 					Triangle.Release(facet);
 				}
@@ -466,20 +466,25 @@ namespace Delaunay
 
 		void InsertToFacet(Vertex v, Triangle old)
 		{
-			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
+			Triangle ab = Triangle.Create();
+			Triangle bc = Triangle.Create();
+			Triangle ca = Triangle.Create();
+
 			HalfEdge av = HalfEdge.Create(old.A, v);
 			HalfEdge bv = HalfEdge.Create(old.B, v);
 			HalfEdge cv = HalfEdge.Create(old.C, v);
 
-			Triangle ab = Triangle.Create(AB.CycleLink(bv, av.Pair));
-			Triangle bc = Triangle.Create(BC.CycleLink(cv, bv.Pair));
-			Triangle ca = Triangle.Create(CA.CycleLink(av, cv.Pair));
+			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
 
 			AB.Face = bv.Face = av.Pair.Face = ab;
 			BC.Face = cv.Face = bv.Pair.Face = bc;
 			CA.Face = av.Face = cv.Pair.Face = ca;
 
 			Triangle.Release(old);
+
+			ab.Edge = AB.CycleLink(bv, av.Pair);
+			bc.Edge = BC.CycleLink(cv, bv.Pair);
+			ca.Edge = CA.CycleLink(av, cv.Pair);
 
 			Utility.Verify(av.Face == ca);
 			Utility.Verify(av.Pair.Face == ab);
@@ -497,23 +502,28 @@ namespace Delaunay
 
 		void InsertOnEdge(Vertex v, Triangle old, HalfEdge hitEdge)
 		{
+			Triangle split1 = Triangle.Create();
+			Triangle split2 = Triangle.Create();
+
 			Vertex opositeVertex = hitEdge.Next.Dest;
+
 			HalfEdge ov = HalfEdge.Create(opositeVertex, v);
 			HalfEdge v1 = HalfEdge.Create(v, hitEdge.Dest);
 			HalfEdge v2 = HalfEdge.Create(v, hitEdge.Pair.Dest);
 
 			HalfEdge sp1Edge0 = hitEdge.Next;
+
 			HalfEdge sp2Edge0 = hitEdge.Next.Next;
 			HalfEdge sp2Edge1 = v2.Pair;
 			HalfEdge sp2Edge2 = ov.Pair;
 
-			Triangle split1 = Triangle.Create(sp1Edge0.CycleLink(ov, v1));
-			Triangle split2 = Triangle.Create(sp2Edge0.CycleLink(sp2Edge1, sp2Edge2));
-
 			sp1Edge0.Face = ov.Face = v1.Face = split1;
 			sp2Edge0.Face = sp2Edge1.Face = sp2Edge2.Face = split2;
-			
+
 			Triangle.Release(old);
+
+			split1.Edge = sp1Edge0.CycleLink(ov, v1);
+			split2.Edge = sp2Edge0.CycleLink(sp2Edge1, sp2Edge2);
 
 			Utility.Verify(ov.Face == split1);
 			Utility.Verify(ov.Pair.Face == split2);
@@ -528,17 +538,21 @@ namespace Delaunay
 				Vertex p = hitEdge.Pair.Next.Dest;
 
 				HalfEdge vp = HalfEdge.Create(v, p);
+
+				oposite1 = Triangle.Create();
+				oposite2 = Triangle.Create();
+
 				HalfEdge hpn = hitEdge.Pair.Next;
 				HalfEdge op1Edge0 = hpn.Next;
 				HalfEdge op1Edge1 = v1.Pair;
 				HalfEdge op1Edge2 = vp;
 
-				oposite1 = Triangle.Create(op1Edge0.CycleLink(op1Edge1, op1Edge2));
-				oposite2 = Triangle.Create(hpn.CycleLink(vp.Pair, v2));
-
 				hpn.Face = vp.Pair.Face = v2.Face = oposite2;
 				op1Edge0.Face = op1Edge1.Face = op1Edge2.Face = oposite1;
 				Triangle.Release(other);
+
+				oposite2.Edge = hpn.CycleLink(vp.Pair, v2);
+				oposite1.Edge = op1Edge0.CycleLink(op1Edge1, op1Edge2);
 
 				Utility.Verify(vp.Face == oposite1);
 				Utility.Verify(vp.Pair.Face == oposite2);
