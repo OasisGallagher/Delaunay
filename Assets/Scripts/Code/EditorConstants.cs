@@ -26,13 +26,13 @@ namespace Delaunay
 		public const string kXmlAllObstacles = "AllObstacles";
 
 		public const float kPanelWidth = 60;
-		public const float kConvexHullGizmosHeight = 0.7f;
-
+		
 		public const int kMaxStackCapacity = 4096;
 		public const int kDebugInvalidCycle = 32;
 
-		public static readonly Vector3 kTriangleMeshOffset = new Vector3(0, 0.1f, 0);
-		public static readonly Vector3 kEdgeOffset = new Vector3(0, 0f, 0);
+		public static readonly Vector3 kPathOffset = new Vector3(0, 0.7f, 0f);
+		public static readonly Vector3 kMeshOffset = new Vector3(0, 0.1f, 0);
+		public static readonly Vector3 kNewPolygonPreviewOffset = new Vector3(0, 0.8f, 0);
 
 		public static readonly VertexComparer kVertexComparer = new VertexComparer();
 	}

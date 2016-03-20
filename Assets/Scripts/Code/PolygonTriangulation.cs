@@ -219,7 +219,7 @@ namespace Delaunay
 			{
 				foreach (Vertex v in polygon)
 				{
-					if (MathUtility.PointInCircumCircle(src, dest, c, v))
+					if (MathUtility.PointInCircumCircle(src.Position, dest.Position, c.Position, v.Position))
 					{
 						c = v;
 					}

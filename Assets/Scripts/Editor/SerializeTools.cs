@@ -110,14 +110,14 @@ namespace Delaunay
 			for (; reader.Read(); )
 			{
 				if (reader.NodeType == XmlNodeType.EndElement
-					&& reader.Name == EditorConstants.kXmlObstacle)
+					&& reader.Name == EditorConstants.kXmlAllObstacles)
 				{
 					break;
 				}
 
 				if (reader.NodeType != XmlNodeType.Element) { continue; }
 
-				if (reader.Name == EditorConstants.kXmlObstacle)
+				if (reader.Name == EditorConstants.kXmlAllObstacles)
 				{
 					Obstacle.ObstacleIDGenerator.ReadXml(reader);
 				}

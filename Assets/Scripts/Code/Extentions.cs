@@ -10,6 +10,13 @@ namespace Delaunay
 			return target[target.Count - 1];
 		}
 
+		public static T popBack<T>(this IList<T> target)
+		{
+			T ans = target[target.Count - 1];
+			target.RemoveAt(target.Count - 1);
+			return ans;
+		}
+
 		public static string[] toStrArray<T>(this IList<T> target)
 		{
 			string[] answer = new string[target.Count];

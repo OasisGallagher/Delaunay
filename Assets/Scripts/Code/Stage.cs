@@ -14,14 +14,16 @@ namespace Delaunay
 		GameObject destination;
 		GameObject player;
 
-		bool createObstacle = true;
-		List<Vector3> newObstacle = new List<Vector3>();
-
 		List<Vector3> borderCorners = new List<Vector3>();
 
 		public void __tmpRemoveObstacle(int ID)
 		{
 			delaunayMesh.RemoveObstacle(ID);
+		}
+
+		public void AddObstacle(IEnumerable<Vector3> vertices)
+		{
+			delaunayMesh.AddObstacle(vertices);
 		}
 
 		#region Mono behaviour
@@ -96,22 +98,9 @@ namespace Delaunay
 			Vector3 point = Vector3.zero;
 			if (Input.GetMouseButtonUp(2) && GetScreenMousePosition(out point))
 			{
-				if (createObstacle)
-				{
-					if (AddNewObstacleVertex(point))
-					{
-						newObstacle.Add(point);
-					}
-					else
-					{
-						Debug.LogError("Invalid point " + point);
-					}
-				}
-				else
-				{
-					player.transform.position = delaunayMesh.GetNearestPoint(point, AgentRadius);
-					player.GetComponent<Steering>().Path = null;
-				}
+
+				player.transform.position = delaunayMesh.GetNearestPoint(point, AgentRadius);
+				player.GetComponent<Steering>().Path = null;
 			}
 
 			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
@@ -128,88 +117,12 @@ namespace Delaunay
 			player.GetComponent<Steering>().Speed = AgentSpeed;
 		}
 
-		void OnDrawGizmos()
-		{
-			foreach (Vector3 position in newObstacle)
-			{
-				Gizmos.DrawWireSphere(position + EditorConstants.kTriangleMeshOffset, 0.2f);
-			}
-
-			for (int i = 1; i < newObstacle.Count; ++i)
-			{
-				Gizmos.DrawLine(newObstacle[i - 1] + EditorConstants.kTriangleMeshOffset,
-					newObstacle[i] + EditorConstants.kTriangleMeshOffset
-				);
-			}
-		}
-
-		void OnGUI()
-		{
-			GUILayout.BeginVertical("Box", GUILayout.Width(EditorConstants.kPanelWidth));
-
-			if (GUILayout.Button("Save"))
-			{
-				string path = UnityEditor.EditorUtility.SaveFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "delaunay", "xml");
-				if (!string.IsNullOrEmpty(path))
-				{
-					SerializeTools.Save(path);
-				}
-			}
-
-			if (GUILayout.Button("Load"))
-			{
-				string path = UnityEditor.EditorUtility.OpenFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "xml");
-				if (!string.IsNullOrEmpty(path))
-				{
-					Clear();
-					SerializeTools.Load(path);
-					print(path + " loaded.");
-				}
-			}
-
-			bool toggle = GUILayout.Toggle(createObstacle, "Plant");
-			if (toggle != createObstacle)
-			{
-				createObstacle = toggle;
-				if (newObstacle.Count > 0)
-				{
-					print(string.Join("\t", newObstacle.toStrArray()));
-					delaunayMesh.AddObstacle(newObstacle);
-					newObstacle.Clear();
-				}
-			}
-
-			GUILayout.Label("V: " + GeomManager.AllVertices.Count);
-			GUILayout.Label("E: " + GeomManager.AllEdges.Count);
-			GUILayout.Label("T: " + GeomManager.AllTriangles.Count);
-
-			GUILayout.EndVertical();
-		}
-
 		#endregion
 
 		void Clear()
 		{
 			if (delaunayMesh != null) { delaunayMesh.Clear(); }
 			destination.SetActive(false);
-		}
-
-		bool AddNewObstacleVertex(Vector3 point)
-		{
-			if (newObstacle.Count == 0) { return true; }
-			Vector3 cross = Vector3.zero;
-			for (int i = 1; i < newObstacle.Count; ++i)
-			{
-				CrossState state = MathUtility.GetLineCrossPoint(out cross, newObstacle[i],
-					newObstacle[i - 1], point, newObstacle.back());
-
-				if (state == CrossState.CrossOnSegment && !cross.equals2(newObstacle.back()))
-				{
-					return false;
-				}
-			}
-
-			return true;
 		}
 
 		bool GetScreenMousePosition(out Vector3 point)

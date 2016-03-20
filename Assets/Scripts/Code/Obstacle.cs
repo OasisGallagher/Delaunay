@@ -53,16 +53,14 @@ namespace Delaunay
 		{
 			writer.WriteAttributeString("ID", ID.ToString());
 
-			using (new XmlWriterScope(writer, "BoundingEdges"))
+			writer.WriteStartElement("BoundingEdges");
+			foreach (HalfEdge edge in BoundingEdges)
 			{
-				foreach (HalfEdge edge in BoundingEdges)
-				{
-					using (new XmlWriterScope(writer, "EdgeID"))
-					{
-						writer.WriteString(edge.ID.ToString());
-					}
-				}
+				writer.WriteStartElement("EdgeID");
+				writer.WriteString(edge.ID.ToString());
+				writer.WriteEndElement();
 			}
+			writer.WriteEndElement();
 		}
 
 		public void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)

@@ -43,10 +43,7 @@ namespace Delaunay
 
 			for (int i = 1; i < path.Count; ++i)
 			{
-				Vector3 prev = path[i - 1];
-				Vector3 current = path[i];
-				prev.y = current.y = EditorConstants.kConvexHullGizmosHeight;
-				Gizmos.DrawLine(prev, current);
+				Gizmos.DrawLine(path[i - 1] + EditorConstants.kPathOffset, path[i] + EditorConstants.kPathOffset);
 			}
 
 			Gizmos.color = oldColor;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,14 +13,14 @@ namespace Delaunay
 			DebugDrawTiles = 4,
 		}
 
-		DebugDrawMask drawMask;
-		Color blockFaceColor = Color.red;
-		Color walkableFaceColor = Color.gray;
-		Color edgeColor = Color.black;
+		DebugDrawMask drawMask = (DebugDrawMask)(-1);
+		Color blockFaceColor = new Color(1, 0, 0, 11 / 255f);
+		Color walkableFaceColor = new Color(128 / 255f, 128 / 255f, 128 / 255f, 11 / 255f);
+		Color edgeColor = new Color(0, 205 / 255f, 1, 126 / 255f);
 
-		Color freeTileFaceColor = new Color(77 / 255f, 64 / 255f, 176 / 255f, 1f);
-		Color usedTileFaceColor = new Color(159 / 255f, 53 / 255f, 53 / 255f, 22 / 255f);
-		Color tileEdgeColor = new Color(4 / 255f, 4 / 255f, 4 / 255f, 76 / 255f);
+		Color freeTileFaceColor = new Color(77 / 255f, 64 / 255f, 176 / 255f, 11/255f);
+		Color usedTileFaceColor = new Color(159 / 255f, 53 / 255f, 53 / 255f, 11 / 255f);
+		Color tileEdgeColor = new Color(0, 0, 1, 22 / 255f);
 
 		public void OnGUI()
 		{
@@ -34,7 +35,20 @@ namespace Delaunay
 			EditorGUILayout.EndVertical();
 		}
 
-		public void Draw()
+		public void DrawPolyLine(List<Vector3> points)
+		{
+			Color oldColor = Handles.color;
+			Handles.color = Color.red;
+			Handles.DrawPolyLine(points.ToArray());
+			foreach (Vector3 element in points)
+			{
+				Handles.SphereCap(5, element, Quaternion.identity, 0.5f);
+			}
+
+			Handles.color = oldColor;
+		}
+
+		public void DrawDelaunayMesh()
 		{
 			if ((drawMask & DebugDrawMask.DebugDrawTriangles) != 0)
 			{
@@ -45,10 +59,10 @@ namespace Delaunay
 						Color color = face.Walkable ? walkableFaceColor : blockFaceColor;
 						Vector3[] verts = new Vector3[]
 						{
-							face.A.Position + EditorConstants.kTriangleMeshOffset,
-							face.B.Position + EditorConstants.kTriangleMeshOffset,
-							face.C.Position + EditorConstants.kTriangleMeshOffset,
-							face.A.Position + EditorConstants.kTriangleMeshOffset,
+							face.A.Position + EditorConstants.kMeshOffset,
+							face.B.Position + EditorConstants.kMeshOffset,
+							face.C.Position + EditorConstants.kMeshOffset,
+							face.A.Position + EditorConstants.kMeshOffset,
 						};
 
 						Handles.DrawSolidRectangleWithOutline(verts, color, color);
@@ -65,8 +79,8 @@ namespace Delaunay
 					bool forward = edge.Src.Position.compare2(edge.Dest.Position) < 0;
 					if (forward)
 					{
-						Handles.DrawLine(edge.Src.Position + EditorConstants.kTriangleMeshOffset,
-							edge.Dest.Position + EditorConstants.kTriangleMeshOffset
+						Handles.DrawLine(edge.Src.Position + EditorConstants.kMeshOffset,
+							edge.Dest.Position + EditorConstants.kMeshOffset
 						);
 					}
 				});
@@ -83,7 +97,7 @@ namespace Delaunay
 					for (int j = 0; j < map.ColumnCount; ++j)
 					{
 						Tile tile = map[i, j];
-						Vector3 center = map.GetTileCenter(i, j) + EditorConstants.kTriangleMeshOffset;
+						Vector3 center = map.GetTileCenter(i, j) + EditorConstants.kMeshOffset;
 						Vector3 deltaX = new Vector3(map.TileSize / 2f, 0, 0);
 						Vector3 deltaZ = new Vector3(0, 0, map.TileSize / 2f);
 						Vector3[] verts = new Vector3[]

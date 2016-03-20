@@ -584,12 +584,15 @@ namespace Delaunay
 				halfEdge = stack.Pop();
 				if (halfEdge.Constraint) { continue; }
 
-				Triangle a = halfEdge.Face;
-				Triangle b = halfEdge.Pair.Face;
+				Triangle x = halfEdge.Face;
+				Triangle y = halfEdge.Pair.Face;
 
-				if (a == null || b == null) { continue; }
+				if (x == null || y == null) { continue; }
 
-				if (!a.PointInCircumCircle(halfEdge.Pair.Next.Dest)) { continue; }
+				if (!MathUtility.PointInCircumCircle(x.A.Position, x.B.Position, x.C.Position, halfEdge.Pair.Next.Dest.Position))
+				{
+					continue;
+				}
 
 				HalfEdge ab = HalfEdge.Create(halfEdge.Next.Dest, halfEdge.Pair.Next.Dest);
 
@@ -597,11 +600,11 @@ namespace Delaunay
 				HalfEdge bEdges1 = halfEdge.Next;
 				HalfEdge bEdges2 = ab;
 
-				a.Edge = halfEdge.Next.Next.CycleLink(halfEdge.Pair.Next, ab.Pair);
-				b.Edge = bEdges0.CycleLink(bEdges1, bEdges2);
+				x.Edge = halfEdge.Next.Next.CycleLink(halfEdge.Pair.Next, ab.Pair);
+				y.Edge = bEdges0.CycleLink(bEdges1, bEdges2);
 
-				a.BoundingEdges.ForEach(item => { item.Face = a; });
-				b.BoundingEdges.ForEach(item => { item.Face = b; });
+				x.BoundingEdges.ForEach(item => { item.Face = x; });
+				y.BoundingEdges.ForEach(item => { item.Face = y; });
 
 				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Pair.Next.Next);
 

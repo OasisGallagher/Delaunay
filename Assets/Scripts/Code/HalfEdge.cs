@@ -62,19 +62,7 @@ namespace Delaunay
 		/// <summary>
 		/// Vertex at the end of the half-edge.
 		/// </summary>
-		Vertex mDest;
-		public Vertex Dest
-		{
-			get { return mDest; }
-			set
-			{
-				if (ID == 9 || ID == 8)
-				{
-					Debug.Log("");
-				}
-				mDest = value;
-			}
-		}// { get; set; }
+		public Vertex Dest { get; set; }
 
 		/// <summary>
 		/// Next half-edge around the face.
@@ -155,25 +143,21 @@ namespace Delaunay
 		{
 			writer.WriteAttributeString("ID", ID.ToString());
 
-			using (new XmlWriterScope(writer, "DestVertexID"))
-			{
-				writer.WriteString(Dest != null ? Dest.ID.ToString() : "-1");
-			}
+			writer.WriteStartElement("DestVertexID");
+			writer.WriteString(Dest != null ? Dest.ID.ToString() : "-1");
+			writer.WriteEndElement();
 
-			using (new XmlWriterScope(writer, "NextEdgeID"))
-			{
-				writer.WriteString(Next != null ? Next.ID.ToString() : "-1");
-			}
+			writer.WriteStartElement("NextEdgeID");
+			writer.WriteString(Next != null ? Next.ID.ToString() : "-1");
+			writer.WriteEndElement();
 
-			using (new XmlWriterScope(writer, "PairEdgeID"))
-			{
-				writer.WriteString(Pair != null ? Pair.ID.ToString() : "-1");
-			}
+			writer.WriteStartElement("PairEdgeID");
+			writer.WriteString(Pair != null ? Pair.ID.ToString() : "-1");
+			writer.WriteEndElement();
 
-			using (new XmlWriterScope(writer, "Constraint"))
-			{
-				writer.WriteString(Constraint ? "1" : "0");
-			}
+			writer.WriteStartElement("Constraint");
+			writer.WriteString(Constraint ? "1" : "0");
+			writer.WriteEndElement();
 		}
 
 		public override string ToString()

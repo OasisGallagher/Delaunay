@@ -351,23 +351,17 @@ namespace Delaunay
 			return SearchWidth(c, t2, e3, d);
 		}
 
-		public bool PointInCircumCircle(Vertex v)
-		{
-			return MathUtility.PointInCircumCircle(A, B, C, v);
-		}
-
 		public void WriteXml(XmlWriter writer)
 		{
 			writer.WriteAttributeString("ID", ID.ToString());
-			using (new XmlWriterScope(writer, "EdgeID"))
-			{
-				writer.WriteString(Edge != null ? Edge.ID.ToString() : "-1");
-			}
 
-			using (new XmlWriterScope(writer, "Walkable"))
-			{
-				writer.WriteString(Walkable ? "1" : "0");
-			}
+			writer.WriteStartElement("EdgeID");
+			writer.WriteString(Edge != null ? Edge.ID.ToString() : "-1");
+			writer.WriteEndElement();
+
+			writer.WriteStartElement("Walkable");
+			writer.WriteString(Walkable ? "1" : "0");
+			writer.WriteEndElement();
 		}
 
 		void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)

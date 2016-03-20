@@ -348,12 +348,12 @@ namespace Delaunay
 			return answer + pivot;
 		}
 
-		public static bool PointInCircumCircle(Vertex a, Vertex b, Vertex c, Vertex v)
+		public static bool PointInCircumCircle(Vector3 a, Vector3 b, Vector3 c, Vector3 v)
 		{
 			// https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcircle_equations
-			Vector3 ba = a.Position - b.Position;
-			Vector3 bc = c.Position - b.Position;
-			Vector3 bv = v.Position - b.Position;
+			Vector3 ba = a - b;
+			Vector3 bc = c - b;
+			Vector3 bv = v - b;
 
 			float sqrBa = ba.x * ba.x + ba.z * ba.z;
 			float sqrBc = bc.x * bc.x + bc.z * bc.z;

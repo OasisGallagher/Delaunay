@@ -59,12 +59,11 @@ namespace Delaunay
 		{
 			writer.WriteAttributeString("ID", ID.ToString());
 
-			using (new XmlWriterScope(writer, "Position"))
-			{
-				writer.WriteAttributeString("X", Position.x.ToString());
-				writer.WriteAttributeString("Y", Position.y.ToString());
-				writer.WriteAttributeString("Z", Position.z.ToString());
-			}
+			writer.WriteStartElement("Position");
+			writer.WriteAttributeString("X", Position.x.ToString());
+			writer.WriteAttributeString("Y", Position.y.ToString());
+			writer.WriteAttributeString("Z", Position.z.ToString());
+			writer.WriteEndElement();
 
 			/*using (new XmlWriterScope(writer, "EdgeID"))
 			{
