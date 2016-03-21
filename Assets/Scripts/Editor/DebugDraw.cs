@@ -6,6 +6,12 @@ namespace Delaunay
 {
 	public class DebugDraw
 	{
+		DelaunayMesh mesh;
+		public DebugDraw(DelaunayMesh mesh)
+		{
+			this.mesh = mesh;
+		}
+
 		enum DebugDrawMask
 		{
 			DebugDrawTriangles = 1,
@@ -14,7 +20,7 @@ namespace Delaunay
 		}
 
 		DebugDrawMask drawMask = (DebugDrawMask)(-1);
-		Color blockFaceColor = new Color(1, 0, 0, 11 / 255f);
+		Color blockFaceColor = new Color(1, 0, 0, 90 / 255f);
 		Color walkableFaceColor = new Color(128 / 255f, 128 / 255f, 128 / 255f, 11 / 255f);
 		Color edgeColor = new Color(0, 205 / 255f, 1, 126 / 255f);
 
@@ -52,7 +58,7 @@ namespace Delaunay
 		{
 			if ((drawMask & DebugDrawMask.DebugDrawTriangles) != 0)
 			{
-				GeomManager.AllTriangles.ForEach(face =>
+				mesh.AllTriangles.ForEach(face =>
 				{
 					if (face.gameObject.activeSelf)
 					{
@@ -74,7 +80,7 @@ namespace Delaunay
 			{
 				Color handlesOldColor = Handles.color;
 				Handles.color = edgeColor;
-				GeomManager.AllEdges.ForEach(edge =>
+				mesh.AllEdges.ForEach(edge =>
 				{
 					bool forward = edge.Src.Position.compare2(edge.Dest.Position) < 0;
 					if (forward)
@@ -90,7 +96,7 @@ namespace Delaunay
 
 			if ((drawMask & DebugDrawMask.DebugDrawTiles) != 0)
 			{
-				TiledMap map = GeomManager.Map;
+				TiledMap map = mesh.Map;
 
 				for (int i = 0; i < map.RowCount; ++i)
 				{

@@ -20,23 +20,23 @@ namespace Delaunay
 
 	static class SerializeTools
 	{
-		public static void Save(string path)
+		public static void Save(string path, GeomManager geomManager)
 		{
 			if (!string.IsNullOrEmpty(path))
 			{
-				SaveXml(path);
+				SaveXml(path, geomManager);
 			}
 		}
 
-		public static void Load(string path)
+		public static void Load(string path, GeomManager geomManager)
 		{
 			if (!string.IsNullOrEmpty(path))
 			{
-				LoadXml(path);
+				LoadXml(path, geomManager);
 			}
 		}
 
-		static void LoadXml(string path)
+		static void LoadXml(string path, GeomManager geomManager)
 		{
 			XmlReaderSettings settings = new XmlReaderSettings();
 			settings.IgnoreWhitespace = true;
@@ -60,9 +60,11 @@ namespace Delaunay
 
 				if (reader.Name == EditorConstants.kXmlVertex)
 				{
-					Vertex.Create(reader);
+					geomManager.CreateVertex(reader);
 				}
 			}
+
+			List<Vertex> vertices = geomManager.AllVertices;
 
 			Dictionary<int, HalfEdge> container = new Dictionary<int, HalfEdge>();
 			for (; reader.Read(); )
@@ -82,7 +84,7 @@ namespace Delaunay
 
 				if (reader.Name == EditorConstants.kXmlEdge)
 				{
-					HalfEdge.Create(reader, container);
+					geomManager.CreateEdge(reader, vertices, container);
 				}
 			}
 
@@ -103,7 +105,7 @@ namespace Delaunay
 
 				if (reader.Name == EditorConstants.kXmlTriangle)
 				{
-					Triangle.Create(reader, container);
+					geomManager.CreateTriangle(reader, container);
 				}
 			}
 
@@ -124,7 +126,7 @@ namespace Delaunay
 
 				if (reader.Name == EditorConstants.kXmlObstacle)
 				{
-					Obstacle.Create(reader, container);
+					geomManager.CreateObstacle(reader, container);
 				}
 			}
 
@@ -132,11 +134,11 @@ namespace Delaunay
 
 			foreach (HalfEdge edge in container.Values)
 			{
-				GeomManager.AddEdge(edge);
+				geomManager._AddEdge(edge);
 			}
 		}
 
-		static void SaveXml(string path)
+		static void SaveXml(string path, GeomManager geomManager)
 		{
 			File.Delete(path);
 
@@ -153,25 +155,25 @@ namespace Delaunay
 				using (new XmlWriterScope(writer, EditorConstants.kXmlAllVertices))
 				{
 					Vertex.VertexIDGenerator.WriteXml(writer);
-					WriteAllVertices(writer);
+					WriteAllVertices(writer, geomManager);
 				}
 
 				using (new XmlWriterScope(writer, EditorConstants.kXmlAllEdges))
 				{
 					HalfEdge.HalfEdgeIDGenerator.WriteXml(writer);
-					WriteAllEdges(writer);
+					WriteAllEdges(writer, geomManager);
 				}
 
 				using (new XmlWriterScope(writer, EditorConstants.kXmlAllTriangles))
 				{
 					Triangle.TriangleIDGenerator.WriteXml(writer);
-					WriteAllTriangles(writer);
+					WriteAllTriangles(writer, geomManager);
 				}
 
 				using (new XmlWriterScope(writer, EditorConstants.kXmlAllObstacles))
 				{
 					Obstacle.ObstacleIDGenerator.WriteXml(writer);
-					WriteAllObstacles(writer);
+					WriteAllObstacles(writer, geomManager);
 				}
 			}
 
@@ -179,9 +181,9 @@ namespace Delaunay
 			writer.Close();
 		}
 
-		static void WriteAllVertices(XmlWriter writer)
+		static void WriteAllVertices(XmlWriter writer, GeomManager geomManager)
 		{
-			GeomManager.AllVertices.ForEach(vertex =>
+			geomManager.AllVertices.ForEach(vertex =>
 			{
 				using (new XmlWriterScope(writer, EditorConstants.kXmlVertex))
 				{
@@ -190,9 +192,9 @@ namespace Delaunay
 			});
 		}
 
-		static void WriteAllEdges(XmlWriter writer)
+		static void WriteAllEdges(XmlWriter writer, GeomManager geomManager)
 		{
-			GeomManager.AllEdges.ForEach(edge =>
+			geomManager.AllEdges.ForEach(edge =>
 			{
 				using (new XmlWriterScope(writer, EditorConstants.kXmlEdge))
 				{
@@ -201,9 +203,9 @@ namespace Delaunay
 			});
 		}
 
-		static void WriteAllTriangles(XmlWriter writer)
+		static void WriteAllTriangles(XmlWriter writer, GeomManager geomManager)
 		{
-			GeomManager.AllTriangles.ForEach(triangle =>
+			geomManager.AllTriangles.ForEach(triangle =>
 			{
 				using (new XmlWriterScope(writer, EditorConstants.kXmlTriangle))
 				{
@@ -212,9 +214,9 @@ namespace Delaunay
 			});
 		}
 
-		static void WriteAllObstacles(XmlWriter writer)
+		static void WriteAllObstacles(XmlWriter writer, GeomManager geomManager)
 		{
-			GeomManager.AllObstacles.ForEach(obstacle =>
+			geomManager.AllObstacles.ForEach(obstacle =>
 			{
 				using (new XmlWriterScope(writer, EditorConstants.kXmlObstacle))
 				{

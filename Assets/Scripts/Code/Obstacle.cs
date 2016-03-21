@@ -10,29 +10,7 @@ namespace Delaunay
 
 		public static IDGenerator ObstacleIDGenerator = new IDGenerator();
 
-		public bool __tmpActive;
-		public static Obstacle Create(List<HalfEdge> boundingEdges)
-		{
-			Obstacle answer = new Obstacle();
-			answer.BoundingEdges = boundingEdges;
-			GeomManager.AddObstacle(answer);
-			return answer;
-		}
-
-		public static Obstacle Create(XmlReader reader, IDictionary<int, HalfEdge> container)
-		{
-			Obstacle answer = new Obstacle();
-			answer.ReadXml(reader, container);
-			GeomManager.AddObstacle(answer);
-			return answer;
-		}
-
-		public void Release(Obstacle obstacle)
-		{
-			GeomManager.RemoveObstacle(obstacle);
-		}
-
-		Obstacle()
+		public Obstacle()
 		{
 			ID = ObstacleIDGenerator.Value;
 		}

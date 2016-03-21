@@ -1,77 +1,179 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Xml;
 using UnityEngine;
 using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.Vertex, System.Collections.Generic.List<Delaunay.HalfEdge>>;
 using ObstacleContainer = System.Collections.Generic.List<Delaunay.Obstacle>;
 
 namespace Delaunay
 {
-	public static class GeomManager
+	public class GeomManager
 	{
-		static HalfEdgeContainer halfEdgeContainer = new HalfEdgeContainer(EditorConstants.kVertexComparer);
-		static ObstacleContainer obstacleContainer = new ObstacleContainer();
-		static TiledMap tiledMap = new TiledMap(new Vector3(-10, 0, -10), 1f, 20, 20);
+		HalfEdgeContainer halfEdgeContainer = new HalfEdgeContainer(EditorConstants.kVertexComparer);
+		ObstacleContainer obstacleContainer = new ObstacleContainer();
+		TiledMap tiledMap = new TiledMap(new Vector3(-10, 0, -10), 1f, 20, 20);
 
-		public static void AddEdge(HalfEdge edge)
+		public Vertex CreateVertex(Vector3 position)
 		{
-			List<HalfEdge> list = null;
-			Utility.Verify(edge.Pair != null, "Invalid Edge, ID = " + edge.ID);
+			Utility.Verify(FindVertex(position) == null, "Duplicate vertex at position " + position);
+			Vertex ans = new Vertex(position);
 
-			if (!halfEdgeContainer.TryGetValue(edge.Src, out list))
+			AddVertex(ans);
+
+			return ans;
+		}
+
+		public Vertex CreateVertex(XmlReader reader)
+		{
+			Vertex ans = new Vertex(Vector3.zero);
+			ans.ReadXml(reader);
+
+			AddVertex(ans);
+
+			return ans;
+		}
+
+		public HalfEdge CreateEdge(Vertex src, Vertex dest)
+		{
+			HalfEdge self = GetRays(src).Find(item => { return item.Dest == dest; });
+
+			if (self == null)
 			{
-				halfEdgeContainer.Add(edge.Src, list = new List<HalfEdge>());
+				self = new HalfEdge();
+				self.Dest = dest;
+
+				HalfEdge other = new HalfEdge();
+				other.Dest = src;
+
+				self.Pair = other;
+				other.Pair = self;
+
+				/*src.Edge = self;
+				dest.Edge = other;
+				*/
+
+				_AddEdge(self);
+				_AddEdge(other);
 			}
 
-			list.Add(edge);
+			return self;
 		}
 
-		public static void AddVertex(Vertex vertex)
+		public HalfEdge CreateEdge(XmlReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
 		{
-			Utility.Verify(!halfEdgeContainer.ContainsKey(vertex));
-			halfEdgeContainer.Add(vertex, new List<HalfEdge>());
+			HalfEdge answer = null;
+			int edgeID = int.Parse(reader["ID"]);
+			reader.Read();
+
+			if (!container.TryGetValue(edgeID, out answer))
+			{
+				container.Add(edgeID, answer = new HalfEdge());
+				answer.ID = edgeID;
+			}
+
+			answer.ReadXml(reader, vertices, container);
+			return answer;
 		}
 
-		public static void AddObstacle(Obstacle obstacle)
+		public void ReleaseEdge(HalfEdge edge)
 		{
-			obstacleContainer.Add(obstacle);
+			RemoveEdge(edge.Pair);
+			RemoveEdge(edge);
 		}
 
-		public static void RemoveObstacle(Obstacle obstacle)
+		public Triangle CreateTriangle()
+		{
+			GameObject go = new GameObject();
+			Triangle ans = go.AddComponent<Triangle>();
+			ans._Awake();
+			return ans;
+		}
+
+		public Triangle CreateTriangle(XmlReader reader, IDictionary<int, HalfEdge> container)
+		{
+			GameObject go = new GameObject();
+
+			Triangle answer = go.AddComponent<Triangle>();
+			answer._Awake();
+
+			answer.ReadXml(reader, container);
+
+			RasterizeTriangle(answer);
+
+			return answer;
+		}
+
+		public Triangle CreateTriangle(Vertex a, Vertex b, Vertex c)
+		{
+			HalfEdge ab = CreateEdge(a, b);
+			HalfEdge bc = CreateEdge(b, c);
+			HalfEdge ca = CreateEdge(c, a);
+
+			if (ab.Face != null)
+			{
+				Utility.Verify(ab.Face == bc.Face && bc.Face == ca.Face);
+				return ab.Face;
+			}
+
+			ab.Next = bc;
+			bc.Next = ca;
+			ca.Next = ab;
+
+			GameObject go = new GameObject();
+
+			Triangle answer = go.AddComponent<Triangle>();
+			answer._Awake();
+
+			ab.Face = bc.Face = ca.Face = answer;
+			answer.Edge = ab;
+			RasterizeTriangle(answer);
+
+			return answer;
+		}
+
+		public void ReleaseTriangle(Triangle triangle)
+		{
+			UnrasterizeTriangle(triangle);
+
+			foreach (HalfEdge edge in triangle.BoundingEdges)
+			{
+				if (edge.Face == triangle)
+				{
+					edge.Face = null;
+					edge.Next = null;
+				}
+
+				if (edge.Face == null && edge.Pair.Face == null)
+				{
+					ReleaseEdge(edge);
+				}
+			}
+
+			GameObject.DestroyImmediate(triangle.gameObject);
+		}
+
+		public Obstacle CreateObstacle(List<HalfEdge> boundingEdges)
+		{
+			Obstacle answer = new Obstacle();
+			answer.BoundingEdges = boundingEdges;
+			obstacleContainer.Add(answer);
+			return answer;
+		}
+
+		public Obstacle CreateObstacle(XmlReader reader, IDictionary<int, HalfEdge> container)
+		{
+			Obstacle answer = new Obstacle();
+			answer.ReadXml(reader, container);
+			obstacleContainer.Add(answer);
+			return answer;
+		}
+
+		public void ReleaseObstacle(Obstacle obstacle)
 		{
 			obstacleContainer.Remove(obstacle);
 		}
 
-		public static void AddTriangle(Triangle triangle)
-		{
-			Vector3[] list = new Vector3[] { triangle.A.Position, triangle.B.Position, triangle.C.Position };
-			TiledMapRegion tmr = FindTriangleBoundingRectOverlappedTiles(triangle);
-
-			for (; tmr.MoveNext(); )
-			{
-				Tuple2<int, int> current = tmr.Current;
-				Tile tile = tiledMap[current.First, current.Second];
-				Vector3 center = tiledMap.GetTileCenter(current.First, current.Second);
-				if (MathUtility.PolygonContains(list, center))
-				{
-					tile.Face = triangle;
-				}
-			}
-		}
-
-		public static void RemoveTriangle(Triangle triangle)
-		{
-			TiledMapRegion tmr = FindTriangleBoundingRectOverlappedTiles(triangle);
-			for (; tmr.MoveNext(); )
-			{
-				Tile tile = tiledMap[tmr.Current.First, tmr.Current.Second];
-				if (tile.Face == triangle)
-				{
-					tile.Face = null;
-				}
-			}
-		}
-
-		public static Tuple2<int, Triangle> FindVertexContainedTriangle(Vector3 position)
+		public Tuple2<int, Triangle> FindVertexContainedTriangle(Vector3 position)
 		{
 			Tuple2<int, Triangle> answer = new Tuple2<int, Triangle>();
 
@@ -79,7 +181,7 @@ namespace Delaunay
 			
 			Triangle face = startTile != null ? startTile.Face : null;
 
-			face = face ?? GeomManager.AllTriangles[0];
+			face = face ?? AllTriangles[0];
 
 			for (; face != null; )
 			{
@@ -102,12 +204,12 @@ namespace Delaunay
 			return answer;
 		}
 
-		public static Obstacle GetObstacle(int ID)
+		public Obstacle GetObstacle(int ID)
 		{
 			return obstacleContainer.Find(item => { return item.ID == ID; });
 		}
 
-		public static void RemoveEdge(HalfEdge edge)
+		public void RemoveEdge(HalfEdge edge)
 		{
 			List<HalfEdge> list = halfEdgeContainer[edge.Src];
 			Utility.Verify(list.Remove(edge));
@@ -117,11 +219,41 @@ namespace Delaunay
 			}
 		}
 
-		public static void Clear()
+		public void RasterizeTriangle(Triangle triangle)
 		{
-			AllTriangles.ForEach(facet =>
+			Vector3[] list = new Vector3[] { triangle.A.Position, triangle.B.Position, triangle.C.Position };
+			TiledMapRegion tmr = FindTriangleBoundingRectOverlappedTiles(triangle);
+
+			for (; tmr.MoveNext(); )
 			{
-				Triangle.Release(facet);
+				Tuple2<int, int> current = tmr.Current;
+				Tile tile = tiledMap[current.First, current.Second];
+				Vector3 center = tiledMap.GetTileCenter(current.First, current.Second);
+				if (MathUtility.PolygonContains(list, center))
+				{
+					tile.Face = triangle;
+				}
+			}
+		}
+
+		public void UnrasterizeTriangle(Triangle triangle)
+		{
+			TiledMapRegion tmr = FindTriangleBoundingRectOverlappedTiles(triangle);
+			for (; tmr.MoveNext(); )
+			{
+				Tile tile = tiledMap[tmr.Current.First, tmr.Current.Second];
+				if (tile.Face == triangle)
+				{
+					tile.Face = null;
+				}
+			}
+		}
+
+		public void Clear()
+		{
+			AllTriangles.ForEach(triangle =>
+			{
+				ReleaseTriangle(triangle);
 			});
 
 			halfEdgeContainer.Clear();
@@ -133,7 +265,7 @@ namespace Delaunay
 			Obstacle.ObstacleIDGenerator.Current = 0;
 		}
 
-		public static Vertex FindVertex(Vector3 position)
+		public Vertex FindVertex(Vector3 position)
 		{
 			List<Vertex> vertices = AllVertices;
 
@@ -157,19 +289,19 @@ namespace Delaunay
 			return null;
 		}
 
-		public static List<HalfEdge> GetRays(Vertex vertex)
+		public List<HalfEdge> GetRays(Vertex vertex)
 		{
 			List<HalfEdge> answer = null;
 			halfEdgeContainer.TryGetValue(vertex, out answer);
 			return answer ?? new List<HalfEdge>();
 		}
 
-		public static List<Vertex> AllVertices
+		public List<Vertex> AllVertices
 		{
 			get { return new List<Vertex>(halfEdgeContainer.Keys); }
 		}
 
-		public static List<HalfEdge> AllEdges
+		public List<HalfEdge> AllEdges
 		{
 			get
 			{
@@ -184,7 +316,7 @@ namespace Delaunay
 			}
 		}
 
-		public static List<Triangle> AllTriangles
+		public List<Triangle> AllTriangles
 		{
 			get
 			{
@@ -193,17 +325,39 @@ namespace Delaunay
 			}
 		}
 
-		public static List<Obstacle> AllObstacles
+		public List<Obstacle> AllObstacles
 		{
 			get { return obstacleContainer; }
 		}
 
-		public static TiledMap Map
+		public TiledMap Map
 		{
 			get { return tiledMap; }
 		}
 
-		static List<Triangle> CollectTriangles()
+		/// <summary>
+		/// Merge only!
+		/// </summary>
+		public void _AddEdge(HalfEdge edge)
+		{
+			List<HalfEdge> list = null;
+			Utility.Verify(edge.Pair != null, "Invalid Edge, ID = " + edge.ID);
+
+			if (!halfEdgeContainer.TryGetValue(edge.Src, out list))
+			{
+				halfEdgeContainer.Add(edge.Src, list = new List<HalfEdge>());
+			}
+
+			list.Add(edge);
+		}
+
+		void AddVertex(Vertex vertex)
+		{
+			Utility.Verify(!halfEdgeContainer.ContainsKey(vertex));
+			halfEdgeContainer.Add(vertex, new List<HalfEdge>());
+		}
+
+		List<Triangle> CollectTriangles()
 		{
 			Triangle face = null;
 			foreach (List<HalfEdge> edgeContainer in halfEdgeContainer.Values)
@@ -243,7 +397,7 @@ namespace Delaunay
 			return answer;
 		}
 
-		static TiledMapRegion FindTriangleBoundingRectOverlappedTiles(Triangle triangle)
+		TiledMapRegion FindTriangleBoundingRectOverlappedTiles(Triangle triangle)
 		{
 			float xMin = Mathf.Min(triangle.A.Position.x, triangle.B.Position.x, triangle.C.Position.x);
 			float xMax = Mathf.Max(triangle.A.Position.x, triangle.B.Position.x, triangle.C.Position.x);

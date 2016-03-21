@@ -10,79 +10,11 @@ namespace Delaunay
 
 		public static IDGenerator TriangleIDGenerator = new IDGenerator();
 
-		public static Triangle Create()
-		{
-			GameObject go = new GameObject();
-
-			Triangle answer = go.AddComponent<Triangle>();
-			return answer;
-		}
-
-		public static Triangle Create(XmlReader reader, IDictionary<int, HalfEdge> container)
-		{
-			GameObject go = new GameObject();
-
-			Triangle answer = go.AddComponent<Triangle>();
-
-			answer.ReadXml(reader, container);
-			GeomManager.AddTriangle(answer);
-
-			return answer;
-		}
-
-		public static Triangle Create(Vertex a, Vertex b, Vertex c)
-		{
-			HalfEdge ab = HalfEdge.Create(a, b);
-			HalfEdge bc = HalfEdge.Create(b, c);
-			HalfEdge ca = HalfEdge.Create(c, a);
-
-			if (ab.Face != null)
-			{
-				Utility.Verify(ab.Face == bc.Face && bc.Face == ca.Face);
-				return ab.Face;
-			}
-
-			ab.Next = bc;
-			bc.Next = ca;
-			ca.Next = ab;
-
-			GameObject go = new GameObject();
-
-			Triangle answer = go.AddComponent<Triangle>();
-
-			ab.Face = bc.Face = ca.Face = answer;
-			answer.halfEdge = ab;
-
-			GeomManager.AddTriangle(answer);
-			return answer;
-		}
-
-		public static void Release(Triangle triangle)
-		{
-			GeomManager.RemoveTriangle(triangle);
-
-			foreach(HalfEdge edge in triangle.BoundingEdges)
-			{
-				if (edge.Face == triangle)
-				{
-					edge.Face = null;
-					edge.Next = null;
-				}
-			}
-
-			triangle.halfEdge = null;
-			GameObject.DestroyImmediate(triangle.gameObject);
-		}
-
-		void Awake()
+		public void _Awake()
 		{
 			ID = TriangleIDGenerator.Value;
 			Walkable = true;
 			gameObject.name = "Triangle_" + ID;
-		}
-
-		void Start()
-		{
 		}
 
 		void OnDrawGizmosSelected()
@@ -170,10 +102,7 @@ namespace Delaunay
 			set
 			{
 				if (halfEdge == value) { return; }
-				if (halfEdge != null) { GeomManager.RemoveTriangle(this); }
-
 				halfEdge = value;
-				GeomManager.AddTriangle(this);
 				widthA = widthB = widthC = float.NaN;
 			}
 		}
@@ -364,7 +293,7 @@ namespace Delaunay
 			writer.WriteEndElement();
 		}
 
-		void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
+		public void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
 		{
 			ID = int.Parse(reader["ID"]);
 
@@ -372,7 +301,7 @@ namespace Delaunay
 
 			int edge = reader.ReadElementContentAsInt();
 
-			halfEdge = container[edge];
+			Edge = container[edge];
 
 			BoundingEdges.ForEach(e => { e.Face = this; });
 

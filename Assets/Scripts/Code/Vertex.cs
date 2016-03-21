@@ -18,23 +18,7 @@ namespace Delaunay
 
 		public static IDGenerator VertexIDGenerator = new IDGenerator();
 
-		public static Vertex Create(Vector3 position)
-		{
-			Utility.Verify(GeomManager.FindVertex(position) == null, "Duplicate vertex at position " + position);
-			Vertex ans = new Vertex(position);
-			GeomManager.AddVertex(ans);
-			return ans;
-		}
-
-		public static Vertex Create(XmlReader reader)
-		{
-			Vertex ans = new Vertex(Vector3.zero);
-			ans.ReadXml(reader);
-			GeomManager.AddVertex(ans);
-			return ans;
-		}
-
-		Vertex(Vector3 position)
+		public Vertex(Vector3 position)
 		{
 			ID = VertexIDGenerator.Value;
 			this.Position = position;
@@ -71,7 +55,7 @@ namespace Delaunay
 			}*/
 		}
 
-		void ReadXml(XmlReader reader)
+		public void ReadXml(XmlReader reader)
 		{
 			ID = int.Parse(reader["ID"]);
 			reader.Read();

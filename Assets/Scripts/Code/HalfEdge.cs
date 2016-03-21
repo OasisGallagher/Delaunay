@@ -9,55 +9,7 @@ namespace Delaunay
 	{
 		public static IDGenerator HalfEdgeIDGenerator = new IDGenerator();
 
-		public static HalfEdge Create(Vertex src, Vertex dest)
-		{
-			HalfEdge self = GeomManager.GetRays(src).Find(item => { return item.Dest == dest; });
-
-			if (self == null)
-			{
-				self = new HalfEdge();
-				self.Dest = dest;
-
-				HalfEdge other = new HalfEdge();
-				other.Dest = src;
-
-				self.Pair = other;
-				other.Pair = self;
-
-				/*src.Edge = self;
-				dest.Edge = other;
-				*/
-
-				GeomManager.AddEdge(self);
-				GeomManager.AddEdge(other);
-			}
-
-			return self;
-		}
-
-		public static HalfEdge Create(XmlReader reader, IDictionary<int, HalfEdge> container)
-		{
-			HalfEdge answer = null;
-			int edgeID = int.Parse(reader["ID"]);
-			reader.Read();
-
-			if (!container.TryGetValue(edgeID, out answer))
-			{
-				container.Add(edgeID, answer = new HalfEdge());
-				answer.ID = edgeID;
-			}
-
-			answer.ReadXml(reader, container);
-			return answer;
-		}
-
-		public static void Release(HalfEdge edge)
-		{
-			GeomManager.RemoveEdge(edge.Pair);
-			GeomManager.RemoveEdge(edge);
-		}
-
-		public int ID { get; private set; }
+		public int ID { get; set; }
 
 		/// <summary>
 		/// Vertex at the end of the half-edge.
@@ -82,24 +34,11 @@ namespace Delaunay
 		/// <summary>
 		/// Face the half-edge borders.
 		/// </summary>
-		public Triangle Face
-		{
-			get { return face; }
-			set
-			{
-				if (face == value) { return; }
-
-				face = value;
-				if (face == null && Pair.face == null)
-				{
-					HalfEdge.Release(this);
-				}
-			}
-		}
+		public Triangle Face { get; set; }
 
 		public Vector3 Center { get { return (Src.Position + Dest.Position) / 2f; } }
 
-		HalfEdge()
+		public HalfEdge()
 		{
 			ID = HalfEdgeIDGenerator.Value;
 		}
@@ -165,13 +104,13 @@ namespace Delaunay
 			return ID + "_" + Pair.Dest + "=>" + Dest;
 		}
 
-		void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
+		public void ReadXml(XmlReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
 		{
 			container[ID] = this;
 
 			int destVertexID = reader.ReadElementContentAsInt();
 
-			Dest = GeomManager.AllVertices.Find(item => { return item.ID == destVertexID; });
+			Dest = vertices.Find(item => { return item.ID == destVertexID; });
 			Utility.Verify(Dest != null);
 
 			int nextEdge = reader.ReadElementContentAsInt();

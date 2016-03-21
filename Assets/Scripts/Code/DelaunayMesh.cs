@@ -4,16 +4,30 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	class CrossResult
-	{
-		public HalfEdge edge;
-		public CrossState crossState = CrossState.Parallel;
-	}
-
 	public class DelaunayMesh
 	{
+		public GeomManager geomManager { get; private set; }
+
+		List<Vector3> borderVertices;
+
 		public DelaunayMesh(IEnumerable<Vector3> borderVertices)
 		{
+			geomManager = new GeomManager();
+			this.borderVertices = new List<Vector3>(borderVertices);
+		}
+
+		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
+		{
+			List<HalfEdge> polygonBoundingEdges = AddPolygon(vertices);
+			Obstacle obstacle = geomManager.CreateObstacle(polygonBoundingEdges);
+			MarkObstacle(obstacle);
+			return obstacle;
+		}
+
+		public void Clear()
+		{
+			geomManager.Clear();
+			
 			float max = float.NegativeInfinity;
 			foreach (Vector3 item in borderVertices)
 			{
@@ -28,22 +42,12 @@ namespace Delaunay
 
 			SetUpBounds(super);
 			AddPolygon(borderVertices);
-			RemoveBounds(super);
+			//RemoveBounds(super);
 		}
-
-		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
-		{
-			List<HalfEdge> polygonBoundingEdges = AddPolygon(vertices);
-			Obstacle obstacle = Obstacle.Create(polygonBoundingEdges);
-			MarkObstacle(obstacle);
-			return obstacle;
-		}
-
-		public void Clear() { GeomManager.Clear(); }
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)
 		{
-			Tuple2<int, Triangle> findResult = GeomManager.FindVertexContainedTriangle(start);
+			Tuple2<int, Triangle> findResult = geomManager.FindVertexContainedTriangle(start);
 			if (findResult.Second != null && !findResult.Second.Walkable)
 			{
 				int fromTriangleID = findResult.Second.ID;
@@ -53,7 +57,7 @@ namespace Delaunay
 			Utility.Verify(findResult.Second != null, "Invalid start point");
 			Triangle facet1 = findResult.Second;
 
-			findResult = GeomManager.FindVertexContainedTriangle(dest);
+			findResult = geomManager.FindVertexContainedTriangle(dest);
 			if (findResult.Second != null && !findResult.Second.Walkable)
 			{
 				findResult.Second = FindWalkableTriangle(findResult.Second.FindVertex(dest));
@@ -89,7 +93,7 @@ namespace Delaunay
 
 		public void RemoveObstacle(int obstacleID)
 		{
-			Obstacle obstacle = GeomManager.GetObstacle(obstacleID);
+			Obstacle obstacle = geomManager.GetObstacle(obstacleID);
 			List<Vertex> boundingVertices = new List<Vertex>(obstacle.BoundingEdges.Count);
 			obstacle.BoundingEdges.ForEach(item => { boundingVertices.Add(item.Src); });
 
@@ -101,7 +105,7 @@ namespace Delaunay
 			Vertex benchmark = null;
 			foreach (HalfEdge edge in obstacle.BoundingEdges)
 			{
-				foreach (HalfEdge ray in GeomManager.GetRays(edge.Src))
+				foreach (HalfEdge ray in geomManager.GetRays(edge.Src))
 				{
 					if (ray.Face == null) { continue; }
 					if (triangles.IndexOf(ray.Face) < 0) { triangles.Add(ray.Face); }
@@ -124,14 +128,14 @@ namespace Delaunay
 				vertices.Clear();
 			}
 
-			triangles.ForEach(t => { Triangle.Release(t); });
+			triangles.ForEach(t => { geomManager.ReleaseTriangle(t); });
 
 			CreateTriangles(PolygonTriangulation.Triangulate(polygon));
 		}
 
 		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
 		{
-			Tuple2<int, Triangle> result = GeomManager.FindVertexContainedTriangle(from);
+			Tuple2<int, Triangle> result = geomManager.FindVertexContainedTriangle(from);
 			Utility.Verify(result.Second != null, "Can not find facet contains " + from);
 			if (result.First < 0)
 			{
@@ -144,9 +148,34 @@ namespace Delaunay
 			return Vector3.zero;
 		}
 
+		public List<Vertex> AllVertices
+		{
+			get { return geomManager.AllVertices; }
+		}
+
+		public List<HalfEdge> AllEdges
+		{
+			get { return geomManager.AllEdges; }
+		}
+
+		public List<Triangle> AllTriangles
+		{
+			get { return geomManager.AllTriangles; }
+		}
+
+		public List<Obstacle> AllObstacles
+		{
+			get { return geomManager.AllObstacles; }
+		}
+
+		public TiledMap Map
+		{
+			get { return geomManager.Map; }
+		}
+
 		Triangle FindWalkableTriangle(Vertex src)
 		{
-			foreach (HalfEdge edge in GeomManager.GetRays(src))
+			foreach (HalfEdge edge in geomManager.GetRays(src))
 			{
 				if (edge.Face != null && edge.Face.Walkable)
 				{
@@ -164,7 +193,7 @@ namespace Delaunay
 
 			if (!e.MoveNext()) { return polygonBoundingEdges; }
 
-			Vertex prevVertex = Vertex.Create(e.Current);
+			Vertex prevVertex = geomManager.CreateVertex(e.Current);
 			Vertex firstVertex = prevVertex;
 
 			List<Vertex> vertices = new List<Vertex>();
@@ -173,7 +202,7 @@ namespace Delaunay
 			{
 				vertices.Add(prevVertex);
 
-				Vertex currentVertex = Vertex.Create(e.Current);
+				Vertex currentVertex = geomManager.CreateVertex(e.Current);
 				polygonBoundingEdges.AddRange(AddConstraintEdge(prevVertex, currentVertex));
 				prevVertex = currentVertex;
 			}
@@ -227,7 +256,7 @@ namespace Delaunay
 			BitArray bits = new BitArray(vertices.Count);
 			for (int i = 0; i < vertices.Count; ++i)
 			{
-				foreach (HalfEdge e in GeomManager.GetRays(vertices[i]))
+				foreach (HalfEdge e in geomManager.GetRays(vertices[i]))
 				{
 					int index = vertices.IndexOf(e.Dest);
 					if (index < 0) { continue; }
@@ -251,7 +280,7 @@ namespace Delaunay
 		{
 			for (int i = 0; i < vertices.Count; i += 3)
 			{
-				Triangle.Create(vertices[i], vertices[i + 1], vertices[i + 2]);
+				geomManager.CreateTriangle(vertices[i], vertices[i + 1], vertices[i + 2]);
 			}
 		}
 
@@ -274,24 +303,24 @@ namespace Delaunay
 
 		HalfEdge AddConstraintAt(ref Vertex src, Vertex dest)
 		{
-			CrossResult crossResult = new CrossResult();
-			foreach (HalfEdge ray in GeomManager.GetRays(src))
+			Tuple2<HalfEdge, CrossState> crossResult = new Tuple2<HalfEdge, CrossState>(null, CrossState.Parallel);
+			foreach (HalfEdge ray in geomManager.GetRays(src))
 			{
-				if (FindCrossedEdge(crossResult, ray, src, dest)) { break; }
+				if (FindCrossedEdge(out crossResult, ray, src, dest)) { break; }
 			}
 
-			Utility.Verify(crossResult.crossState != CrossState.Parallel);
+			Utility.Verify(crossResult.Second != CrossState.Parallel);
 
-			if (crossResult.crossState == CrossState.FullyOverlaps)
+			if (crossResult.Second == CrossState.FullyOverlaps)
 			{
-				crossResult.edge.Constraint = true;
-				src = crossResult.edge.Dest;
-				return crossResult.edge;
+				crossResult.First.Constraint = true;
+				src = crossResult.First.Dest;
+				return crossResult.First;
 			}
 
-			Utility.Verify(crossResult.crossState == CrossState.CrossOnSegment);
+			Utility.Verify(crossResult.Second == CrossState.CrossOnSegment);
 
-			return ConstraintCrossEdges(ref src, dest, crossResult.edge);
+			return ConstraintCrossEdges(ref src, dest, crossResult.First);
 		}
 
 		HalfEdge ConstraintCrossEdges(ref Vertex src, Vertex dest, HalfEdge crossedEdge)
@@ -307,19 +336,19 @@ namespace Delaunay
 				HalfEdge edge = crossedEdges[i];
 				if (edge.Face != null)
 				{
-					Triangle.Release(edge.Face);
+					geomManager.ReleaseTriangle(edge.Face);
 				}
 
 				if (edge.Pair.Face != null)
 				{
-					Triangle.Release(edge.Pair.Face);
+					geomManager.ReleaseTriangle(edge.Pair.Face);
 				}
 			}
 
 			CreateTriangles(PolygonTriangulation.Triangulate(low, dest, src));
 			CreateTriangles(PolygonTriangulation.Triangulate(up, src, dest));
 
-			HalfEdge constraintEdge = GeomManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
+			HalfEdge constraintEdge = geomManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
 			Utility.Verify(constraintEdge != null);
 			constraintEdge.Constraint = true;
 
@@ -376,9 +405,11 @@ namespace Delaunay
 			return src;
 		}
 
-		bool FindCrossedEdge(CrossResult answer, HalfEdge ray, Vertex src, Vertex dest)
+		bool FindCrossedEdge(out Tuple2<HalfEdge, CrossState> answer, HalfEdge ray, Vertex src, Vertex dest)
 		{
 			List<HalfEdge> cycle = ray.Cycle;
+			answer = new Tuple2<HalfEdge, CrossState>();
+
 			foreach (HalfEdge edge in cycle)
 			{
 				Vector3 point;
@@ -390,12 +421,12 @@ namespace Delaunay
 				if (crossState == CrossState.FullyOverlaps
 					|| (crossState == CrossState.CrossOnSegment && !point.equals2(edge.Src.Position) && !point.equals2(edge.Dest.Position)))
 				{
-					answer.crossState = crossState;
-					answer.edge = edge;
+					answer.Second = crossState;
+					answer.First = edge;
 					if (crossState == CrossState.FullyOverlaps
 						&& (dest.Position.equals2(edge.Src.Position) || src.Position.equals2(edge.Dest.Position)))
 					{
-						answer.edge = answer.edge.Pair;
+						answer.First = answer.First.Pair;
 					}
 
 					return true;
@@ -412,7 +443,7 @@ namespace Delaunay
 
 		bool Append(Vertex v)
 		{
-			Tuple2<int, Triangle> answer = GeomManager.FindVertexContainedTriangle(v.Position);
+			Tuple2<int, Triangle> answer = geomManager.FindVertexContainedTriangle(v.Position);
 
 			if (answer.First < 0) { return false; }
 
@@ -433,31 +464,33 @@ namespace Delaunay
 
 		void SetUpBounds(Vector3[] super)
 		{
-			Clear();
-			Triangle.Create(Vertex.Create(super[0]), Vertex.Create(super[1]), Vertex.Create(super[2]));
+			geomManager.CreateTriangle(
+				geomManager.CreateVertex(super[0]),
+				geomManager.CreateVertex(super[1]),
+				geomManager.CreateVertex(super[2])
+			);
 		}
 
 		void RemoveBounds(Vector3[] super)
 		{
-			GeomManager.AllTriangles.ForEach(facet =>
+			geomManager.AllTriangles.ForEach(facet =>
 			{
-				if (!facet.gameObject.activeSelf) { return; }
 				if (facet.HasVertex(super[0]) || facet.HasVertex(super[1]) || facet.HasVertex(super[2]))
 				{
-					Triangle.Release(facet);
+					geomManager.ReleaseTriangle(facet);
 				}
 			});
 		}
 
 		void InsertToFacet(Vertex v, Triangle old)
 		{
-			Triangle ab = Triangle.Create();
-			Triangle bc = Triangle.Create();
-			Triangle ca = Triangle.Create();
+			Triangle ab = geomManager.CreateTriangle();
+			Triangle bc = geomManager.CreateTriangle();
+			Triangle ca = geomManager.CreateTriangle();
 
-			HalfEdge av = HalfEdge.Create(old.A, v);
-			HalfEdge bv = HalfEdge.Create(old.B, v);
-			HalfEdge cv = HalfEdge.Create(old.C, v);
+			HalfEdge av = geomManager.CreateEdge(old.A, v);
+			HalfEdge bv = geomManager.CreateEdge(old.B, v);
+			HalfEdge cv = geomManager.CreateEdge(old.C, v);
 
 			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
 
@@ -465,11 +498,15 @@ namespace Delaunay
 			BC.Face = cv.Face = bv.Pair.Face = bc;
 			CA.Face = av.Face = cv.Pair.Face = ca;
 
-			Triangle.Release(old);
+			geomManager.ReleaseTriangle(old);
 
 			ab.Edge = AB.CycleLink(bv, av.Pair);
 			bc.Edge = BC.CycleLink(cv, bv.Pair);
 			ca.Edge = CA.CycleLink(av, cv.Pair);
+
+			geomManager.RasterizeTriangle(ab);
+			geomManager.RasterizeTriangle(bc);
+			geomManager.RasterizeTriangle(ca);
 
 			Utility.Verify(av.Face == ca);
 			Utility.Verify(av.Pair.Face == ab);
@@ -487,14 +524,14 @@ namespace Delaunay
 
 		void InsertOnEdge(Vertex v, Triangle old, HalfEdge hitEdge)
 		{
-			Triangle split1 = Triangle.Create();
-			Triangle split2 = Triangle.Create();
+			Triangle split1 = geomManager.CreateTriangle();
+			Triangle split2 = geomManager.CreateTriangle();
 
 			Vertex opositeVertex = hitEdge.Next.Dest;
 
-			HalfEdge ov = HalfEdge.Create(opositeVertex, v);
-			HalfEdge v1 = HalfEdge.Create(v, hitEdge.Dest);
-			HalfEdge v2 = HalfEdge.Create(v, hitEdge.Pair.Dest);
+			HalfEdge ov = geomManager.CreateEdge(opositeVertex, v);
+			HalfEdge v1 = geomManager.CreateEdge(v, hitEdge.Dest);
+			HalfEdge v2 = geomManager.CreateEdge(v, hitEdge.Pair.Dest);
 
 			HalfEdge sp1Edge0 = hitEdge.Next;
 
@@ -505,10 +542,13 @@ namespace Delaunay
 			sp1Edge0.Face = ov.Face = v1.Face = split1;
 			sp2Edge0.Face = sp2Edge1.Face = sp2Edge2.Face = split2;
 
-			Triangle.Release(old);
+			geomManager.ReleaseTriangle(old);
 
 			split1.Edge = sp1Edge0.CycleLink(ov, v1);
 			split2.Edge = sp2Edge0.CycleLink(sp2Edge1, sp2Edge2);
+
+			geomManager.RasterizeTriangle(split1);
+			geomManager.RasterizeTriangle(split2);
 
 			Utility.Verify(ov.Face == split1);
 			Utility.Verify(ov.Pair.Face == split2);
@@ -522,10 +562,10 @@ namespace Delaunay
 			{
 				Vertex p = hitEdge.Pair.Next.Dest;
 
-				HalfEdge vp = HalfEdge.Create(v, p);
+				HalfEdge vp = geomManager.CreateEdge(v, p);
 
-				oposite1 = Triangle.Create();
-				oposite2 = Triangle.Create();
+				oposite1 = geomManager.CreateTriangle();
+				oposite2 = geomManager.CreateTriangle();
 
 				HalfEdge hpn = hitEdge.Pair.Next;
 				HalfEdge op1Edge0 = hpn.Next;
@@ -534,10 +574,13 @@ namespace Delaunay
 
 				hpn.Face = vp.Pair.Face = v2.Face = oposite2;
 				op1Edge0.Face = op1Edge1.Face = op1Edge2.Face = oposite1;
-				Triangle.Release(other);
+				geomManager.ReleaseTriangle(other);
 
 				oposite2.Edge = hpn.CycleLink(vp.Pair, v2);
 				oposite1.Edge = op1Edge0.CycleLink(op1Edge1, op1Edge2);
+
+				geomManager.RasterizeTriangle(oposite1);
+				geomManager.RasterizeTriangle(oposite2);
 
 				Utility.Verify(vp.Face == oposite1);
 				Utility.Verify(vp.Pair.Face == oposite2);
@@ -579,14 +622,20 @@ namespace Delaunay
 					continue;
 				}
 
-				HalfEdge ab = HalfEdge.Create(halfEdge.Next.Dest, halfEdge.Pair.Next.Dest);
+				HalfEdge ab = geomManager.CreateEdge(halfEdge.Next.Dest, halfEdge.Pair.Next.Dest);
 
 				HalfEdge bEdges0 = halfEdge.Pair.Next.Next;
 				HalfEdge bEdges1 = halfEdge.Next;
 				HalfEdge bEdges2 = ab;
 
+				geomManager.UnrasterizeTriangle(x);
+				geomManager.UnrasterizeTriangle(y);
+
 				x.Edge = halfEdge.Next.Next.CycleLink(halfEdge.Pair.Next, ab.Pair);
 				y.Edge = bEdges0.CycleLink(bEdges1, bEdges2);
+
+				geomManager.RasterizeTriangle(x);
+				geomManager.RasterizeTriangle(x);
 
 				x.BoundingEdges.ForEach(item => { item.Face = x; });
 				y.BoundingEdges.ForEach(item => { item.Face = y; });
@@ -600,6 +649,7 @@ namespace Delaunay
 				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Next.Next);
 
 				halfEdge.Face = halfEdge.Pair.Face = null;
+				geomManager.ReleaseEdge(halfEdge);
 			}
 		}
 	}

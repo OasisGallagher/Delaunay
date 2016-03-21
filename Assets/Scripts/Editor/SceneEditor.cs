@@ -24,10 +24,16 @@ namespace Delaunay
 		void OnEnable()
 		{
 			SceneView.onSceneGUIDelegate += OnUpdateSceneGUI;
-			debugDraw = new DebugDraw();
+
 			plantedVertices = new List<Vector3>();
 
 			GameObject floor = GameObject.Find("Floor");
+
+			if (floor == null)
+			{
+				Debug.LogError("Can not find floor");
+				return;
+			}
 
 			Vector3 scale = floor.transform.localScale / 2f;
 			const float padding = 0.2f;
@@ -44,6 +50,8 @@ namespace Delaunay
 			};
 
 			delaunayMesh = new DelaunayMesh(borderCorners);
+
+			debugDraw = new DebugDraw(delaunayMesh);
 		}
 
 		void OnDisable()
@@ -53,7 +61,6 @@ namespace Delaunay
 			if (delaunayMesh != null)
 			{
 				delaunayMesh.Clear();
-				delaunayMesh = null;
 			}
 
 			SceneView.onSceneGUIDelegate -= OnUpdateSceneGUI;
@@ -73,8 +80,11 @@ namespace Delaunay
 
 		void DrawSceneGUI()
 		{
-			DrawStats();
-			DrawCommands();
+			if (delaunayMesh != null)
+			{
+				DrawStats();
+				DrawCommands();
+			}
 		}
 
 		private void DrawCommands()
@@ -108,7 +118,7 @@ namespace Delaunay
 			if (!string.IsNullOrEmpty(path))
 			{
 				ClearMesh();
-				SerializeTools.Load(path);
+				SerializeTools.Load(path, delaunayMesh.geomManager);
 				ShowNotification(new GUIContent(Path.GetFileName(path) + " loaded."));
 			}
 		}
@@ -118,7 +128,7 @@ namespace Delaunay
 			string path = UnityEditor.EditorUtility.SaveFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "delaunay", "xml");
 			if (!string.IsNullOrEmpty(path))
 			{
-				SerializeTools.Save(path);
+				SerializeTools.Save(path, delaunayMesh.geomManager);
 			}
 		}
 
@@ -132,9 +142,9 @@ namespace Delaunay
 			GUILayout.BeginArea(new Rect(Screen.width - 80, Screen.height - 100, 90, 100));
 
 			GUILayout.BeginVertical("Box");
-			GUILayout.Label("V: " + GeomManager.AllVertices.Count);
-			GUILayout.Label("E: " + GeomManager.AllEdges.Count);
-			GUILayout.Label("T: " + GeomManager.AllTriangles.Count);
+			GUILayout.Label("V: " + delaunayMesh.AllVertices.Count);
+			GUILayout.Label("E: " + delaunayMesh.AllEdges.Count);
+			GUILayout.Label("T: " + delaunayMesh.AllTriangles.Count);
 			GUILayout.EndVertical();
 
 			GUILayout.EndArea();
