@@ -12,25 +12,23 @@ namespace Delaunay
 
 	public class DelaunayMesh
 	{
-		Vector3 stAPosition;
-		Vector3 stBPosition;
-		Vector3 stCPosition;
-
-		public DelaunayMesh(Rect bound)
+		public DelaunayMesh(IEnumerable<Vector3> borderVertices)
 		{
-			float max = Mathf.Max(bound.xMax, bound.yMax);
+			float max = float.NegativeInfinity;
+			foreach (Vector3 item in borderVertices)
+			{
+				max = Mathf.Max(max, Mathf.Abs(item.x), Mathf.Abs(item.z));
+			}
 
-			stAPosition = new Vector3(0, 0, 4 * max);
-			stBPosition = new Vector3(-4 * max, 0, -4 * max);
-			stCPosition = new Vector3(4 * max, 0, 0);
-		}
+			Vector3[] super = new Vector3[] {
+				new Vector3(0, 0, 4 * max),
+				new Vector3(-4 * max, 0, -4 * max),
+				new Vector3(4 * max, 0, 0)
+			};
 
-		public void __tmpStart() { SetUpBounds(); }
-		public void __tmpStop() { RemoveBounds(); }
-
-		public void AddBorder(IEnumerable<Vector3> vertices)
-		{
-			AddPolygon(vertices);
+			SetUpBounds(super);
+			AddPolygon(borderVertices);
+			RemoveBounds(super);
 		}
 
 		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
@@ -42,12 +40,6 @@ namespace Delaunay
 		}
 
 		public void Clear() { GeomManager.Clear(); }
-
-		class ContainedFacet
-		{
-			public int hitEdge = -1;
-			public Triangle triangle = null;
-		}
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)
 		{
@@ -228,13 +220,6 @@ namespace Delaunay
 			}
 
 			return answer;
-		}
-
-		List<Vector3> ComputeConvexHull()
-		{
-			List<Vector3> positions = new List<Vector3>();
-			GeomManager.AllVertices.ForEach(vertex => { positions.Add(vertex.Position); });
-			return ConvexHullComputer.Compute(positions);
 		}
 
 		Vertex FindBenchmark(List<Vertex> vertices, List<Triangle> triangles)
@@ -446,18 +431,18 @@ namespace Delaunay
 			return true;
 		}
 
-		void SetUpBounds()
+		void SetUpBounds(Vector3[] super)
 		{
 			Clear();
-			Triangle.Create(Vertex.Create(stAPosition), Vertex.Create(stBPosition), Vertex.Create(stCPosition));
+			Triangle.Create(Vertex.Create(super[0]), Vertex.Create(super[1]), Vertex.Create(super[2]));
 		}
 
-		void RemoveBounds()
+		void RemoveBounds(Vector3[] super)
 		{
 			GeomManager.AllTriangles.ForEach(facet =>
 			{
 				if (!facet.gameObject.activeSelf) { return; }
-				if (facet.HasVertex(stAPosition) || facet.HasVertex(stBPosition) || facet.HasVertex(stCPosition))
+				if (facet.HasVertex(super[0]) || facet.HasVertex(super[1]) || facet.HasVertex(super[2]))
 				{
 					Triangle.Release(facet);
 				}

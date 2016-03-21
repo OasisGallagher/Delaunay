@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,6 +13,8 @@ namespace Delaunay
 
 		List<Vector3> plantedVertices;
 
+		DelaunayMesh delaunayMesh;
+
 		[MenuItem("Window/Scene Editor")]
 		static void OpenEditor()
 		{
@@ -23,11 +26,35 @@ namespace Delaunay
 			SceneView.onSceneGUIDelegate += OnUpdateSceneGUI;
 			debugDraw = new DebugDraw();
 			plantedVertices = new List<Vector3>();
+
+			GameObject floor = GameObject.Find("Floor");
+
+			Vector3 scale = floor.transform.localScale / 2f;
+			const float padding = 0.2f;
+
+			Vector3 floorPosition = floor.transform.position;
+			Rect rect = new Rect(floorPosition.x - scale.x - padding, floorPosition.z - scale.z - padding, (scale.x + padding) * 2, (scale.z + padding) * 2);
+
+			List<Vector3> borderCorners = new List<Vector3>
+			{
+				new Vector3(rect.xMax, 0, rect.yMax),
+				new Vector3(rect.xMin, 0, rect.yMax),
+				new Vector3(rect.xMin, 0, rect.yMin),
+				new Vector3(rect.xMax, 0, rect.yMin)
+			};
+
+			delaunayMesh = new DelaunayMesh(borderCorners);
 		}
 
 		void OnDisable()
 		{
 			plantedVertices.Clear();
+
+			if (delaunayMesh != null)
+			{
+				delaunayMesh.Clear();
+				delaunayMesh = null;
+			}
 
 			SceneView.onSceneGUIDelegate -= OnUpdateSceneGUI;
 		}
@@ -68,7 +95,7 @@ namespace Delaunay
 
 			if (GUILayout.Button("Clear"))
 			{
-				//	Clear();
+				ClearMesh();
 			}
 
 			GUILayout.EndVertical();
@@ -80,9 +107,9 @@ namespace Delaunay
 			string path = UnityEditor.EditorUtility.OpenFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "xml");
 			if (!string.IsNullOrEmpty(path))
 			{
-				//Clear();
+				ClearMesh();
 				SerializeTools.Load(path);
-				Debug.Log(path + " loaded.");
+				ShowNotification(new GUIContent(Path.GetFileName(path) + " loaded."));
 			}
 		}
 
@@ -93,6 +120,11 @@ namespace Delaunay
 			{
 				SerializeTools.Save(path);
 			}
+		}
+
+		void ClearMesh()
+		{
+			if (delaunayMesh != null) { delaunayMesh.Clear(); }
 		}
 
 		void DrawStats()
@@ -174,7 +206,7 @@ namespace Delaunay
 
 			if (planting && keyCode == KeyCode.Return && plantedVertices.Count > 0)
 			{
-				GameObject.FindObjectOfType<Stage>().AddObstacle(plantedVertices);
+				delaunayMesh.AddObstacle(plantedVertices);
 				plantedVertices.Clear();
 			}
 		}
