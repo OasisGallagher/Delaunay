@@ -41,10 +41,10 @@ namespace Delaunay
 			EditorGUILayout.EndVertical();
 		}
 
-		public void DrawPolyLine(List<Vector3> points)
+		public void DrawPolyLine(List<Vector3> points, Color color)
 		{
 			Color oldColor = Handles.color;
-			Handles.color = Color.red;
+			Handles.color = color;
 			Handles.DrawPolyLine(points.ToArray());
 			foreach (Vector3 element in points)
 			{

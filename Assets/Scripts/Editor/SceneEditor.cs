@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -8,10 +9,14 @@ namespace Delaunay
 {
 	public class SceneEditor : EditorWindow
 	{
+		const int kMaxVertices = 32;
+		const float kTrimStep = 0.1f;
+
 		DebugDraw debugDraw;
 		bool planting = false;
 
 		List<Vector3> plantedVertices;
+		BitArray editStates;
 
 		DelaunayMesh delaunayMesh;
 
@@ -25,42 +30,20 @@ namespace Delaunay
 		{
 			SceneView.onSceneGUIDelegate += OnUpdateSceneGUI;
 
-			plantedVertices = new List<Vector3>();
+			plantedVertices = new List<Vector3>(kMaxVertices);
+			editStates = new BitArray(kMaxVertices);
 
-			GameObject floor = GameObject.Find("Floor");
-
-			if (floor == null)
-			{
-				Debug.LogError("Can not find floor");
-				return;
-			}
-
-			Vector3 scale = floor.transform.localScale / 2f;
-			const float padding = 0.2f;
-
-			Vector3 floorPosition = floor.transform.position;
-			Rect rect = new Rect(floorPosition.x - scale.x - padding, floorPosition.z - scale.z - padding, (scale.x + padding) * 2, (scale.z + padding) * 2);
-
-			List<Vector3> borderCorners = new List<Vector3>
-			{
-				new Vector3(rect.xMax, 0, rect.yMax),
-				new Vector3(rect.xMin, 0, rect.yMax),
-				new Vector3(rect.xMin, 0, rect.yMin),
-				new Vector3(rect.xMax, 0, rect.yMin)
-			};
-
-			delaunayMesh = new DelaunayMesh(borderCorners);
-
+			delaunayMesh = new DelaunayMesh();
 			debugDraw = new DebugDraw(delaunayMesh);
 		}
 
 		void OnDisable()
 		{
-			plantedVertices.Clear();
+			ClearPlanted();
 
 			if (delaunayMesh != null)
 			{
-				delaunayMesh.Clear();
+				delaunayMesh.ClearAll();
 			}
 
 			SceneView.onSceneGUIDelegate -= OnUpdateSceneGUI;
@@ -71,10 +54,11 @@ namespace Delaunay
 			if (debugDraw != null)
 			{
 				debugDraw.DrawDelaunayMesh();
-				debugDraw.DrawPolyLine(plantedVertices);
+				debugDraw.DrawPolyLine(plantedVertices, HasBorder ? Color.blue : Color.red);
 			}
 
 			DrawSceneGUI();
+			DrawVertexHandles();
 			OnInput();
 		}
 
@@ -87,7 +71,18 @@ namespace Delaunay
 			}
 		}
 
-		private void DrawCommands()
+		void DrawVertexHandles()
+		{
+			for (int i = 0; i < editStates.Count; ++i)
+			{
+				if (editStates[i])
+				{
+					plantedVertices[i] = Handles.DoPositionHandle(plantedVertices[i], Quaternion.identity);
+				}
+			}
+		}
+
+		void DrawCommands()
 		{
 			GUILayout.BeginArea(new Rect(10, 10, 90, 120));
 
@@ -103,7 +98,14 @@ namespace Delaunay
 				LoadMesh();
 			}
 
-			if (GUILayout.Button("Clear"))
+			EditorGUILayout.Separator();
+
+			if (GUILayout.Button("Clear All"))
+			{
+				ClearAll();
+			}
+
+			if (GUILayout.Button("Clear Mesh"))
 			{
 				ClearMesh();
 			}
@@ -112,29 +114,61 @@ namespace Delaunay
 			GUILayout.EndArea();
 		}
 
+		void DrawVertexEditor(int index)
+		{
+			GUILayout.BeginHorizontal("Box");
+			editStates[index] = GUILayout.Toggle(editStates[index], (index + 1).ToString());
+			plantedVertices[index] = EditorGUILayout.Vector3Field("", plantedVertices[index], GUILayout.Height(16));
+			if (GUILayout.Button("↑", EditorStyles.miniButtonLeft))
+			{
+				plantedVertices[index] += new Vector3(0, kTrimStep, 0);
+			}
+
+			if (GUILayout.Button("↓", EditorStyles.miniButtonRight))
+			{
+				plantedVertices[index] -= new Vector3(0, kTrimStep, 0);
+			}
+
+			GUILayout.EndHorizontal();
+		}
+
 		void LoadMesh()
 		{
-			string path = UnityEditor.EditorUtility.OpenFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "xml");
+			string path = EditorUtility.OpenFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "xml");
 			if (!string.IsNullOrEmpty(path))
 			{
-				ClearMesh();
-				SerializeTools.Load(path, delaunayMesh.geomManager);
+				delaunayMesh.Load(path);
 				ShowNotification(new GUIContent(Path.GetFileName(path) + " loaded."));
 			}
 		}
 
 		void SaveMesh()
 		{
-			string path = UnityEditor.EditorUtility.SaveFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "delaunay", "xml");
+			string path = EditorUtility.SaveFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "delaunay", "xml");
 			if (!string.IsNullOrEmpty(path))
 			{
-				SerializeTools.Save(path, delaunayMesh.geomManager);
+				delaunayMesh.Save(path);
 			}
 		}
 
 		void ClearMesh()
 		{
-			if (delaunayMesh != null) { delaunayMesh.Clear(); }
+			if (delaunayMesh != null)
+			{
+				delaunayMesh.ClearMesh();
+			}
+
+			ClearPlanted();
+		}
+
+		void ClearAll()
+		{
+			if (delaunayMesh != null)
+			{
+				delaunayMesh.ClearAll();
+			}
+
+			ClearPlanted();
 		}
 
 		void DrawStats()
@@ -150,32 +184,53 @@ namespace Delaunay
 			GUILayout.EndArea();
 		}
 
-		void OnUpdate()
-		{ 
-		}
-
 		void OnGUI()
 		{
+			GUILayout.BeginVertical("Box");
+
 			if (debugDraw != null)
 			{
 				debugDraw.OnGUI();
 			}
 
-			if (GUILayout.Button(planting ? "Cancel" : "Plant"))
+			GUILayout.BeginHorizontal("Box");
+			if (GUILayout.Button(planting ? "Cancel" : "Plant", GUILayout.Width(60)))
 			{
 				OnClickPlant();
 			}
+
+			if (planting)
+			{
+				Color oldColor = GUI.color;
+				GUI.color = Color.green;
+				GUILayout.Label("Click \"~\" in scene to add vertex.", EditorStyles.boldLabel);
+				GUI.color = oldColor;
+			}
+
+			GUILayout.EndHorizontal();
+
+			for (int i = 0; i < plantedVertices.Count; ++i)
+			{
+				DrawVertexEditor(i);
+			}
+
+			GUILayout.EndVertical();
 		}
 
 		void OnClickPlant()
 		{
 			planting = !planting;
-			plantedVertices.Clear();
+			ClearPlanted();
 		}
 
 		bool CheckNewVertex(Vector3 point)
 		{
-			if (plantedVertices.Count == 0) { return true; }
+			if (plantedVertices.Count >= kMaxVertices)
+			{
+				Debug.LogError("Too many vertices");
+				return false;
+			}
+
 			Vector3 cross = Vector3.zero;
 			for (int i = 1; i < plantedVertices.Count; ++i)
 			{
@@ -184,6 +239,7 @@ namespace Delaunay
 
 				if (state == CrossState.CrossOnSegment && !cross.equals2(plantedVertices.back()))
 				{
+					Debug.LogError("Invalid point " + point);
 					return false;
 				}
 			}
@@ -204,11 +260,8 @@ namespace Delaunay
 			if (planting && keyCode == KeyCode.BackQuote)
 			{
 				Vector3 point = FixedMousePosition;
-				if (!CheckNewVertex(point))
-				{
-					Debug.LogError("Invalid point " + point);
-				}
-				else
+
+				if (CheckNewVertex(point))
 				{
 					plantedVertices.Add(point);
 				}
@@ -216,9 +269,53 @@ namespace Delaunay
 
 			if (planting && keyCode == KeyCode.Return && plantedVertices.Count > 0)
 			{
-				delaunayMesh.AddObstacle(plantedVertices);
-				plantedVertices.Clear();
+				RenderVertices(plantedVertices);
+				ClearPlanted();
 			}
+		}
+
+		void RenderVertices(IEnumerable<Vector3> vertices)
+		{
+			if (HasBorder)
+			{
+				delaunayMesh.AddObstacle(vertices);
+			}
+
+			if(!HasBorder && EditorUtility.DisplayDialog("", "Create border with these vertices?", "Yes", "No"))
+			{
+				delaunayMesh.AddBorder(vertices);
+			}
+		}
+
+		void ClearPlanted()
+		{
+			plantedVertices.Clear();
+			editStates.SetAll(false);
+		}
+
+		Vector3[] CalculateFloorBorderVertices()
+		{
+			GameObject floor = GameObject.Find("Floor");
+
+			if (floor == null)
+			{
+				Debug.LogError("Can not find floor");
+				return null;
+			}
+
+			Vector3 scale = floor.transform.localScale / 2f;
+			const float padding = 0.2f;
+
+			Vector3 floorPosition = floor.transform.position;
+			Rect rect = new Rect(floorPosition.x - scale.x - padding, floorPosition.z - scale.z - padding, (scale.x + padding) * 2, (scale.z + padding) * 2);
+
+			return new Vector3[]
+			{
+				new Vector3(rect.xMax, 0, rect.yMax),
+				new Vector3(rect.xMin, 0, rect.yMax),
+				new Vector3(rect.xMin, 0, rect.yMin),
+				new Vector3(rect.xMax, 0, rect.yMin)
+			};
 		}
 
 		Vector3 FixedMousePosition
@@ -234,6 +331,11 @@ namespace Delaunay
 
 				return hit.point;
 			}
+		}
+
+		bool HasBorder
+		{
+			get { return delaunayMesh != null && delaunayMesh.HasBorder; }
 		}
 	}
 }

@@ -18,7 +18,7 @@ namespace Delaunay
 		public void Dispose() { writer.WriteEndElement(); }
 	}
 
-	static class SerializeTools
+	public static class SerializeTools
 	{
 		public static void Save(string path, GeomManager geomManager)
 		{

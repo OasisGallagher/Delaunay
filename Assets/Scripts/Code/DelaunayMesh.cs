@@ -6,14 +6,13 @@ namespace Delaunay
 {
 	public class DelaunayMesh
 	{
-		public GeomManager geomManager { get; private set; }
-
+		GeomManager geomManager;
 		List<Vector3> borderVertices;
 
-		public DelaunayMesh(IEnumerable<Vector3> borderVertices)
+		public DelaunayMesh()
 		{
 			geomManager = new GeomManager();
-			this.borderVertices = new List<Vector3>(borderVertices);
+			borderVertices = new List<Vector3>();
 		}
 
 		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
@@ -24,25 +23,34 @@ namespace Delaunay
 			return obstacle;
 		}
 
-		public void Clear()
+		public void AddBorder(IEnumerable<Vector3> vertices)
+		{
+			Utility.Verify(!HasBorder);
+			borderVertices.AddRange(vertices);
+			CreateBorder();
+		}
+
+		public void ClearMesh()
 		{
 			geomManager.Clear();
-			
-			float max = float.NegativeInfinity;
-			foreach (Vector3 item in borderVertices)
-			{
-				max = Mathf.Max(max, Mathf.Abs(item.x), Mathf.Abs(item.z));
-			}
+			CreateBorder();
+		}
 
-			Vector3[] super = new Vector3[] {
-				new Vector3(0, 0, 4 * max),
-				new Vector3(-4 * max, 0, -4 * max),
-				new Vector3(4 * max, 0, 0)
-			};
+		public void ClearAll()
+		{
+			geomManager.Clear();
+			borderVertices.Clear();
+		}
 
-			SetUpBounds(super);
-			AddPolygon(borderVertices);
-			//RemoveBounds(super);
+		public void Load(string path)
+		{
+			geomManager.Clear();
+			SerializeTools.Load(path, geomManager);
+		}
+
+		public void Save(string path)
+		{
+			SerializeTools.Save(path, geomManager);
 		}
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)
@@ -148,6 +156,11 @@ namespace Delaunay
 			return Vector3.zero;
 		}
 
+		public bool HasBorder
+		{
+			get { return borderVertices.Count > 0; }
+		}
+
 		public List<Vertex> AllVertices
 		{
 			get { return geomManager.AllVertices; }
@@ -184,6 +197,25 @@ namespace Delaunay
 			}
 
 			return null;
+		}
+
+		void CreateBorder()
+		{
+			float max = float.NegativeInfinity;
+			foreach (Vector3 item in borderVertices)
+			{
+				max = Mathf.Max(max, Mathf.Abs(item.x), Mathf.Abs(item.z));
+			}
+
+			Vector3[] super = new Vector3[] {
+				new Vector3(0, 0, 4 * max),
+				new Vector3(-4 * max, 0, -4 * max),
+				new Vector3(4 * max, 0, 0)
+			};
+
+			SetUpBounds(super);
+			AddPolygon(borderVertices);
+			RemoveBounds(super);
 		}
 
 		List<HalfEdge> AddPolygon(IEnumerable<Vector3> container)
@@ -635,7 +667,7 @@ namespace Delaunay
 				y.Edge = bEdges0.CycleLink(bEdges1, bEdges2);
 
 				geomManager.RasterizeTriangle(x);
-				geomManager.RasterizeTriangle(x);
+				geomManager.RasterizeTriangle(y);
 
 				x.BoundingEdges.ForEach(item => { item.Face = x; });
 				y.BoundingEdges.ForEach(item => { item.Face = y; });
