@@ -161,6 +161,11 @@ namespace Delaunay
 			get { return borderVertices.Count > 0; }
 		}
 
+		public IEnumerable<Vector3> BorderVertices
+		{
+			get { return borderVertices; }
+		}
+
 		public List<Vertex> AllVertices
 		{
 			get { return geomManager.AllVertices; }

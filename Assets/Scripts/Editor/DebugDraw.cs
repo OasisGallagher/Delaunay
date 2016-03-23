@@ -17,6 +17,7 @@ namespace Delaunay
 			DebugDrawTriangles = 1,
 			DebugDrawEdges = 2,
 			DebugDrawTiles = 4,
+			DebugDrawBorder = 8,
 		}
 
 		DebugDrawMask drawMask = (DebugDrawMask)(-1);
@@ -48,9 +49,8 @@ namespace Delaunay
 			Handles.DrawPolyLine(points.ToArray());
 			foreach (Vector3 element in points)
 			{
-				Handles.SphereCap(5, element, Quaternion.identity, 0.5f);
+				Handles.SphereCap(5, element, Quaternion.identity, 0.1f);
 			}
-
 			Handles.color = oldColor;
 		}
 
@@ -117,6 +117,28 @@ namespace Delaunay
 						Handles.DrawSolidRectangleWithOutline(verts, tile.Face != null ? usedTileFaceColor : freeTileFaceColor, tileEdgeColor);
 					}
 				}
+			}
+
+			if ((drawMask & DebugDrawMask.DebugDrawBorder) != 0)
+			{
+				IEnumerator<Vector3> e = mesh.BorderVertices.GetEnumerator();
+				Vector3 prev = Vector3.zero, first = Vector3.zero;
+				Color oldColor = Handles.color;
+				Handles.color = Color.red;
+
+				if (e.MoveNext())
+				{
+					first = prev = e.Current;
+					for (; e.MoveNext(); )
+					{
+						Handles.DrawLine(prev + EditorConstants.kMeshOffset, e.Current + EditorConstants.kMeshOffset);
+						prev = e.Current;
+					}
+
+					Handles.DrawLine(prev + EditorConstants.kMeshOffset, first + EditorConstants.kMeshOffset);
+				}
+
+				Handles.color = oldColor;
 			}
 		}
 	}

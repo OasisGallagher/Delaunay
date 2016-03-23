@@ -57,8 +57,10 @@ namespace Delaunay
 				debugDraw.DrawPolyLine(plantedVertices, HasBorder ? Color.blue : Color.red);
 			}
 
-			DrawSceneGUI();
 			DrawVertexHandles();
+
+			DrawSceneGUI();
+			
 			OnInput();
 		}
 
@@ -73,12 +75,22 @@ namespace Delaunay
 
 		void DrawVertexHandles()
 		{
+			bool repaint = false;
+
 			for (int i = 0; i < editStates.Count; ++i)
 			{
-				if (editStates[i])
+				if (!editStates[i]) { continue; }
+				Vector3 position = Handles.DoPositionHandle(plantedVertices[i], Quaternion.identity);
+				if (position != plantedVertices[i])
 				{
-					plantedVertices[i] = Handles.DoPositionHandle(plantedVertices[i], Quaternion.identity);
+					plantedVertices[i] = position;
+					repaint = true;
 				}
+			}
+
+			if (repaint)
+			{
+				Repaint();
 			}
 		}
 
@@ -117,8 +129,11 @@ namespace Delaunay
 		void DrawVertexEditor(int index)
 		{
 			GUILayout.BeginHorizontal("Box");
+
 			editStates[index] = GUILayout.Toggle(editStates[index], (index + 1).ToString());
+			
 			plantedVertices[index] = EditorGUILayout.Vector3Field("", plantedVertices[index], GUILayout.Height(16));
+			
 			if (GUILayout.Button("↑", EditorStyles.miniButtonLeft))
 			{
 				plantedVertices[index] += new Vector3(0, kTrimStep, 0);
@@ -215,6 +230,11 @@ namespace Delaunay
 			}
 
 			GUILayout.EndVertical();
+
+			if (GUI.changed)
+			{
+				SceneView.RepaintAll();
+			}
 		}
 
 		void OnClickPlant()
@@ -257,21 +277,51 @@ namespace Delaunay
 
 		void OnKeyboardInput(KeyCode keyCode)
 		{
-			if (planting && keyCode == KeyCode.BackQuote)
+			bool repaint = false;
+			if (keyCode == KeyCode.BackQuote)
 			{
-				Vector3 point = FixedMousePosition;
-
-				if (CheckNewVertex(point))
-				{
-					plantedVertices.Add(point);
-				}
+				repaint = OnBackQuote();
 			}
 
-			if (planting && keyCode == KeyCode.Return && plantedVertices.Count > 0)
+			if (keyCode == KeyCode.Return)
 			{
-				RenderVertices(plantedVertices);
-				ClearPlanted();
+				repaint = OnReturn();
 			}
+
+			if (repaint)
+			{
+				Repaint();
+			}
+		}
+
+		bool OnBackQuote()
+		{
+			if (!planting) { return false; }
+			Vector3 point = FixedMousePosition;
+
+			if (CheckNewVertex(point))
+			{
+				plantedVertices.Add(point);
+				return true;
+			}
+
+			return false;
+		}
+
+		bool OnReturn()
+		{
+			if (!planting) { return false; }
+
+			if (plantedVertices.Count < 3)
+			{
+				EditorUtility.DisplayDialog("Error", "Insufficient vertices for a polygon.", "Ok");
+				return false;
+			}
+
+			RenderVertices(plantedVertices);
+			ClearPlanted();
+
+			return true;
 		}
 
 		void RenderVertices(IEnumerable<Vector3> vertices)
@@ -295,11 +345,11 @@ namespace Delaunay
 
 		Vector3[] CalculateFloorBorderVertices()
 		{
-			GameObject floor = GameObject.Find("Floor");
+			GameObject floor = GameObject.Find("Stage");
 
 			if (floor == null)
 			{
-				Debug.LogError("Can not find floor");
+				Debug.LogError("Can not find GameObject named \"Stage\"");
 				return null;
 			}
 
