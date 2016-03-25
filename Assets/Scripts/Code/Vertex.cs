@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System.IO;
+using System.Xml;
 using UnityEngine;
 
 namespace Delaunay
@@ -53,6 +54,18 @@ namespace Delaunay
 			{
 				writer.WriteString(Edge != null ? Edge.ID.ToString() : "-1");
 			}*/
+		}
+
+		public void WriteBinary(BinaryWriter writer)
+		{
+			writer.Write(ID);
+			writer.Write(Position);
+		}
+
+		public void ReadBinary(BinaryReader reader)
+		{
+			ID = reader.ReadInt32();
+			Position = reader.ReadVector3();
 		}
 
 		public void ReadXml(XmlReader reader)

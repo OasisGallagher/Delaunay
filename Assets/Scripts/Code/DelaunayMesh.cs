@@ -45,12 +45,13 @@ namespace Delaunay
 		public void Load(string path)
 		{
 			geomManager.Clear();
-			SerializeTools.Load(path, geomManager);
+			SerializeTools.Load(path, geomManager, borderVertices);
+			Debug.Log("Load " + borderVertices.Count + " vertices");
 		}
 
 		public void Save(string path)
 		{
-			SerializeTools.Save(path, geomManager);
+			SerializeTools.Save(path, geomManager, borderVertices);
 		}
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)

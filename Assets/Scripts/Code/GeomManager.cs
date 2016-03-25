@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Xml;
 using UnityEngine;
 using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.Vertex, System.Collections.Generic.List<Delaunay.HalfEdge>>;
@@ -27,6 +28,16 @@ namespace Delaunay
 		{
 			Vertex ans = new Vertex(Vector3.zero);
 			ans.ReadXml(reader);
+
+			AddVertex(ans);
+
+			return ans;
+		}
+
+		public Vertex CreateVertex(BinaryReader reader)
+		{
+			Vertex ans = new Vertex(Vector3.zero);
+			ans.ReadBinary(reader);
 
 			AddVertex(ans);
 
@@ -75,6 +86,21 @@ namespace Delaunay
 			return answer;
 		}
 
+		public HalfEdge CreateEdge(BinaryReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
+		{
+			HalfEdge answer = null;
+			int edgeID = reader.ReadInt32();
+
+			if (!container.TryGetValue(edgeID, out answer))
+			{
+				container.Add(edgeID, answer = new HalfEdge());
+				answer.ID = edgeID;
+			}
+
+			answer.ReadBinary(reader, vertices, container);
+			return answer;
+		}
+
 		public void ReleaseEdge(HalfEdge edge)
 		{
 			RemoveEdge(edge.Pair);
@@ -97,6 +123,20 @@ namespace Delaunay
 			answer._Awake();
 
 			answer.ReadXml(reader, container);
+
+			RasterizeTriangle(answer);
+
+			return answer;
+		}
+
+		public Triangle CreateTriangle(BinaryReader reader, IDictionary<int, HalfEdge> container)
+		{
+			GameObject go = new GameObject();
+
+			Triangle answer = go.AddComponent<Triangle>();
+			answer._Awake();
+
+			answer.ReadBinary(reader, container);
 
 			RasterizeTriangle(answer);
 
@@ -164,6 +204,14 @@ namespace Delaunay
 		{
 			Obstacle answer = new Obstacle();
 			answer.ReadXml(reader, container);
+			obstacleContainer.Add(answer);
+			return answer;
+		}
+
+		public Obstacle CreateObstacle(BinaryReader reader, IDictionary<int, HalfEdge> container)
+		{
+			Obstacle answer = new Obstacle();
+			answer.ReadBinary(reader, container);
 			obstacleContainer.Add(answer);
 			return answer;
 		}

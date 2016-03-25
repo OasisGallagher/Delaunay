@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 namespace Delaunay
 {
@@ -40,6 +41,22 @@ namespace Delaunay
 			}
 
 			return answer;
+		}
+
+		public static void Write(this BinaryWriter writer, Vector3 v3)
+		{
+			writer.Write(v3.x);
+			writer.Write(v3.y);
+			writer.Write(v3.z);
+		}
+
+		public static Vector3 ReadVector3(this BinaryReader reader)
+		{
+			Vector3 ans = Vector3.zero;
+			ans.x = reader.ReadSingle();
+			ans.y = reader.ReadSingle();
+			ans.z = reader.ReadSingle();
+			return ans;
 		}
 
 		public static IList<T2> transform<T1, T2>(this IList<T1> src, IList<T2> dest, Func<T1, T2> func)

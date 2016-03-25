@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Xml;
+using System.IO;
 
 namespace Delaunay
 {
@@ -99,9 +100,13 @@ namespace Delaunay
 			writer.WriteEndElement();
 		}
 
-		public override string ToString()
+		public void WriteBinary(BinaryWriter writer)
 		{
-			return ID + "_" + Pair.Dest + "=>" + Dest;
+			writer.Write(ID);
+			writer.Write(Dest != null ? Dest.ID : -1);
+			writer.Write(Next != null ? Next.ID : -1);
+			writer.Write(Pair != null ? Pair.ID : -1);
+			writer.Write(Constraint);
 		}
 
 		public void ReadXml(XmlReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
@@ -137,6 +142,46 @@ namespace Delaunay
 			isConstraint = reader.ReadElementContentAsBoolean();
 
 			// Face is updated by Triangle.
+		}
+
+		public void ReadBinary(BinaryReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
+		{
+			container[ID] = this;
+
+			int destVertexID = reader.ReadInt32();
+
+			Dest = vertices.Find(item => { return item.ID == destVertexID; });
+			Utility.Verify(Dest != null);
+
+			int nextEdge = reader.ReadInt32();
+
+			HalfEdge edge = null;
+			if (nextEdge != -1 && !container.TryGetValue(nextEdge, out edge))
+			{
+				container.Add(nextEdge, edge = new HalfEdge());
+				edge.ID = nextEdge;
+			}
+			Next = edge;
+
+			int pairEdge = reader.ReadInt32();
+
+			if (!container.TryGetValue(pairEdge, out edge))
+			{
+				container.Add(pairEdge, edge = new HalfEdge());
+				edge.ID = pairEdge;
+			}
+			Pair = edge;
+
+			Utility.Verify(Pair != null);
+
+			isConstraint = reader.ReadBoolean();
+
+			// Face is updated by Triangle.
+		}
+
+		public override string ToString()
+		{
+			return ID + "_" + Pair.Dest + "=>" + Dest;
 		}
 
 		List<HalfEdge> GetEdgeCycle()

@@ -15,11 +15,13 @@ namespace Delaunay
 	public static class EditorConstants
 	{
 		public const string kXmlVertex = "Vertex";
+		public const string kXmlBorderVertex = "BorderVertex";
 		public const string kXmlEdge = "Edge";
 		public const string kXmlTriangle = "Triangle";
 		public const string kXmlObstacle = "Obstacle";
 
 		public const string kXmlRoot = "Root";
+		public const string kXmlAllBorderVertices = "AllBorderVertices";
 		public const string kXmlAllVertices = "AllVertices";
 		public const string kXmlAllEdges = "AllEdges";
 		public const string kXmlAllTriangles = "AllTriangles";

@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System.IO;
+using System.Xml;
 
 namespace Delaunay
 {
@@ -19,6 +20,16 @@ namespace Delaunay
 		public void ReadXml(XmlReader reader)
 		{
 			Current = int.Parse(reader["IDCurrent"]);
+		}
+
+		public void WriteBinary(BinaryWriter writer)
+		{
+			writer.Write(Current);
+		}
+
+		public void ReadBinary(BinaryReader reader)
+		{
+			Current = reader.ReadInt32();
 		}
 	}
 }

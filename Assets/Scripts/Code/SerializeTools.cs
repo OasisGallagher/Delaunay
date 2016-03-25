@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Xml;
+using UnityEngine;
 
 namespace Delaunay
 {
@@ -20,28 +21,45 @@ namespace Delaunay
 
 	public static class SerializeTools
 	{
-		public static void Save(string path, GeomManager geomManager)
+		public static void Save(string path, GeomManager geomManager, List<Vector3> borderVertices)
 		{
 			if (!string.IsNullOrEmpty(path))
 			{
-				SaveXml(path, geomManager);
+				SaveXml(path, geomManager, borderVertices);
 			}
 		}
 
-		public static void Load(string path, GeomManager geomManager)
+		public static void Load(string path, GeomManager geomManager, List<Vector3> borderVertices)
 		{
 			if (!string.IsNullOrEmpty(path))
 			{
-				LoadXml(path, geomManager);
+				LoadXml(path, geomManager, borderVertices);
 			}
 		}
 
-		static void LoadXml(string path, GeomManager geomManager)
+		static void LoadXml(string path, GeomManager geomManager, List<Vector3> borderVertices)
 		{
 			XmlReaderSettings settings = new XmlReaderSettings();
 			settings.IgnoreWhitespace = true;
 
 			XmlReader reader = XmlReader.Create(path, settings);
+
+			borderVertices.Clear();
+			for (; reader.Read(); )
+			{
+				if (reader.NodeType == XmlNodeType.EndElement
+					&& reader.Name == EditorConstants.kXmlAllBorderVertices)
+				{
+					break;
+				}
+
+				if (reader.NodeType != XmlNodeType.Element) { continue; }
+
+				if (reader.Name == EditorConstants.kXmlBorderVertex)
+				{
+					borderVertices.Add(new Vector3(float.Parse(reader["X"]), float.Parse(reader["Y"]), float.Parse(reader["Z"])));
+				}
+			}
 
 			for (; reader.Read(); )
 			{
@@ -138,7 +156,7 @@ namespace Delaunay
 			}
 		}
 
-		static void SaveXml(string path, GeomManager geomManager)
+		static void SaveXml(string path, GeomManager geomManager, List<Vector3> borderVertices)
 		{
 			File.Delete(path);
 
@@ -152,6 +170,11 @@ namespace Delaunay
 			writer.WriteStartDocument();
 			using (new XmlWriterScope(writer, EditorConstants.kXmlRoot))
 			{
+				using (new XmlWriterScope(writer, EditorConstants.kXmlAllBorderVertices))
+				{
+					WriteAllBorderVertices(writer, borderVertices);
+				}
+
 				using (new XmlWriterScope(writer, EditorConstants.kXmlAllVertices))
 				{
 					Vertex.VertexIDGenerator.WriteXml(writer);
@@ -179,6 +202,135 @@ namespace Delaunay
 
 			writer.WriteEndDocument();
 			writer.Close();
+		}
+
+		static void LoadBinary(string path, GeomManager geomManager, List<Vector3> borderVertices)
+		{
+			FileStream fs = new FileStream(path, FileMode.Open);
+			BinaryReader reader = new BinaryReader(fs);
+
+			borderVertices.Clear();
+			int count = reader.ReadInt32();
+			borderVertices.Capacity = count;
+			for (int i = 0; i < count; ++i)
+			{
+				borderVertices.Add(reader.ReadVector3());
+			}
+
+			Vertex.VertexIDGenerator.ReadBinary(reader);
+			count = reader.ReadInt32();
+
+			for (int i = 0; i < count; ++i)
+			{
+				geomManager.CreateVertex(reader);
+			}
+			
+			HalfEdge.HalfEdgeIDGenerator.ReadBinary(reader);
+
+			List<Vertex> vertices = geomManager.AllVertices;
+			Dictionary<int, HalfEdge> container = new Dictionary<int, HalfEdge>();
+			count = reader.ReadInt32();
+			for (int i = 0; i < count; ++i)
+			{
+				geomManager.CreateEdge(reader, vertices, container);
+			}
+
+			Triangle.TriangleIDGenerator.ReadBinary(reader);
+			count = reader.ReadInt32();
+			for (int i = 0; i < count; ++i)
+			{ 
+				geomManager.CreateTriangle
+			}
+
+			for (; reader.Read(); )
+			{
+				if (reader.NodeType == XmlNodeType.EndElement
+					&& reader.Name == EditorConstants.kXmlAllTriangles)
+				{
+					break;
+				}
+
+				if (reader.NodeType != XmlNodeType.Element) { continue; }
+
+				if (reader.Name == EditorConstants.kXmlAllTriangles)
+				{
+					Triangle.TriangleIDGenerator.ReadXml(reader);
+				}
+
+				if (reader.Name == EditorConstants.kXmlTriangle)
+				{
+					geomManager.CreateTriangle(reader, container);
+				}
+			}
+
+			for (; reader.Read(); )
+			{
+				if (reader.NodeType == XmlNodeType.EndElement
+					&& reader.Name == EditorConstants.kXmlAllObstacles)
+				{
+					break;
+				}
+
+				if (reader.NodeType != XmlNodeType.Element) { continue; }
+
+				if (reader.Name == EditorConstants.kXmlAllObstacles)
+				{
+					Obstacle.ObstacleIDGenerator.ReadXml(reader);
+				}
+
+				if (reader.Name == EditorConstants.kXmlObstacle)
+				{
+					geomManager.CreateObstacle(reader, container);
+				}
+			}
+
+			reader.Close();
+
+			foreach (HalfEdge edge in container.Values)
+			{
+				geomManager._AddEdge(edge);
+			}
+		}
+
+		static void SaveBinary(string path, GeomManager geomManager, List<Vector3> borderVertices)
+		{
+			FileStream fs = new FileStream(path, FileMode.Truncate);
+			BinaryWriter writer = new BinaryWriter(fs);
+
+			writer.Write(borderVertices.Count);
+			borderVertices.ForEach(item => { writer.Write(item); });
+
+			Vertex.VertexIDGenerator.WriteBinary(writer);
+			writer.Write(geomManager.AllVertices.Count);
+			geomManager.AllVertices.ForEach(item => { item.WriteBinary(writer); });
+
+			HalfEdge.HalfEdgeIDGenerator.WriteBinary(writer);
+			writer.Write(geomManager.AllEdges.Count);
+			geomManager.AllEdges.ForEach(item => { item.WriteBinary(writer); });
+
+			Triangle.TriangleIDGenerator.WriteBinary(writer);
+			writer.Write(geomManager.AllTriangles.Count);
+			geomManager.AllTriangles.ForEach(item => { item.WriteBinary(writer); });
+
+			Obstacle.ObstacleIDGenerator.WriteBinary(writer);
+			writer.Write(geomManager.AllObstacles.Count);
+			geomManager.AllObstacles.ForEach(item => { item.WriteBinary(writer); });
+
+			writer.Close();
+			fs.Close();
+		}
+
+		static void WriteAllBorderVertices(XmlWriter writer, List<Vector3> borderVertices)
+		{
+			borderVertices.ForEach(position =>
+			{
+				using (new XmlWriterScope(writer, EditorConstants.kXmlBorderVertex))
+				{
+					writer.WriteAttributeString("X", position.x.ToString());
+					writer.WriteAttributeString("Y", position.y.ToString());
+					writer.WriteAttributeString("Z", position.z.ToString());
+				}
+			});
 		}
 
 		static void WriteAllVertices(XmlWriter writer, GeomManager geomManager)
