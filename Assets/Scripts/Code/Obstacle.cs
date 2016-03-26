@@ -5,6 +5,78 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	public class BorderCluster
+	{
+		public int ID { get; private set; }
+
+		public static IDGenerator BorderClusterIDGenerator = new IDGenerator();
+
+		public BorderCluster()
+		{
+			ID = BorderClusterIDGenerator.Value;
+		}
+
+		public List<HalfEdge> BoundingEdges { get; set; }
+
+		public void WriteXml(XmlWriter writer)
+		{
+			writer.WriteAttributeString("ID", ID.ToString());
+
+			writer.WriteStartElement("BoundingEdges");
+			foreach (HalfEdge edge in BoundingEdges)
+			{
+				writer.WriteStartElement("EdgeID");
+				writer.WriteString(edge.ID.ToString());
+				writer.WriteEndElement();
+			}
+			writer.WriteEndElement();
+		}
+
+		public void WriteBinary(BinaryWriter writer)
+		{
+			writer.Write(ID);
+			writer.Write(BoundingEdges.Count);
+			foreach (HalfEdge edge in BoundingEdges)
+			{
+				writer.Write(edge.ID);
+			}
+		}
+
+		public void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
+		{
+			ID = int.Parse(reader["ID"]);
+			reader.Read();
+
+			List<HalfEdge> bounding = new List<HalfEdge>();
+
+			reader.Read();
+
+			for (; reader.Name != "BoundingEdges"; )
+			{
+				int halfEdge = reader.ReadElementContentAsInt();
+				bounding.Add(container[halfEdge]);
+			}
+
+			BoundingEdges = bounding;
+		}
+
+		public void ReadBinary(BinaryReader reader, IDictionary<int, HalfEdge> container)
+		{
+			ID = reader.ReadInt32();
+
+			int count = reader.ReadInt32();
+			List<HalfEdge> bounding = new List<HalfEdge>(count);
+
+			for (int i = 0; i < count; ++i)
+			{
+				int halfEdge = reader.ReadInt32();
+				bounding.Add(container[halfEdge]);
+			}
+
+			BoundingEdges = bounding;
+		}
+	}
+
 	public class Obstacle
 	{
 		public int ID { get; private set; }
@@ -88,13 +160,10 @@ namespace Delaunay
 
 		List<Triangle> CalculateMeshTriangles(List<HalfEdge> edges)
 		{
-			Vector3[] boundings = new Vector3[edges.Count];
-			edges.transform(boundings, item => { return item.Src.Position; });
-
 			List<Triangle> answer = new List<Triangle>();
 
 			Queue<HalfEdge> queue = new Queue<HalfEdge>();
-			queue.Enqueue(boundingEdges[0]);
+			queue.Enqueue(edges[0]);
 			for (; queue.Count > 0; )
 			{
 				HalfEdge edge = queue.Dequeue();

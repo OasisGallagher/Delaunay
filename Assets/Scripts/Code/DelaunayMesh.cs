@@ -15,14 +15,6 @@ namespace Delaunay
 			superBorder = new List<Vector3>();
 		}
 
-		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
-		{
-			List<HalfEdge> polygonBoundingEdges = AddPolygon(vertices);
-			Obstacle obstacle = geomManager.CreateObstacle(polygonBoundingEdges);
-			MarkObstacle(obstacle);
-			return obstacle;
-		}
-
 		public void AddSuperBorder(IEnumerable<Vector3> vertices)
 		{
 			Utility.Verify(!HasSuperBorder);
@@ -30,9 +22,33 @@ namespace Delaunay
 			CreateSuperBorder(superBorder);
 		}
 
-		public void AddBorder(IEnumerable<Vector3> vertices)
+		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
 		{
-			AddPolygon(vertices);
+			List<HalfEdge> polygonBoundingEdges = AddShape(vertices);
+			Obstacle obstacle = geomManager.CreateObstacle(polygonBoundingEdges);
+			MarkObstacle(obstacle);
+			return obstacle;
+		}
+
+		public void RemoveObstacle(int obstacleID)
+		{
+			Obstacle obstacle = geomManager.GetObstacle(obstacleID);
+			RemoveShape(obstacle.BoundingEdges);
+			geomManager.ReleaseObstacle(obstacle);
+		}
+
+		public BorderCluster AddBorderCluster(IEnumerable<Vector3> vertices)
+		{
+			List<HalfEdge> polygonBoundingEdges = AddShape(vertices);
+			BorderCluster borderCluster = geomManager.CreateBorderCluster(polygonBoundingEdges);
+			return borderCluster;
+		}
+
+		public void RemoveBorderCluster(int borderClusterID)
+		{
+			BorderCluster borderCluster = geomManager.GetBorderCluster(borderClusterID);
+			RemoveShape(borderCluster.BoundingEdges);
+			geomManager.ReleaseBorderCluster(borderCluster);
 		}
 
 		public void ClearMesh()
@@ -105,48 +121,6 @@ namespace Delaunay
 			//return GetNearestPoint(triangle, hit, radius);
 		}
 
-		public void RemoveObstacle(int obstacleID)
-		{
-			Obstacle obstacle = geomManager.GetObstacle(obstacleID);
-			List<Vertex> boundingVertices = new List<Vertex>(obstacle.BoundingEdges.Count);
-			obstacle.BoundingEdges.ForEach(item => { boundingVertices.Add(item.Src); });
-
-			List<Vertex> polygon = new List<Vertex>(obstacle.BoundingEdges.Count * 2);
-
-			List<Triangle> triangles = new List<Triangle>();
-			List<Vertex> vertices = new List<Vertex>();
-
-			Vertex benchmark = null;
-			foreach (HalfEdge edge in obstacle.BoundingEdges)
-			{
-				foreach (HalfEdge ray in geomManager.GetRays(edge.Src))
-				{
-					if (ray.Face == null) { continue; }
-					if (triangles.IndexOf(ray.Face) < 0) { triangles.Add(ray.Face); }
-
-					if (boundingVertices.Contains(ray.Dest)) { continue; }
-					if (polygon.Contains(ray.Dest)) { continue; }
-
-					vertices.Add(ray.Dest);
-				}
-
-				vertices.Sort(new PolarAngleComparer(edge.Src.Position,
-					(benchmark ?? FindBenchmark(vertices, triangles)).Position));
-
-				if (vertices.Count > 0)
-				{
-					benchmark = vertices.back();
-				}
-
-				polygon.AddRange(vertices);
-				vertices.Clear();
-			}
-
-			triangles.ForEach(t => { geomManager.ReleaseTriangle(t); });
-
-			CreateTriangles(PolygonTriangulation.Triangulate(polygon));
-		}
-
 		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
 		{
 			Tuple2<int, Triangle> result = geomManager.FindVertexContainedTriangle(from);
@@ -213,7 +187,7 @@ namespace Delaunay
 			};
 
 			SetUpSuperTriangle(superTriangle);
-			AddPolygon(vertices);
+			AddShape(vertices);
 			RemoveSuperTriangle(superTriangle);
 		}
 
@@ -230,7 +204,7 @@ namespace Delaunay
 			return null;
 		}
 
-		List<HalfEdge> AddPolygon(IEnumerable<Vector3> container)
+		List<HalfEdge> AddShape(IEnumerable<Vector3> container)
 		{
 			IEnumerator<Vector3> e = container.GetEnumerator();
 			List<HalfEdge> polygonBoundingEdges = new List<HalfEdge>();
@@ -255,6 +229,50 @@ namespace Delaunay
 			polygonBoundingEdges.AddRange(AddConstraintEdge(prevVertex, firstVertex));
 
 			return polygonBoundingEdges;
+		}
+
+		void RemoveShape(IEnumerable<HalfEdge> boundingEdges)
+		{
+			List<Vertex> boundingVertices = new List<Vertex>();
+			foreach (IEnumerator<HalfEdge> e in boundingEdges)
+			{
+				boundingVertices.Add(e.Current.Src);
+			}
+
+			List<Vertex> polygon = new List<Vertex>(boundingVertices.Count * 2);
+
+			List<Triangle> triangles = new List<Triangle>();
+			List<Vertex> vertices = new List<Vertex>();
+
+			Vertex benchmark = null;
+			foreach (HalfEdge edge in boundingEdges)
+			{
+				foreach (HalfEdge ray in geomManager.GetRays(edge.Src))
+				{
+					if (ray.Face == null) { continue; }
+					if (triangles.IndexOf(ray.Face) < 0) { triangles.Add(ray.Face); }
+
+					if (boundingVertices.Contains(ray.Dest)) { continue; }
+					if (polygon.Contains(ray.Dest)) { continue; }
+
+					vertices.Add(ray.Dest);
+				}
+
+				vertices.Sort(new PolarAngleComparer(edge.Src.Position,
+					(benchmark ?? FindBenchmark(vertices, triangles)).Position));
+
+				if (vertices.Count > 0)
+				{
+					benchmark = vertices.back();
+				}
+
+				polygon.AddRange(vertices);
+				vertices.Clear();
+			}
+
+			triangles.ForEach(t => { geomManager.ReleaseTriangle(t); });
+
+			CreateTriangles(PolygonTriangulation.Triangulate(polygon));
 		}
 
 		Vector3 GetNearestPoint(Triangle triangle, Vector3 hit, float radius)

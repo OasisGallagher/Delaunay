@@ -148,6 +148,27 @@ namespace Delaunay
 				}
 			}
 
+			for (; reader.Read(); )
+			{
+				if (reader.NodeType == XmlNodeType.EndElement
+					&& reader.Name == EditorConstants.kXmlAllBorderClusters)
+				{
+					break;
+				}
+
+				if (reader.NodeType != XmlNodeType.Element) { continue; }
+
+				if (reader.Name == EditorConstants.kXmlAllBorderClusters)
+				{
+					BorderCluster.BorderClusterIDGenerator.ReadXml(reader);
+				}
+
+				if (reader.Name == EditorConstants.kXmlBorderCluster)
+				{
+					geomManager.CreateBorderCluster(reader, container);
+				}
+			}
+
 			reader.Close();
 
 			foreach (HalfEdge edge in container.Values)
@@ -197,6 +218,12 @@ namespace Delaunay
 				{
 					Obstacle.ObstacleIDGenerator.WriteXml(writer);
 					WriteAllObstacles(writer, geomManager);
+				}
+
+				using (new XmlWriterScope(writer, EditorConstants.kXmlAllBorderClusters))
+				{
+					BorderCluster.BorderClusterIDGenerator.WriteXml(writer);
+					WriteAllBorderClusters(writer, geomManager);
 				}
 			}
 
@@ -249,6 +276,13 @@ namespace Delaunay
 				geomManager.CreateObstacle(reader, container);
 			}
 
+			BorderCluster.BorderClusterIDGenerator.ReadBinary(reader);
+			count = reader.ReadInt32();
+			for (int i = 0; i < count; ++i)
+			{
+				geomManager.CreateBorderCluster(reader, container);
+			}
+
 			reader.Close();
 			fs.Close();
 
@@ -281,6 +315,10 @@ namespace Delaunay
 			Obstacle.ObstacleIDGenerator.WriteBinary(writer);
 			writer.Write(geomManager.AllObstacles.Count);
 			geomManager.AllObstacles.ForEach(item => { item.WriteBinary(writer); });
+
+			BorderCluster.BorderClusterIDGenerator.WriteBinary(writer);
+			writer.Write(geomManager.AllBorderClusters.Count);
+			geomManager.AllBorderClusters.ForEach(item => { item.WriteBinary(writer); });
 
 			writer.Close();
 			fs.Close();
@@ -339,6 +377,17 @@ namespace Delaunay
 				using (new XmlWriterScope(writer, EditorConstants.kXmlObstacle))
 				{
 					obstacle.WriteXml(writer);
+				}
+			});
+		}
+
+		static void WriteAllBorderClusters(XmlWriter writer, GeomManager geomManager)
+		{
+			geomManager.AllBorderClusters.ForEach(borderCluster =>
+			{
+				using (new XmlWriterScope(writer, EditorConstants.kXmlBorderCluster))
+				{
+					borderCluster.WriteXml(writer);
 				}
 			});
 		}

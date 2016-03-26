@@ -19,6 +19,7 @@ namespace Delaunay
 		BitArray editStates;
 
 		DelaunayMesh delaunayMesh;
+		EditCommandSequence cmdSequence;
 
 		[MenuItem("Window/Scene Editor")]
 		static void OpenEditor()
@@ -35,6 +36,8 @@ namespace Delaunay
 
 			delaunayMesh = new DelaunayMesh();
 			debugDraw = new DebugDraw(delaunayMesh);
+
+			cmdSequence = new EditCommandSequence();
 		}
 
 		void OnDisable()
@@ -44,6 +47,11 @@ namespace Delaunay
 			if (delaunayMesh != null)
 			{
 				delaunayMesh.ClearAll();
+			}
+
+			if (cmdSequence != null)
+			{
+				cmdSequence.Clear();
 			}
 
 			SceneView.onSceneGUIDelegate -= OnUpdateSceneGUI;
@@ -83,7 +91,8 @@ namespace Delaunay
 				Vector3 position = Handles.DoPositionHandle(plantedVertices[i], Quaternion.identity);
 				if (position != plantedVertices[i])
 				{
-					plantedVertices[i] = position;
+					cmdSequence.Push(new MoveVertexCommand(plantedVertices, i, position));
+					//plantedVertices[i] = position;
 					repaint = true;
 				}
 			}
@@ -112,6 +121,23 @@ namespace Delaunay
 
 			EditorGUILayout.Separator();
 
+			GUI.enabled = cmdSequence != null && cmdSequence.CanUndo;
+			if (GUILayout.Button("←", EditorStyles.miniButtonLeft))
+			{
+				cmdSequence.Undo();
+			}
+
+			GUI.enabled = cmdSequence != null && cmdSequence.CanRedo;
+
+			if (GUILayout.Button("→", EditorStyles.miniButtonRight))
+			{
+				cmdSequence.Redo();
+			}
+
+			GUI.enabled = true;
+
+			EditorGUILayout.Separator();
+
 			if (GUILayout.Button("Clear All"))
 			{
 				ClearAll();
@@ -121,6 +147,7 @@ namespace Delaunay
 			{
 				ClearMesh();
 			}
+
 			GUILayout.EndVertical();
 			GUILayout.EndArea();
 		}
@@ -135,12 +162,14 @@ namespace Delaunay
 			
 			if (GUILayout.Button("↑", EditorStyles.miniButtonLeft))
 			{
-				plantedVertices[index] += new Vector3(0, kTrimStep, 0);
+				cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] + new Vector3(0, kTrimStep, 0)));
+				//plantedVertices[index] += new Vector3(0, kTrimStep, 0);
 			}
 
 			if (GUILayout.Button("↓", EditorStyles.miniButtonRight))
 			{
-				plantedVertices[index] -= new Vector3(0, kTrimStep, 0);
+				cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] - new Vector3(0, kTrimStep, 0)));
+				//plantedVertices[index] -= new Vector3(0, kTrimStep, 0);
 			}
 
 			GUILayout.EndHorizontal();
@@ -173,6 +202,7 @@ namespace Delaunay
 			}
 
 			ClearPlanted();
+			cmdSequence.Clear();
 		}
 
 		void ClearAll()
@@ -183,7 +213,9 @@ namespace Delaunay
 			}
 
 			ClearPlanted();
+			cmdSequence.Clear();
 		}
+
 		void DrawStats()
 		{
 			GUILayout.BeginArea(new Rect(Screen.width - 80, Screen.height - 100, 90, 100));
@@ -299,7 +331,8 @@ namespace Delaunay
 
 			if (CheckNewVertex(point))
 			{
-				plantedVertices.Add(point);
+				cmdSequence.Push(new AddVertexCommand(plantedVertices, point));
+				//plantedVertices.Add(point);
 				return true;
 			}
 
@@ -328,7 +361,7 @@ namespace Delaunay
 			{
 				CreateObject(vertices, close);
 			}
-			else if (EditorUtility.DisplayDialog("", "Create super border with these vertices?", "Yes", "No"))
+			else if (EditorUtility.DisplayDialog("", "Create super border with these vertices?\n You cannot undo this action.", "Yes", "No"))
 			{
 				delaunayMesh.AddSuperBorder(vertices);
 			}
@@ -338,11 +371,13 @@ namespace Delaunay
 		{
 			if (close)
 			{
-				delaunayMesh.AddObstacle(vertices);
+				cmdSequence.Push(new CreateBorderClusterCommand(delaunayMesh, vertices));
+				//delaunayMesh.AddObstacle(vertices);
 			}
 			else
 			{
-				delaunayMesh.AddBorder(vertices);
+				cmdSequence.Push(new CreateObstacleCommand(delaunayMesh, vertices));
+				//delaunayMesh.AddBorderCluster(vertices);
 			}
 		}
 
