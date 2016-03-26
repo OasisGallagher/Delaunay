@@ -371,13 +371,13 @@ namespace Delaunay
 		{
 			if (close)
 			{
-				cmdSequence.Push(new CreateBorderClusterCommand(delaunayMesh, vertices));
+				cmdSequence.Push(new CreateObstacleCommand(delaunayMesh, vertices));
 				//delaunayMesh.AddObstacle(vertices);
 			}
 			else
 			{
-				cmdSequence.Push(new CreateObstacleCommand(delaunayMesh, vertices));
-				//delaunayMesh.AddBorderCluster(vertices);
+				cmdSequence.Push(new CreateBorderSetCommand(delaunayMesh, vertices));
+				//delaunayMesh.AddBorderSet(vertices);
 			}
 		}
 

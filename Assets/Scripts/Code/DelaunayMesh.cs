@@ -37,18 +37,18 @@ namespace Delaunay
 			geomManager.ReleaseObstacle(obstacle);
 		}
 
-		public BorderCluster AddBorderCluster(IEnumerable<Vector3> vertices)
+		public BorderSet AddBorderSet(IEnumerable<Vector3> vertices)
 		{
 			List<HalfEdge> polygonBoundingEdges = AddShape(vertices);
-			BorderCluster borderCluster = geomManager.CreateBorderCluster(polygonBoundingEdges);
-			return borderCluster;
+			BorderSet borderSet = geomManager.CreateBorderSet(polygonBoundingEdges);
+			return borderSet;
 		}
 
-		public void RemoveBorderCluster(int borderClusterID)
+		public void RemoveBorderSet(int borderSetID)
 		{
-			BorderCluster borderCluster = geomManager.GetBorderCluster(borderClusterID);
-			RemoveShape(borderCluster.BoundingEdges);
-			geomManager.ReleaseBorderCluster(borderCluster);
+			BorderSet borderSet = geomManager.GetBorderSet(borderSetID);
+			RemoveShape(borderSet.BoundingEdges);
+			geomManager.ReleaseBorderSet(borderSet);
 		}
 
 		public void ClearMesh()

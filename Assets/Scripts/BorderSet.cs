@@ -4,28 +4,18 @@ using System.Xml;
 
 namespace Delaunay
 {
-	public class Obstacle
+	public class BorderSet
 	{
 		public int ID { get; private set; }
 
-		public static IDGenerator ObstacleIDGenerator = new IDGenerator();
+		public static IDGenerator BorderSetIDGenerator = new IDGenerator();
 
-		public Obstacle()
+		public BorderSet()
 		{
-			ID = ObstacleIDGenerator.Value;
+			ID = BorderSetIDGenerator.Value;
 		}
 
-		public List<HalfEdge> BoundingEdges
-		{
-			get { return boundingEdges; }
-			set
-			{
-				boundingEdges = value;
-				mesh = CalculateMeshTriangles(boundingEdges);
-			}
-		}
-
-		public List<Triangle> Mesh { get { return mesh; } }
+		public List<HalfEdge> BoundingEdges { get; set; }
 
 		public void WriteXml(XmlWriter writer)
 		{
@@ -84,33 +74,5 @@ namespace Delaunay
 
 			BoundingEdges = bounding;
 		}
-
-		List<Triangle> CalculateMeshTriangles(List<HalfEdge> edges)
-		{
-			List<Triangle> answer = new List<Triangle>();
-
-			Queue<HalfEdge> queue = new Queue<HalfEdge>();
-			queue.Enqueue(edges[0]);
-			for (; queue.Count > 0; )
-			{
-				HalfEdge edge = queue.Dequeue();
-				if (edge.Face == null) { continue; }
-				if (answer.Contains(edge.Face)) { continue; }
-
-				answer.Add(edge.Face);
-
-				HalfEdge e1 = edge.Face.BC, e2 = edge.Face.CA;
-				if (edge == edge.Face.BC) { e1 = edge.Face.AB; e2 = edge.Face.CA; }
-				if (edge == edge.Face.CA) { e1 = edge.Face.AB; e2 = edge.Face.BC; }
-
-				if (!e1.Constraint) { queue.Enqueue(e1.Pair); }
-				if (!e2.Constraint) { queue.Enqueue(e2.Pair); }
-			}
-
-			return answer;
-		}
-
-		List<Triangle> mesh = null;
-		List<HalfEdge> boundingEdges = null;
 	}
 }

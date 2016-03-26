@@ -151,21 +151,21 @@ namespace Delaunay
 			for (; reader.Read(); )
 			{
 				if (reader.NodeType == XmlNodeType.EndElement
-					&& reader.Name == EditorConstants.kXmlAllBorderClusters)
+					&& reader.Name == EditorConstants.kXmlAllBorderSets)
 				{
 					break;
 				}
 
 				if (reader.NodeType != XmlNodeType.Element) { continue; }
 
-				if (reader.Name == EditorConstants.kXmlAllBorderClusters)
+				if (reader.Name == EditorConstants.kXmlAllBorderSets)
 				{
-					BorderCluster.BorderClusterIDGenerator.ReadXml(reader);
+					BorderSet.BorderSetIDGenerator.ReadXml(reader);
 				}
 
-				if (reader.Name == EditorConstants.kXmlBorderCluster)
+				if (reader.Name == EditorConstants.kXmlBorderSet)
 				{
-					geomManager.CreateBorderCluster(reader, container);
+					geomManager.CreateBorderSet(reader, container);
 				}
 			}
 
@@ -220,10 +220,10 @@ namespace Delaunay
 					WriteAllObstacles(writer, geomManager);
 				}
 
-				using (new XmlWriterScope(writer, EditorConstants.kXmlAllBorderClusters))
+				using (new XmlWriterScope(writer, EditorConstants.kXmlAllBorderSets))
 				{
-					BorderCluster.BorderClusterIDGenerator.WriteXml(writer);
-					WriteAllBorderClusters(writer, geomManager);
+					BorderSet.BorderSetIDGenerator.WriteXml(writer);
+					WriteAllBorderSets(writer, geomManager);
 				}
 			}
 
@@ -276,11 +276,11 @@ namespace Delaunay
 				geomManager.CreateObstacle(reader, container);
 			}
 
-			BorderCluster.BorderClusterIDGenerator.ReadBinary(reader);
+			BorderSet.BorderSetIDGenerator.ReadBinary(reader);
 			count = reader.ReadInt32();
 			for (int i = 0; i < count; ++i)
 			{
-				geomManager.CreateBorderCluster(reader, container);
+				geomManager.CreateBorderSet(reader, container);
 			}
 
 			reader.Close();
@@ -316,9 +316,9 @@ namespace Delaunay
 			writer.Write(geomManager.AllObstacles.Count);
 			geomManager.AllObstacles.ForEach(item => { item.WriteBinary(writer); });
 
-			BorderCluster.BorderClusterIDGenerator.WriteBinary(writer);
-			writer.Write(geomManager.AllBorderClusters.Count);
-			geomManager.AllBorderClusters.ForEach(item => { item.WriteBinary(writer); });
+			BorderSet.BorderSetIDGenerator.WriteBinary(writer);
+			writer.Write(geomManager.AllBorderSets.Count);
+			geomManager.AllBorderSets.ForEach(item => { item.WriteBinary(writer); });
 
 			writer.Close();
 			fs.Close();
@@ -381,13 +381,13 @@ namespace Delaunay
 			});
 		}
 
-		static void WriteAllBorderClusters(XmlWriter writer, GeomManager geomManager)
+		static void WriteAllBorderSets(XmlWriter writer, GeomManager geomManager)
 		{
-			geomManager.AllBorderClusters.ForEach(borderCluster =>
+			geomManager.AllBorderSets.ForEach(borderSet =>
 			{
-				using (new XmlWriterScope(writer, EditorConstants.kXmlBorderCluster))
+				using (new XmlWriterScope(writer, EditorConstants.kXmlBorderSet))
 				{
-					borderCluster.WriteXml(writer);
+					borderSet.WriteXml(writer);
 				}
 			});
 		}

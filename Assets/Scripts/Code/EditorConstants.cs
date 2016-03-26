@@ -19,7 +19,7 @@ namespace Delaunay
 		public const string kXmlEdge = "Edge";
 		public const string kXmlTriangle = "Triangle";
 		public const string kXmlObstacle = "Obstacle";
-		public const string kXmlBorderCluster = "BorderCluster";
+		public const string kXmlBorderSet = "BorderSet";
 
 		public const string kXmlRoot = "Root";
 		public const string kXmlAllBorderVertices = "AllBorderVertices";
@@ -27,7 +27,7 @@ namespace Delaunay
 		public const string kXmlAllEdges = "AllEdges";
 		public const string kXmlAllTriangles = "AllTriangles";
 		public const string kXmlAllObstacles = "AllObstacles";
-		public const string kXmlAllBorderClusters = "AllBorderClusters";
+		public const string kXmlAllBorderSets = "AllBorderSets";
 
 		public const float kPanelWidth = 60;
 		

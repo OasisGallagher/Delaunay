@@ -5,7 +5,7 @@ using System.Xml;
 using UnityEngine;
 using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.Vertex, System.Collections.Generic.List<Delaunay.HalfEdge>>;
 using ObstacleContainer = System.Collections.Generic.List<Delaunay.Obstacle>;
-using BorderClusterContainer = System.Collections.Generic.List<Delaunay.BorderCluster>;
+using BorderSetContainer = System.Collections.Generic.List<Delaunay.BorderSet>;
 
 namespace Delaunay
 {
@@ -13,7 +13,7 @@ namespace Delaunay
 	{
 		HalfEdgeContainer halfEdgeContainer = new HalfEdgeContainer(EditorConstants.kVertexComparer);
 		ObstacleContainer obstacleContainer = new ObstacleContainer();
-		BorderClusterContainer borderClusterContainer = new BorderClusterContainer();
+		BorderSetContainer borderSetContainer = new BorderSetContainer();
 		TiledMap tiledMap = new TiledMap(new Vector3(-10, 0, -10), 1f, 20, 20);
 
 		public Vertex CreateVertex(Vector3 position)
@@ -228,38 +228,38 @@ namespace Delaunay
 			obstacleContainer.Remove(obstacle);
 		}
 
-		public BorderCluster CreateBorderCluster(List<HalfEdge> boundingEdges)
+		public BorderSet CreateBorderSet(List<HalfEdge> boundingEdges)
 		{
-			BorderCluster answer = new BorderCluster();
+			BorderSet answer = new BorderSet();
 			answer.BoundingEdges = boundingEdges;
-			borderClusterContainer.Add(answer);
+			borderSetContainer.Add(answer);
 			return answer;
 		}
 
-		public BorderCluster CreateBorderCluster(XmlReader reader, IDictionary<int, HalfEdge> container)
+		public BorderSet CreateBorderSet(XmlReader reader, IDictionary<int, HalfEdge> container)
 		{
-			BorderCluster answer = new BorderCluster();
+			BorderSet answer = new BorderSet();
 			answer.ReadXml(reader, container);
-			borderClusterContainer.Add(answer);
+			borderSetContainer.Add(answer);
 			return answer;
 		}
 
-		public BorderCluster CreateBorderCluster(BinaryReader reader, IDictionary<int, HalfEdge> container)
+		public BorderSet CreateBorderSet(BinaryReader reader, IDictionary<int, HalfEdge> container)
 		{
-			BorderCluster answer = new BorderCluster();
+			BorderSet answer = new BorderSet();
 			answer.ReadBinary(reader, container);
-			borderClusterContainer.Add(answer);
+			borderSetContainer.Add(answer);
 			return answer;
 		}
 
-		public BorderCluster GetBorderCluster(int ID)
+		public BorderSet GetBorderSet(int ID)
 		{
-			return borderClusterContainer.Find(item => { return item.ID == ID; });
+			return borderSetContainer.Find(item => { return item.ID == ID; });
 		}
 
-		public void ReleaseBorderCluster(BorderCluster borderCluster)
+		public void ReleaseBorderSet(BorderSet borderSet)
 		{
-			borderClusterContainer.Remove(borderCluster);
+			borderSetContainer.Remove(borderSet);
 		}
 
 		public Tuple2<int, Triangle> FindVertexContainedTriangle(Vector3 position)
@@ -414,9 +414,9 @@ namespace Delaunay
 			get { return obstacleContainer; }
 		}
 
-		public List<BorderCluster> AllBorderClusters
+		public List<BorderSet> AllBorderSets
 		{
-			get { return borderClusterContainer; }
+			get { return borderSetContainer; }
 		}
 
 		public TiledMap Map
