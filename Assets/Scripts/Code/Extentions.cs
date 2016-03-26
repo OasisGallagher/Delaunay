@@ -43,14 +43,14 @@ namespace Delaunay
 			return answer;
 		}
 
-		public static void Write(this BinaryWriter writer, Vector3 v3)
+		public static void write(this BinaryWriter writer, Vector3 v3)
 		{
 			writer.Write(v3.x);
 			writer.Write(v3.y);
 			writer.Write(v3.z);
 		}
 
-		public static Vector3 ReadVector3(this BinaryReader reader)
+		public static Vector3 readVector3(this BinaryReader reader)
 		{
 			Vector3 ans = Vector3.zero;
 			ans.x = reader.ReadSingle();

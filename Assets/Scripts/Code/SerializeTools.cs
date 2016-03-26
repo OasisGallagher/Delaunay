@@ -214,7 +214,7 @@ namespace Delaunay
 			borderVertices.Capacity = count;
 			for (int i = 0; i < count; ++i)
 			{
-				borderVertices.Add(reader.ReadVector3());
+				borderVertices.Add(reader.readVector3());
 			}
 
 			Vertex.VertexIDGenerator.ReadBinary(reader);
@@ -238,53 +238,19 @@ namespace Delaunay
 			Triangle.TriangleIDGenerator.ReadBinary(reader);
 			count = reader.ReadInt32();
 			for (int i = 0; i < count; ++i)
-			{ 
-				geomManager.CreateTriangle
+			{
+				geomManager.CreateTriangle(reader, container);
 			}
 
-			for (; reader.Read(); )
+			Obstacle.ObstacleIDGenerator.ReadBinary(reader);
+			count = reader.ReadInt32();
+			for (int i = 0; i < count; ++i)
 			{
-				if (reader.NodeType == XmlNodeType.EndElement
-					&& reader.Name == EditorConstants.kXmlAllTriangles)
-				{
-					break;
-				}
-
-				if (reader.NodeType != XmlNodeType.Element) { continue; }
-
-				if (reader.Name == EditorConstants.kXmlAllTriangles)
-				{
-					Triangle.TriangleIDGenerator.ReadXml(reader);
-				}
-
-				if (reader.Name == EditorConstants.kXmlTriangle)
-				{
-					geomManager.CreateTriangle(reader, container);
-				}
-			}
-
-			for (; reader.Read(); )
-			{
-				if (reader.NodeType == XmlNodeType.EndElement
-					&& reader.Name == EditorConstants.kXmlAllObstacles)
-				{
-					break;
-				}
-
-				if (reader.NodeType != XmlNodeType.Element) { continue; }
-
-				if (reader.Name == EditorConstants.kXmlAllObstacles)
-				{
-					Obstacle.ObstacleIDGenerator.ReadXml(reader);
-				}
-
-				if (reader.Name == EditorConstants.kXmlObstacle)
-				{
-					geomManager.CreateObstacle(reader, container);
-				}
+				geomManager.CreateObstacle(reader, container);
 			}
 
 			reader.Close();
+			fs.Close();
 
 			foreach (HalfEdge edge in container.Values)
 			{
@@ -298,7 +264,7 @@ namespace Delaunay
 			BinaryWriter writer = new BinaryWriter(fs);
 
 			writer.Write(borderVertices.Count);
-			borderVertices.ForEach(item => { writer.Write(item); });
+			borderVertices.ForEach(item => { writer.write(item); });
 
 			Vertex.VertexIDGenerator.WriteBinary(writer);
 			writer.Write(geomManager.AllVertices.Count);

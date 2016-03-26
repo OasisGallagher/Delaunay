@@ -17,7 +17,7 @@ namespace Delaunay
 			DebugDrawTriangles = 1,
 			DebugDrawEdges = 2,
 			DebugDrawTiles = 4,
-			DebugDrawBorder = 8,
+			DebugDrawSuperBorder = 8,
 		}
 
 		DebugDrawMask drawMask = (DebugDrawMask)(-1);
@@ -79,9 +79,10 @@ namespace Delaunay
 			if ((drawMask & DebugDrawMask.DebugDrawEdges) != 0)
 			{
 				Color handlesOldColor = Handles.color;
-				Handles.color = edgeColor;
+				
 				mesh.AllEdges.ForEach(edge =>
 				{
+					Handles.color = edge.Constraint ? blockFaceColor : edgeColor;
 					bool forward = edge.Src.Position.compare2(edge.Dest.Position) < 0;
 					if (forward)
 					{
@@ -119,7 +120,7 @@ namespace Delaunay
 				}
 			}
 
-			if ((drawMask & DebugDrawMask.DebugDrawBorder) != 0)
+			if ((drawMask & DebugDrawMask.DebugDrawSuperBorder) != 0)
 			{
 				IEnumerator<Vector3> e = mesh.BorderVertices.GetEnumerator();
 				Vector3 prev = Vector3.zero, first = Vector3.zero;

@@ -59,13 +59,13 @@ namespace Delaunay
 		public void WriteBinary(BinaryWriter writer)
 		{
 			writer.Write(ID);
-			writer.Write(Position);
+			writer.write(Position);
 		}
 
 		public void ReadBinary(BinaryReader reader)
 		{
 			ID = reader.ReadInt32();
-			Position = reader.ReadVector3();
+			Position = reader.readVector3();
 		}
 
 		public void ReadXml(XmlReader reader)

@@ -54,7 +54,7 @@ namespace Delaunay
 			if (debugDraw != null)
 			{
 				debugDraw.DrawDelaunayMesh();
-				debugDraw.DrawPolyLine(plantedVertices, HasBorder ? Color.blue : Color.red);
+				debugDraw.DrawPolyLine(plantedVertices, HasSuperBorder ? Color.blue : Color.red);
 			}
 
 			DrawVertexHandles();
@@ -121,7 +121,6 @@ namespace Delaunay
 			{
 				ClearMesh();
 			}
-
 			GUILayout.EndVertical();
 			GUILayout.EndArea();
 		}
@@ -149,7 +148,7 @@ namespace Delaunay
 
 		void LoadMesh()
 		{
-			string path = EditorUtility.OpenFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "xml");
+			string path = EditorUtility.OpenFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "dm");
 			if (!string.IsNullOrEmpty(path))
 			{
 				delaunayMesh.Load(path);
@@ -159,7 +158,7 @@ namespace Delaunay
 
 		void SaveMesh()
 		{
-			string path = EditorUtility.SaveFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "delaunay", "xml");
+			string path = EditorUtility.SaveFilePanel("", Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "delaunay", "dm");
 			if (!string.IsNullOrEmpty(path))
 			{
 				delaunayMesh.Save(path);
@@ -185,7 +184,6 @@ namespace Delaunay
 
 			ClearPlanted();
 		}
-
 		void DrawStats()
 		{
 			GUILayout.BeginArea(new Rect(Screen.width - 80, Screen.height - 100, 90, 100));
@@ -271,11 +269,11 @@ namespace Delaunay
 		{
 			if (Event.current.type == EventType.KeyUp)
 			{
-				OnKeyboardInput(Event.current.keyCode);
+				OnKeyboardInput(Event.current.keyCode, Event.current.modifiers);
 			}
 		}
 
-		void OnKeyboardInput(KeyCode keyCode)
+		void OnKeyboardInput(KeyCode keyCode, EventModifiers modifiers)
 		{
 			bool repaint = false;
 			if (keyCode == KeyCode.BackQuote)
@@ -285,7 +283,7 @@ namespace Delaunay
 
 			if (keyCode == KeyCode.Return)
 			{
-				repaint = OnReturn();
+				repaint = OnReturn(modifiers);
 			}
 
 			if (repaint)
@@ -308,7 +306,7 @@ namespace Delaunay
 			return false;
 		}
 
-		bool OnReturn()
+		bool OnReturn(EventModifiers modifiers)
 		{
 			if (!planting) { return false; }
 
@@ -318,20 +316,31 @@ namespace Delaunay
 				return false;
 			}
 
-			RenderVertices(plantedVertices);
+			RenderVertices(plantedVertices, (modifiers & EventModifiers.Shift) == 0);
 			ClearPlanted();
 
 			return true;
 		}
 
-		void RenderVertices(IEnumerable<Vector3> vertices)
+		void RenderVertices(IEnumerable<Vector3> vertices, bool close)
 		{
-			if (HasBorder)
+			if (HasSuperBorder)
+			{
+				CreateObject(vertices, close);
+			}
+			else if (EditorUtility.DisplayDialog("", "Create super border with these vertices?", "Yes", "No"))
+			{
+				delaunayMesh.AddSuperBorder(vertices);
+			}
+		}
+
+		void CreateObject(IEnumerable<Vector3> vertices, bool close)
+		{
+			if (close)
 			{
 				delaunayMesh.AddObstacle(vertices);
 			}
-
-			if(!HasBorder && EditorUtility.DisplayDialog("", "Create border with these vertices?", "Yes", "No"))
+			else
 			{
 				delaunayMesh.AddBorder(vertices);
 			}
@@ -383,9 +392,9 @@ namespace Delaunay
 			}
 		}
 
-		bool HasBorder
+		bool HasSuperBorder
 		{
-			get { return delaunayMesh != null && delaunayMesh.HasBorder; }
+			get { return delaunayMesh != null && delaunayMesh.HasSuperBorder; }
 		}
 	}
 }

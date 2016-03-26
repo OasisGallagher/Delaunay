@@ -7,12 +7,12 @@ namespace Delaunay
 	public class DelaunayMesh
 	{
 		GeomManager geomManager;
-		List<Vector3> borderVertices;
+		List<Vector3> superBorder;
 
 		public DelaunayMesh()
 		{
 			geomManager = new GeomManager();
-			borderVertices = new List<Vector3>();
+			superBorder = new List<Vector3>();
 		}
 
 		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
@@ -23,35 +23,40 @@ namespace Delaunay
 			return obstacle;
 		}
 
+		public void AddSuperBorder(IEnumerable<Vector3> vertices)
+		{
+			Utility.Verify(!HasSuperBorder);
+			superBorder.AddRange(vertices);
+			CreateSuperBorder(superBorder);
+		}
+
 		public void AddBorder(IEnumerable<Vector3> vertices)
 		{
-			Utility.Verify(!HasBorder);
-			borderVertices.AddRange(vertices);
-			CreateBorder();
+			AddPolygon(vertices);
 		}
 
 		public void ClearMesh()
 		{
 			geomManager.Clear();
-			CreateBorder();
+			CreateSuperBorder(superBorder);
 		}
 
 		public void ClearAll()
 		{
 			geomManager.Clear();
-			borderVertices.Clear();
+			superBorder.Clear();
 		}
 
 		public void Load(string path)
 		{
 			geomManager.Clear();
-			SerializeTools.Load(path, geomManager, borderVertices);
-			Debug.Log("Load " + borderVertices.Count + " vertices");
+			SerializeTools.Load(path, geomManager, superBorder);
+			Debug.Log("Load " + superBorder.Count + " vertices");
 		}
 
 		public void Save(string path)
 		{
-			SerializeTools.Save(path, geomManager, borderVertices);
+			SerializeTools.Save(path, geomManager, superBorder);
 		}
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)
@@ -157,14 +162,14 @@ namespace Delaunay
 			return Vector3.zero;
 		}
 
-		public bool HasBorder
+		public bool HasSuperBorder
 		{
-			get { return borderVertices.Count > 0; }
+			get { return superBorder.Count > 0; }
 		}
 
 		public IEnumerable<Vector3> BorderVertices
 		{
-			get { return borderVertices; }
+			get { return superBorder; }
 		}
 
 		public List<Vertex> AllVertices
@@ -192,6 +197,26 @@ namespace Delaunay
 			get { return geomManager.Map; }
 		}
 
+		void CreateSuperBorder(IEnumerable<Vector3> vertices)
+		{
+			if (!HasSuperBorder) { return; }
+			float max = float.NegativeInfinity;
+			foreach (Vector3 item in vertices)
+			{
+				max = Mathf.Max(max, Mathf.Abs(item.x), Mathf.Abs(item.z));
+			}
+
+			Vector3[] superTriangle = new Vector3[] {
+				new Vector3(0, 0, 4 * max),
+				new Vector3(-4 * max, 0, -4 * max),
+				new Vector3(4 * max, 0, 0)
+			};
+
+			SetUpSuperTriangle(superTriangle);
+			AddPolygon(vertices);
+			RemoveSuperTriangle(superTriangle);
+		}
+
 		Triangle FindWalkableTriangle(Vertex src)
 		{
 			foreach (HalfEdge edge in geomManager.GetRays(src))
@@ -203,25 +228,6 @@ namespace Delaunay
 			}
 
 			return null;
-		}
-
-		void CreateBorder()
-		{
-			float max = float.NegativeInfinity;
-			foreach (Vector3 item in borderVertices)
-			{
-				max = Mathf.Max(max, Mathf.Abs(item.x), Mathf.Abs(item.z));
-			}
-
-			Vector3[] super = new Vector3[] {
-				new Vector3(0, 0, 4 * max),
-				new Vector3(-4 * max, 0, -4 * max),
-				new Vector3(4 * max, 0, 0)
-			};
-
-			SetUpBounds(super);
-			AddPolygon(borderVertices);
-			RemoveBounds(super);
 		}
 
 		List<HalfEdge> AddPolygon(IEnumerable<Vector3> container)
@@ -500,7 +506,7 @@ namespace Delaunay
 			return true;
 		}
 
-		void SetUpBounds(Vector3[] super)
+		void SetUpSuperTriangle(Vector3[] super)
 		{
 			geomManager.CreateTriangle(
 				geomManager.CreateVertex(super[0]),
@@ -509,7 +515,7 @@ namespace Delaunay
 			);
 		}
 
-		void RemoveBounds(Vector3[] super)
+		void RemoveSuperTriangle(Vector3[] super)
 		{
 			geomManager.AllTriangles.ForEach(facet =>
 			{
