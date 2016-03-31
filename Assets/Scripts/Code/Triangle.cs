@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Xml;
 using UnityEngine;
 
 namespace Delaunay
@@ -281,39 +280,11 @@ namespace Delaunay
 			return SearchWidth(c, t2, e3, d);
 		}
 
-		public void WriteXml(XmlWriter writer)
-		{
-			writer.WriteAttributeString("ID", ID.ToString());
-
-			writer.WriteStartElement("EdgeID");
-			writer.WriteString(Edge != null ? Edge.ID.ToString() : "-1");
-			writer.WriteEndElement();
-
-			writer.WriteStartElement("Walkable");
-			writer.WriteString(Walkable ? "1" : "0");
-			writer.WriteEndElement();
-		}
-
 		public void WriteBinary(BinaryWriter writer)
 		{
 			writer.Write(ID);
 			writer.Write(Edge != null ? Edge.ID : -1);
 			writer.Write(Walkable);
-		}
-
-		public void ReadXml(XmlReader reader, IDictionary<int, HalfEdge> container)
-		{
-			ID = int.Parse(reader["ID"]);
-
-			reader.Read();
-
-			int edge = reader.ReadElementContentAsInt();
-
-			Edge = container[edge];
-
-			BoundingEdges.ForEach(e => { e.Face = this; });
-
-			Walkable = reader.ReadElementContentAsBoolean();
 		}
 
 		public void ReadBinary(BinaryReader reader, IDictionary<int, HalfEdge> container)

@@ -92,7 +92,6 @@ namespace Delaunay
 				if (position != plantedVertices[i])
 				{
 					cmdSequence.Push(new MoveVertexCommand(plantedVertices, i, position));
-					//plantedVertices[i] = position;
 					repaint = true;
 				}
 			}
@@ -105,7 +104,7 @@ namespace Delaunay
 
 		void DrawCommands()
 		{
-			GUILayout.BeginArea(new Rect(10, 10, 90, 120));
+			GUILayout.BeginArea(new Rect(10, 10, 90, 150));
 
 			GUILayout.BeginVertical("Box", GUILayout.Width(EditorConstants.kPanelWidth));
 
@@ -121,10 +120,12 @@ namespace Delaunay
 
 			EditorGUILayout.Separator();
 
+			GUILayout.BeginHorizontal("Box");
 			GUI.enabled = cmdSequence != null && cmdSequence.CanUndo;
 			if (GUILayout.Button("←", EditorStyles.miniButtonLeft))
 			{
 				cmdSequence.Undo();
+				Repaint();
 			}
 
 			GUI.enabled = cmdSequence != null && cmdSequence.CanRedo;
@@ -132,7 +133,10 @@ namespace Delaunay
 			if (GUILayout.Button("→", EditorStyles.miniButtonRight))
 			{
 				cmdSequence.Redo();
+				Repaint();
 			}
+
+			GUILayout.EndHorizontal();
 
 			GUI.enabled = true;
 
@@ -163,13 +167,11 @@ namespace Delaunay
 			if (GUILayout.Button("↑", EditorStyles.miniButtonLeft))
 			{
 				cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] + new Vector3(0, kTrimStep, 0)));
-				//plantedVertices[index] += new Vector3(0, kTrimStep, 0);
 			}
 
 			if (GUILayout.Button("↓", EditorStyles.miniButtonRight))
 			{
 				cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] - new Vector3(0, kTrimStep, 0)));
-				//plantedVertices[index] -= new Vector3(0, kTrimStep, 0);
 			}
 
 			GUILayout.EndHorizontal();
@@ -181,7 +183,10 @@ namespace Delaunay
 			if (!string.IsNullOrEmpty(path))
 			{
 				delaunayMesh.Load(path);
-				ShowNotification(new GUIContent(Path.GetFileName(path) + " loaded."));
+
+				ClearPlanted();
+				cmdSequence.Clear();
+				SceneView.currentDrawingSceneView.ShowNotification(new GUIContent(Path.GetFileName(path) + " loaded."));
 			}
 		}
 
@@ -332,7 +337,6 @@ namespace Delaunay
 			if (CheckNewVertex(point))
 			{
 				cmdSequence.Push(new AddVertexCommand(plantedVertices, point));
-				//plantedVertices.Add(point);
 				return true;
 			}
 
@@ -355,29 +359,27 @@ namespace Delaunay
 			return true;
 		}
 
-		void RenderVertices(IEnumerable<Vector3> vertices, bool close)
+		void RenderVertices(List<Vector3> vertices, bool close)
 		{
 			if (HasSuperBorder)
 			{
 				CreateObject(vertices, close);
 			}
-			else if (EditorUtility.DisplayDialog("", "Create super border with these vertices?\n You cannot undo this action.", "Yes", "No"))
+			else if (EditorUtility.DisplayDialog("", "Create super border with these vertices?", "Yes", "No"))
 			{
-				delaunayMesh.AddSuperBorder(vertices);
+				cmdSequence.Push(new CreateSuperBorderCommand(vertices, delaunayMesh));
 			}
 		}
 
-		void CreateObject(IEnumerable<Vector3> vertices, bool close)
+		void CreateObject(List<Vector3> vertices, bool close)
 		{
 			if (close)
 			{
-				cmdSequence.Push(new CreateObstacleCommand(delaunayMesh, vertices));
-				//delaunayMesh.AddObstacle(vertices);
+				cmdSequence.Push(new CreateObstacleCommand(vertices, delaunayMesh));
 			}
 			else
 			{
-				cmdSequence.Push(new CreateBorderSetCommand(delaunayMesh, vertices));
-				//delaunayMesh.AddBorderSet(vertices);
+				cmdSequence.Push(new CreateBorderSetCommand(vertices, delaunayMesh));
 			}
 		}
 

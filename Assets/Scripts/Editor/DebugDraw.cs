@@ -82,7 +82,7 @@ namespace Delaunay
 				
 				mesh.AllEdges.ForEach(edge =>
 				{
-					Handles.color = edge.Constraint ? blockFaceColor : edgeColor;
+					Handles.color = (edge.Constraint || edge.Pair.Constraint) ? blockFaceColor : edgeColor;
 					bool forward = edge.Src.Position.compare2(edge.Dest.Position) < 0;
 					if (forward)
 					{

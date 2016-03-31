@@ -67,7 +67,6 @@ namespace Delaunay
 		{
 			geomManager.Clear();
 			SerializeTools.Load(path, geomManager, superBorder);
-			Debug.Log("Load " + superBorder.Count + " vertices");
 		}
 
 		public void Save(string path)
@@ -234,9 +233,9 @@ namespace Delaunay
 		void RemoveShape(IEnumerable<HalfEdge> boundingEdges)
 		{
 			List<Vertex> boundingVertices = new List<Vertex>();
-			foreach (IEnumerator<HalfEdge> e in boundingEdges)
+			foreach (HalfEdge e in boundingEdges)
 			{
-				boundingVertices.Add(e.Current.Src);
+				boundingVertices.Add(e.Src);
 			}
 
 			List<Vertex> polygon = new List<Vertex>(boundingVertices.Count * 2);

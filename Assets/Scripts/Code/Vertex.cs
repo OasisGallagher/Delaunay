@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Xml;
 using UnityEngine;
 
 namespace Delaunay
@@ -40,22 +39,6 @@ namespace Delaunay
 			return base.GetHashCode();
 		}
 
-		public void WriteXml(XmlWriter writer)
-		{
-			writer.WriteAttributeString("ID", ID.ToString());
-
-			writer.WriteStartElement("Position");
-			writer.WriteAttributeString("X", Position.x.ToString());
-			writer.WriteAttributeString("Y", Position.y.ToString());
-			writer.WriteAttributeString("Z", Position.z.ToString());
-			writer.WriteEndElement();
-
-			/*using (new XmlWriterScope(writer, "EdgeID"))
-			{
-				writer.WriteString(Edge != null ? Edge.ID.ToString() : "-1");
-			}*/
-		}
-
 		public void WriteBinary(BinaryWriter writer)
 		{
 			writer.Write(ID);
@@ -66,13 +49,6 @@ namespace Delaunay
 		{
 			ID = reader.ReadInt32();
 			Position = reader.readVector3();
-		}
-
-		public void ReadXml(XmlReader reader)
-		{
-			ID = int.Parse(reader["ID"]);
-			reader.Read();
-			Position.Set(float.Parse(reader["X"]), float.Parse(reader["Y"]), float.Parse(reader["Z"]));
 		}
 	}
 }

@@ -33,7 +33,7 @@ namespace Delaunay
 		public void Redo()
 		{
 			Utility.Verify(CanRedo);
-			sequence[index++].PlayForward();
+			sequence[++index].PlayForward();
 		}
 
 		public void Clear()
@@ -49,7 +49,7 @@ namespace Delaunay
 
 		public bool CanRedo
 		{
-			get { return index < sequence.Count; }
+			get { return index < sequence.Count - 1; }
 		}
 	}
 
@@ -110,48 +110,87 @@ namespace Delaunay
 	public class CreateBorderSetCommand : IEditCommand
 	{
 		DelaunayMesh mesh;
-		IEnumerable<Vector3> vertices;
+		List<Vector3> refVertices;
+		List<Vector3> savedVertices;
+
 		int borderSetID;
 
-		public CreateBorderSetCommand(DelaunayMesh mesh, IEnumerable<Vector3> vertices)
+		public CreateBorderSetCommand(List<Vector3> vertices, DelaunayMesh mesh)
 		{
 			this.mesh = mesh;
-			this.vertices = vertices;
+			this.refVertices = vertices;
+			this.savedVertices = new List<Vector3>(vertices);
 		}
 
 		public void PlayForward()
 		{
-			borderSetID = mesh.AddBorderSet(vertices).ID;
+			borderSetID = mesh.AddBorderSet(savedVertices).ID;
+			refVertices.Clear();
 		}
 
 		public void PlayReverse()
 		{
 			Utility.Verify(borderSetID >= 0);
 			mesh.RemoveBorderSet(borderSetID);
+			refVertices.Clear();
+			refVertices.AddRange(savedVertices);
+		}
+	}
+
+	public class CreateSuperBorderCommand : IEditCommand
+	{
+		DelaunayMesh mesh;
+		List<Vector3> savedVertices;
+		List<Vector3> refVertices;
+
+		public CreateSuperBorderCommand(List<Vector3> vertices, DelaunayMesh mesh)
+		{
+			this.mesh = mesh;
+			this.refVertices = vertices;
+			this.savedVertices = new List<Vector3>(vertices);
+		}
+
+		public void PlayForward()
+		{
+			mesh.AddSuperBorder(savedVertices);
+			refVertices.Clear();
+		}
+
+		public void PlayReverse()
+		{
+			mesh.ClearAll();
+			refVertices.Clear();
+			refVertices.AddRange(savedVertices);
 		}
 	}
 
 	public class CreateObstacleCommand : IEditCommand
 	{
 		DelaunayMesh mesh;
-		IEnumerable<Vector3> vertices;
+		List<Vector3> refVertices;
+		List<Vector3> savedVertices;
+
 		int obstacleID;
 
-		public CreateObstacleCommand(DelaunayMesh mesh, IEnumerable<Vector3> vertices)
+		public CreateObstacleCommand(List<Vector3> vertices, DelaunayMesh mesh)
 		{
 			this.mesh = mesh;
-			this.vertices = vertices;
+			this.refVertices = vertices;
+			this.savedVertices = new List<Vector3>(vertices);
 		}
 
 		public void PlayForward()
 		{
-			obstacleID = mesh.AddObstacle(vertices).ID;
+			obstacleID = mesh.AddObstacle(savedVertices).ID;
+			refVertices.Clear();
 		}
 
 		public void PlayReverse()
 		{
 			Utility.Verify(obstacleID >= 0);
 			mesh.RemoveObstacle(obstacleID);
+			refVertices.Clear();
+			refVertices.AddRange(savedVertices);
 		}
 	}
 }

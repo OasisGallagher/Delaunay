@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Xml;
 using UnityEngine;
 using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.Vertex, System.Collections.Generic.List<Delaunay.HalfEdge>>;
 using ObstacleContainer = System.Collections.Generic.List<Delaunay.Obstacle>;
@@ -20,16 +19,6 @@ namespace Delaunay
 		{
 			Utility.Verify(FindVertex(position) == null, "Duplicate vertex at position " + position);
 			Vertex ans = new Vertex(position);
-
-			AddVertex(ans);
-
-			return ans;
-		}
-
-		public Vertex CreateVertex(XmlReader reader)
-		{
-			Vertex ans = new Vertex(Vector3.zero);
-			ans.ReadXml(reader);
 
 			AddVertex(ans);
 
@@ -72,22 +61,6 @@ namespace Delaunay
 			return self;
 		}
 
-		public HalfEdge CreateEdge(XmlReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
-		{
-			HalfEdge answer = null;
-			int edgeID = int.Parse(reader["ID"]);
-			reader.Read();
-
-			if (!container.TryGetValue(edgeID, out answer))
-			{
-				container.Add(edgeID, answer = new HalfEdge());
-				answer.ID = edgeID;
-			}
-
-			answer.ReadXml(reader, vertices, container);
-			return answer;
-		}
-
 		public HalfEdge CreateEdge(BinaryReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
 		{
 			HalfEdge answer = null;
@@ -115,20 +88,6 @@ namespace Delaunay
 			Triangle ans = go.AddComponent<Triangle>();
 			ans._Awake();
 			return ans;
-		}
-
-		public Triangle CreateTriangle(XmlReader reader, IDictionary<int, HalfEdge> container)
-		{
-			GameObject go = new GameObject();
-
-			Triangle answer = go.AddComponent<Triangle>();
-			answer._Awake();
-
-			answer.ReadXml(reader, container);
-
-			RasterizeTriangle(answer);
-
-			return answer;
 		}
 
 		public Triangle CreateTriangle(BinaryReader reader, IDictionary<int, HalfEdge> container)
@@ -202,14 +161,6 @@ namespace Delaunay
 			return answer;
 		}
 
-		public Obstacle CreateObstacle(XmlReader reader, IDictionary<int, HalfEdge> container)
-		{
-			Obstacle answer = new Obstacle();
-			answer.ReadXml(reader, container);
-			obstacleContainer.Add(answer);
-			return answer;
-		}
-
 		public Obstacle CreateObstacle(BinaryReader reader, IDictionary<int, HalfEdge> container)
 		{
 			Obstacle answer = new Obstacle();
@@ -232,14 +183,6 @@ namespace Delaunay
 		{
 			BorderSet answer = new BorderSet();
 			answer.BoundingEdges = boundingEdges;
-			borderSetContainer.Add(answer);
-			return answer;
-		}
-
-		public BorderSet CreateBorderSet(XmlReader reader, IDictionary<int, HalfEdge> container)
-		{
-			BorderSet answer = new BorderSet();
-			answer.ReadXml(reader, container);
 			borderSetContainer.Add(answer);
 			return answer;
 		}

@@ -71,6 +71,7 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\Editor\ConvexHull.cs" />
     <Compile Include="Assets\Scripts\Editor\DebugDraw.cs" />
+    <Compile Include="Assets\Scripts\Editor\EditCommand.cs" />
     <Compile Include="Assets\Scripts\Editor\SceneEditor.cs" />
     <Compile Include="Assets\Scripts\Editor\TriangleEditor.cs" />
   </ItemGroup>

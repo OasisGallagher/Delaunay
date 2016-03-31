@@ -1,7 +1,6 @@
 ﻿using System;
 using UnityEngine;
 using System.Collections.Generic;
-using System.Xml;
 using System.IO;
 
 namespace Delaunay
@@ -79,27 +78,6 @@ namespace Delaunay
 			return this;
 		}
 
-		public void WriteXml(XmlWriter writer)
-		{
-			writer.WriteAttributeString("ID", ID.ToString());
-
-			writer.WriteStartElement("DestVertexID");
-			writer.WriteString(Dest != null ? Dest.ID.ToString() : "-1");
-			writer.WriteEndElement();
-
-			writer.WriteStartElement("NextEdgeID");
-			writer.WriteString(Next != null ? Next.ID.ToString() : "-1");
-			writer.WriteEndElement();
-
-			writer.WriteStartElement("PairEdgeID");
-			writer.WriteString(Pair != null ? Pair.ID.ToString() : "-1");
-			writer.WriteEndElement();
-
-			writer.WriteStartElement("Constraint");
-			writer.WriteString(Constraint ? "1" : "0");
-			writer.WriteEndElement();
-		}
-
 		public void WriteBinary(BinaryWriter writer)
 		{
 			writer.Write(ID);
@@ -107,41 +85,6 @@ namespace Delaunay
 			writer.Write(Next != null ? Next.ID : -1);
 			writer.Write(Pair != null ? Pair.ID : -1);
 			writer.Write(Constraint);
-		}
-
-		public void ReadXml(XmlReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
-		{
-			container[ID] = this;
-
-			int destVertexID = reader.ReadElementContentAsInt();
-
-			Dest = vertices.Find(item => { return item.ID == destVertexID; });
-			Utility.Verify(Dest != null);
-
-			int nextEdge = reader.ReadElementContentAsInt();
-
-			HalfEdge edge = null;
-			if (nextEdge != -1 && !container.TryGetValue(nextEdge, out edge))
-			{
-				container.Add(nextEdge, edge = new HalfEdge());
-				edge.ID = nextEdge;
-			}
-			Next = edge;
-
-			int pairEdge = reader.ReadElementContentAsInt();
-
-			if (!container.TryGetValue(pairEdge, out edge))
-			{
-				container.Add(pairEdge, edge = new HalfEdge());
-				edge.ID = pairEdge;
-			}
-			Pair = edge;
-
-			Utility.Verify(Pair != null);
-
-			isConstraint = reader.ReadElementContentAsBoolean();
-
-			// Face is updated by Triangle.
 		}
 
 		public void ReadBinary(BinaryReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)

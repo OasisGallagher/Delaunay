@@ -11,11 +11,14 @@ namespace Delaunay
 		
 		GameObject destination;
 		GameObject player;
+		DelaunayMesh delaunayMesh;
 
 		void Start()
 		{
 			destination = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
 			player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
+			delaunayMesh = new DelaunayMesh();
+			delaunayMesh.Load(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "delaunay.dm"));
 		}
 		
 		void Update()
@@ -23,15 +26,15 @@ namespace Delaunay
 			Vector3 point = Vector3.zero;
 			if (Input.GetMouseButtonUp(2) && GetScreenMousePosition(out point))
 			{
-				//player.transform.position = delaunayMesh.GetNearestPoint(point, AgentRadius);
+				player.transform.position = delaunayMesh.GetNearestPoint(point, AgentRadius);
 				player.GetComponent<Steering>().Path = null;
 			}
 
 			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
 			{
 				Vector3 src = player.transform.position;
-				Vector3 dest = point; // delaunayMesh.GetNearestPoint(point, AgentRadius);
-				player.GetComponent<Steering>().Path = null;//delaunayMesh.FindPath(src, dest, AgentRadius);
+				Vector3 dest = delaunayMesh.GetNearestPoint(point, AgentRadius);
+				player.GetComponent<Steering>().Path = delaunayMesh.FindPath(src, dest, AgentRadius);
 				destination.transform.position = dest;
 			}
 

@@ -78,8 +78,8 @@ namespace Delaunay
 				close.Add(currentNode);
 			}
 
-			List<HalfEdge> path = null;
-			if (currentNode == destNode) { path = CreatePath(destNode); }
+			List<HalfEdge> path = CreatePath(currentNode);
+			//if (currentNode == destNode) { path = CreatePath(destNode); }
 
 			open.Dispose();
 			close.Dispose();
