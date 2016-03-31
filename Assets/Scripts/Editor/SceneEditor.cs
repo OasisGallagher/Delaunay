@@ -179,7 +179,7 @@ namespace Delaunay
 
 		void LoadMesh()
 		{
-			string path = EditorUtility.OpenFilePanel("", EditorConstants.kMeshFolder, "dm");
+			string path = EditorUtility.OpenFilePanel("", EditorConstants.kOutputFolder, "dm");
 			if (!string.IsNullOrEmpty(path))
 			{
 				delaunayMesh.Load(path);
@@ -192,7 +192,7 @@ namespace Delaunay
 
 		void SaveMesh()
 		{
-			string path = EditorUtility.SaveFilePanel("", EditorConstants.kMeshFolder, "delaunay", "dm");
+			string path = EditorUtility.SaveFilePanel("", EditorConstants.kOutputFolder, "delaunay", "dm");
 			if (!string.IsNullOrEmpty(path))
 			{
 				delaunayMesh.Save(path);
