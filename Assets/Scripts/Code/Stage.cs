@@ -18,7 +18,8 @@ namespace Delaunay
 			destination = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
 			player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
 			delaunayMesh = new DelaunayMesh();
-			delaunayMesh.Load(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "delaunay.dm"));
+			print(System.IO.Path.Combine(EditorConstants.kMeshFolder, "delaunay.dm"));
+			delaunayMesh.Load(System.IO.Path.Combine(EditorConstants.kMeshFolder, "delaunay.dm"));
 		}
 		
 		void Update()

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace Delaunay
@@ -18,6 +19,8 @@ namespace Delaunay
 		
 		public const int kMaxStackCapacity = 4096;
 		public const int kDebugInvalidCycle = 32;
+
+		public static readonly string kMeshFolder = Path.Combine(Application.dataPath, "Mesh");
 
 		public static readonly Vector3 kPathOffset = new Vector3(0, 0.7f, 0f);
 		public static readonly Vector3 kMeshOffset = new Vector3(0, 0.1f, 0);
