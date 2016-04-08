@@ -374,6 +374,15 @@ namespace Delaunay
 			return det > 0;
 		}
 
+		public static Vector3 LineCrossPlane(Vector3 a, Vector3 b, Vector3 c, Vector3 p, Vector3 dir)
+		{
+			Vector3 normal = Vector3.Cross(b - a, c - a);
+			float t = Vector3.Dot(dir, normal);
+			float d = Vector3.Dot(a - p, normal);
+			Verify(!Mathf.Approximately(0, t), "the line and plane are parallel");
+			return p + dir * d / t;
+		}
+
 		public static Vector3 GetTangent(Vector3 center, float radius, Vector3 point, bool clockwise)
 		{
 			float dist = (center - point).magnitude2();
