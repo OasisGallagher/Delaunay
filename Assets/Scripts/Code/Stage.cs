@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace Delaunay
@@ -8,34 +9,38 @@ namespace Delaunay
 	{
 		public float AgentRadius = 0.5f;
 		public float AgentSpeed = 8f;
-		
+
 		GameObject destination;
 		GameObject player;
-		DelaunayMesh delaunayMesh;
+
+		public DelaunayMesh delaunayMesh;
 
 		void Start()
 		{
+			delaunayMesh = new DelaunayMesh();
+
 			destination = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
 			player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
-			delaunayMesh = new DelaunayMesh();
-			print(System.IO.Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
-			delaunayMesh.Load(System.IO.Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
+			player.GetComponent<Steering>().SetTerrain(delaunayMesh);
+
+			print(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
+			delaunayMesh.Load(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
 		}
-		
+
 		void Update()
 		{
 			Vector3 point = Vector3.zero;
-			if (Input.GetMouseButtonUp(2) && GetScreenMousePosition(out point))
+			if (Input.GetMouseButtonUp(2) && MousePositionToStage(out point))
 			{
 				player.transform.position = delaunayMesh.GetNearestPoint(point, AgentRadius);
-				player.GetComponent<Steering>().Path = null;
+				player.GetComponent<Steering>().SetPath(null);
 			}
 
-			if (Input.GetMouseButtonUp(1) && GetScreenMousePosition(out point))
+			if (Input.GetMouseButtonUp(1) && MousePositionToStage(out point))
 			{
 				Vector3 src = player.transform.position;
 				Vector3 dest = delaunayMesh.GetNearestPoint(point, AgentRadius);
-				player.GetComponent<Steering>().Path = delaunayMesh.FindPath(src, dest, AgentRadius);
+				player.GetComponent<Steering>().SetPath(delaunayMesh.FindPath(src, dest, AgentRadius));
 				destination.transform.position = dest;
 			}
 
@@ -45,7 +50,7 @@ namespace Delaunay
 			player.GetComponent<Steering>().Speed = AgentSpeed;
 		}
 
-		bool GetScreenMousePosition(out Vector3 point)
+		bool MousePositionToStage(out Vector3 point)
 		{
 			RaycastHit hit;
 			point = Vector3.zero;

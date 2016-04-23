@@ -60,19 +60,18 @@ namespace Delaunay
 			{
 				mesh.AllTriangles.ForEach(face =>
 				{
-					if (face.gameObject.activeSelf)
-					{
-						Color color = face.Walkable ? walkableFaceColor : blockFaceColor;
-						Vector3[] verts = new Vector3[]
-						{
-							face.A.Position + EditorConstants.kMeshOffset,
-							face.B.Position + EditorConstants.kMeshOffset,
-							face.C.Position + EditorConstants.kMeshOffset,
-							face.A.Position + EditorConstants.kMeshOffset,
-						};
+					if (!face.gameObject.activeSelf) { return; }
 
-						Handles.DrawSolidRectangleWithOutline(verts, color, color);
-					}
+					Color color = face.Walkable ? walkableFaceColor : blockFaceColor;
+					Vector3[] verts = new Vector3[]
+					{
+						face.A.Position + EditorConstants.kMeshOffset,
+						face.B.Position + EditorConstants.kMeshOffset,
+						face.C.Position + EditorConstants.kMeshOffset,
+						face.A.Position + EditorConstants.kMeshOffset,
+					};
+
+					Handles.DrawSolidRectangleWithOutline(verts, color, color);
 				});
 			}
 

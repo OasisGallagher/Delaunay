@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public class DelaunayMesh
+	public class DelaunayMesh : IPathTerrain
 	{
 		GeomManager geomManager;
 		List<Vector3> superBorder;
@@ -133,6 +133,12 @@ namespace Delaunay
 			}
 
 			return Vector3.zero;
+		}
+
+		public float GetTerrainHeight(Vector3 position)
+		{
+			Triangle triangle = geomManager.FindVertexContainedTriangle(position).Second;
+			return MathUtility.LineCrossPlane(triangle.A.Position, triangle.B.Position,triangle.C.Position, position, Vector3.down).y;
 		}
 
 		public bool HasSuperBorder

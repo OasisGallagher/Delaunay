@@ -6,71 +6,43 @@ namespace Delaunay
 	public class Steering : MonoBehaviour
 	{
 		public float Speed;
-		public List<Vector3> Path
+
+		public void SetPath(List<Vector3> value)
 		{
-			get { return path; }
-			set
-			{
-				path = value;
-				currentNode = 0;
-				velocity = Vector3.zero;
-				lastPosition = transform.position;
-				print("Set new path");
-			}
+			pathway.Points = value != null ? value.ToArray() : null;
+			distance = 0f;
 		}
 
-		int currentNode = 0;
+		public void SetTerrain(IPathTerrain terrain)
+		{
+			this.terrain = terrain;
+		}
 
-		Vector3 velocity, lastPosition;
-		List<Vector3> path;
+		float distance = 0f;
+		IPathTerrain terrain = null;
+		Pathway pathway = new Pathway();
 
 		void Update()
 		{
-			if (path != null && path.Count > 0)
+			if (distance < pathway.Length)
 			{
-				float s = Time.deltaTime * Speed;
-				lastPosition = transform.position;
-				transform.position += velocity * s;
-				UpdateVelocity();
+				Vector3 newPosition = pathway.DistanceToPoint(distance += Speed * Time.deltaTime);
+				transform.position = new Vector3(newPosition.x, terrain.GetTerrainHeight(newPosition), newPosition.z);
 			}
 		}
 
 		void OnDrawGizmos()
 		{
-			if (path == null) { return; }
+			if (pathway.Points == null) { return; }
 			Color oldColor = Gizmos.color;
 			Gizmos.color = Color.gray;
 
-			for (int i = 1; i < path.Count; ++i)
+			for (int i = 1; i < pathway.Points.Length; ++i)
 			{
-				Gizmos.DrawLine(path[i - 1] + EditorConstants.kPathOffset, path[i] + EditorConstants.kPathOffset);
+				Gizmos.DrawLine(pathway.Points[i - 1] + EditorConstants.kPathOffset, pathway.Points[i] + EditorConstants.kPathOffset);
 			}
 
 			Gizmos.color = oldColor;
-		}
-
-		void UpdateVelocity()
-		{
-			if (currentNode >= path.Count)
-			{
-				velocity = Vector3.zero;
-				return;
-			}
-
-			if (transform.position == lastPosition 
-				|| transform.position.dot2(path[currentNode], lastPosition) < 0f)
-			{
-				++currentNode;
-				if (currentNode >= path.Count)
-				{
-					velocity = Vector3.zero;
-					print("Finished steering");
-				}
-				else
-				{
-					velocity = (path[currentNode] - path[currentNode - 1]).normalized;
-				}
-			}
 		}
 	}
 }

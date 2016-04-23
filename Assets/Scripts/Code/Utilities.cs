@@ -379,7 +379,7 @@ namespace Delaunay
 			Vector3 normal = Vector3.Cross(b - a, c - a);
 			float t = Vector3.Dot(dir, normal);
 			float d = Vector3.Dot(a - p, normal);
-			Verify(!Mathf.Approximately(0, t), "the line and plane are parallel");
+			Utility.Verify(!Mathf.Approximately(0, t), "the line and plane are parallel");
 			return p + dir * d / t;
 		}
 

@@ -22,6 +22,8 @@ namespace Delaunay
 
 		public static readonly string kOutputFolder = Path.Combine(Application.dataPath, "Output");
 
+		public static readonly string kMainScenePath = "main.unity";
+
 		public static readonly Vector3 kPathOffset = new Vector3(0, 0.7f, 0f);
 		public static readonly Vector3 kMeshOffset = new Vector3(0, 0.1f, 0);
 		public static readonly Vector3 kNewPolygonPreviewOffset = new Vector3(0, 0.8f, 0);

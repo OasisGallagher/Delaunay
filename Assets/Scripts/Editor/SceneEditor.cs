@@ -21,6 +21,9 @@ namespace Delaunay
 		DelaunayMesh delaunayMesh;
 		EditCommandSequence cmdSequence;
 
+		bool isPlaying = false;
+		bool editDebugDraw = true;
+
 		[MenuItem("Window/Scene Editor")]
 		static void OpenEditor()
 		{
@@ -55,6 +58,14 @@ namespace Delaunay
 			}
 
 			SceneView.onSceneGUIDelegate -= OnUpdateSceneGUI;
+		}
+
+		void Update()
+		{
+			if (isPlaying != EditorApplication.isPlaying)
+			{
+				isPlaying = !isPlaying;
+			}
 		}
 
 		void OnUpdateSceneGUI(SceneView sceneView)
@@ -104,7 +115,7 @@ namespace Delaunay
 
 		void DrawCommands()
 		{
-			GUILayout.BeginArea(new Rect(10, 10, 90, 150));
+			GUILayout.BeginArea(new Rect(10, 10, 120, 150));
 
 			GUILayout.BeginVertical("Box", GUILayout.Width(EditorConstants.kPanelWidth));
 
@@ -122,7 +133,7 @@ namespace Delaunay
 
 			GUILayout.BeginHorizontal("Box");
 			GUI.enabled = cmdSequence != null && cmdSequence.CanUndo;
-			if (GUILayout.Button("←", EditorStyles.miniButtonLeft))
+			if (GUILayout.Button("Undo", EditorStyles.miniButtonLeft))
 			{
 				cmdSequence.Undo();
 				Repaint();
@@ -130,7 +141,7 @@ namespace Delaunay
 
 			GUI.enabled = cmdSequence != null && cmdSequence.CanRedo;
 
-			if (GUILayout.Button("→", EditorStyles.miniButtonRight))
+			if (GUILayout.Button("Redo", EditorStyles.miniButtonRight))
 			{
 				cmdSequence.Redo();
 				Repaint();
@@ -237,13 +248,34 @@ namespace Delaunay
 		void OnGUI()
 		{
 			GUILayout.BeginVertical("Box");
-
-			if (debugDraw != null)
+			editDebugDraw = GUILayout.Toggle(editDebugDraw, "Edit debug draw");
+			if (editDebugDraw && debugDraw != null)
 			{
 				debugDraw.OnGUI();
 			}
+			GUILayout.EndVertical();
+
+			GUILayout.BeginVertical("Box");
 
 			GUILayout.BeginHorizontal("Box");
+
+			Color oldColor = GUI.color;
+			GUI.color = EditorApplication.isPlaying ? Color.red : Color.green;
+			if (GUILayout.Button(EditorApplication.isPlaying ? "Stop" : "Start", GUILayout.Width(60)))
+			{
+				Debug.LogWarning(EditorApplication.currentScene);
+				if (!EditorApplication.isPlaying)
+				{
+					EditorApplication.OpenScene(EditorConstants.kMainScenePath);
+				}
+				else
+				{
+					//EditorApplication.isPlaying = false;
+				}
+			}
+
+			GUI.color = oldColor;
+
 			if (GUILayout.Button(planting ? "Cancel" : "Plant", GUILayout.Width(60)))
 			{
 				OnClickPlant();
@@ -251,7 +283,7 @@ namespace Delaunay
 
 			if (planting)
 			{
-				Color oldColor = GUI.color;
+				oldColor = GUI.color;
 				GUI.color = Color.green;
 				GUILayout.Label("Click \"~\" in scene to add vertex.", EditorStyles.boldLabel);
 				GUI.color = oldColor;
