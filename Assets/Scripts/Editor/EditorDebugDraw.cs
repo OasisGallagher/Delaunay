@@ -4,20 +4,12 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public class DebugDraw
+	public class EditorDebugDraw
 	{
 		DelaunayMesh mesh;
-		public DebugDraw(DelaunayMesh mesh)
+		public EditorDebugDraw(DelaunayMesh mesh)
 		{
 			this.mesh = mesh;
-		}
-
-		enum DebugDrawMask
-		{
-			DebugDrawTriangles = 1,
-			DebugDrawEdges = 2,
-			DebugDrawTiles = 4,
-			DebugDrawSuperBorder = 8,
 		}
 
 		DebugDrawMask drawMask = (DebugDrawMask)(-1);

@@ -12,7 +12,7 @@ namespace Delaunay
 		const int kMaxVertices = 32;
 		const float kTrimStep = 0.1f;
 
-		DebugDraw debugDraw;
+		EditorDebugDraw debugDraw;
 		bool planting = false;
 
 		List<Vector3> plantedVertices;
@@ -38,7 +38,7 @@ namespace Delaunay
 			editStates = new BitArray(kMaxVertices);
 
 			delaunayMesh = new DelaunayMesh();
-			debugDraw = new DebugDraw(delaunayMesh);
+			debugDraw = new EditorDebugDraw(delaunayMesh);
 
 			cmdSequence = new EditCommandSequence();
 		}
@@ -70,6 +70,8 @@ namespace Delaunay
 
 		void OnUpdateSceneGUI(SceneView sceneView)
 		{
+			if (EditorApplication.isPlaying) { return; }
+
 			if (debugDraw != null)
 			{
 				debugDraw.DrawDelaunayMesh();
@@ -175,12 +177,12 @@ namespace Delaunay
 			
 			plantedVertices[index] = EditorGUILayout.Vector3Field("", plantedVertices[index], GUILayout.Height(16));
 			
-			if (GUILayout.Button("↑", EditorStyles.miniButtonLeft))
+			if (GUILayout.Button("Up", EditorStyles.miniButtonLeft))
 			{
 				cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] + new Vector3(0, kTrimStep, 0)));
 			}
 
-			if (GUILayout.Button("↓", EditorStyles.miniButtonRight))
+			if (GUILayout.Button("Down", EditorStyles.miniButtonRight))
 			{
 				cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] - new Vector3(0, kTrimStep, 0)));
 			}
@@ -247,6 +249,8 @@ namespace Delaunay
 
 		void OnGUI()
 		{
+			if (EditorApplication.isPlaying) { return; }
+
 			GUILayout.BeginVertical("Box");
 			editDebugDraw = GUILayout.Toggle(editDebugDraw, "Edit debug draw");
 			if (editDebugDraw && debugDraw != null)
@@ -259,23 +263,6 @@ namespace Delaunay
 
 			GUILayout.BeginHorizontal("Box");
 
-			Color oldColor = GUI.color;
-			GUI.color = EditorApplication.isPlaying ? Color.red : Color.green;
-			if (GUILayout.Button(EditorApplication.isPlaying ? "Stop" : "Start", GUILayout.Width(60)))
-			{
-				Debug.LogWarning(EditorApplication.currentScene);
-				if (!EditorApplication.isPlaying)
-				{
-					EditorApplication.OpenScene(EditorConstants.kMainScenePath);
-				}
-				else
-				{
-					//EditorApplication.isPlaying = false;
-				}
-			}
-
-			GUI.color = oldColor;
-
 			if (GUILayout.Button(planting ? "Cancel" : "Plant", GUILayout.Width(60)))
 			{
 				OnClickPlant();
@@ -283,7 +270,7 @@ namespace Delaunay
 
 			if (planting)
 			{
-				oldColor = GUI.color;
+				Color oldColor = GUI.color;
 				GUI.color = Color.green;
 				GUILayout.Label("Click \"~\" in scene to add vertex.", EditorStyles.boldLabel);
 				GUI.color = oldColor;
@@ -385,17 +372,17 @@ namespace Delaunay
 				return false;
 			}
 
-			RenderVertices(plantedVertices, (modifiers & EventModifiers.Shift) == 0);
+			RenderVertices(plantedVertices, (modifiers & EventModifiers.Shift) != 0);
 			ClearPlanted();
 
 			return true;
 		}
 
-		void RenderVertices(List<Vector3> vertices, bool close)
+		void RenderVertices(List<Vector3> vertices, bool shift)
 		{
 			if (HasSuperBorder)
 			{
-				CreateObject(vertices, close);
+				CreateObject(vertices, shift);
 			}
 			else if (EditorUtility.DisplayDialog("", "Create super border with these vertices?", "Yes", "No"))
 			{
@@ -403,15 +390,16 @@ namespace Delaunay
 			}
 		}
 
-		void CreateObject(List<Vector3> vertices, bool close)
+		void CreateObject(List<Vector3> vertices, bool shift)
 		{
-			if (close)
+			if (shift)
 			{
-				cmdSequence.Push(new CreateObstacleCommand(vertices, delaunayMesh));
+				bool close = EditorUtility.DisplayDialog("", "Close border set?", "Yes", "No");
+				cmdSequence.Push(new CreateBorderSetCommand(vertices, delaunayMesh, close));
 			}
 			else
 			{
-				cmdSequence.Push(new CreateBorderSetCommand(vertices, delaunayMesh));
+				cmdSequence.Push(new CreateObstacleCommand(vertices, delaunayMesh));
 			}
 		}
 

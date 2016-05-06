@@ -114,17 +114,19 @@ namespace Delaunay
 		List<Vector3> savedVertices;
 
 		int borderSetID;
+		bool close;
 
-		public CreateBorderSetCommand(List<Vector3> vertices, DelaunayMesh mesh)
+		public CreateBorderSetCommand(List<Vector3> vertices, DelaunayMesh mesh, bool close)
 		{
 			this.mesh = mesh;
 			this.refVertices = vertices;
 			this.savedVertices = new List<Vector3>(vertices);
+			this.close = close;
 		}
 
 		public void PlayForward()
 		{
-			borderSetID = mesh.AddBorderSet(savedVertices).ID;
+			borderSetID = mesh.AddBorderSet(savedVertices, close).ID;
 			refVertices.Clear();
 		}
 

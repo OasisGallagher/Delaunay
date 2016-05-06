@@ -31,9 +31,10 @@ namespace Delaunay
 			float remaining = distance;
 			Vector3 ans = Vector3.zero;
 
-			for (int i = 1; i < points.Length; ++i)
+			int i = 1;
+			for (; i < points.Length; ++i)
 			{
-				if(lengths[i] >= remaining)
+				if (lengths[i] >= remaining)
 				{
 					ans = Vector3.Lerp(points[i - 1], points[i], remaining / lengths[i]);
 					break;
@@ -41,21 +42,27 @@ namespace Delaunay
 
 				remaining -= lengths[i];
 			}
+			if (i >= points.Length)
+			{
+			}
 
 			return ans;
 		}
 
 		void Recalculate()
 		{
+			totalLength = 0f;
+
 			if (points == null)
 			{
 				lengths = null;
 				normals = null;
-				totalLength = 0f;
 				return;
 			}
 
 			lengths = new float[points.Length];
+			normals = new Vector3[points.Length];
+
 			for (int i = 1; i < points.Length; ++i)
 			{
 				normals[i] = points[i] - points[i - 1];

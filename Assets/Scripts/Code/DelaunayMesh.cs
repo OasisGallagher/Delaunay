@@ -24,7 +24,7 @@ namespace Delaunay
 
 		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
 		{
-			List<HalfEdge> polygonBoundingEdges = AddShape(vertices);
+			List<HalfEdge> polygonBoundingEdges = AddShape(vertices, true);
 			Obstacle obstacle = geomManager.CreateObstacle(polygonBoundingEdges);
 			MarkObstacle(obstacle);
 			return obstacle;
@@ -37,9 +37,9 @@ namespace Delaunay
 			geomManager.ReleaseObstacle(obstacle);
 		}
 
-		public BorderSet AddBorderSet(IEnumerable<Vector3> vertices)
+		public BorderSet AddBorderSet(IEnumerable<Vector3> vertices, bool close)
 		{
-			List<HalfEdge> polygonBoundingEdges = AddShape(vertices);
+			List<HalfEdge> polygonBoundingEdges = AddShape(vertices, close);
 			BorderSet borderSet = geomManager.CreateBorderSet(polygonBoundingEdges);
 			return borderSet;
 		}
@@ -99,7 +99,7 @@ namespace Delaunay
 
 		public Vector3 GetNearestPoint(Vector3 hit, float radius)
 		{
-			return hit;
+			return new Vector3(hit.x, GetTerrainHeight(hit), hit.z);
 			// TODO:
 			//	Triangle triangle = FindFacetContainsVertex(hit).Second;
 			/*
@@ -192,7 +192,7 @@ namespace Delaunay
 			};
 
 			SetUpSuperTriangle(superTriangle);
-			AddShape(vertices);
+			AddShape(vertices, true);
 			RemoveSuperTriangle(superTriangle);
 		}
 
@@ -209,7 +209,7 @@ namespace Delaunay
 			return null;
 		}
 
-		List<HalfEdge> AddShape(IEnumerable<Vector3> container)
+		List<HalfEdge> AddShape(IEnumerable<Vector3> container, bool close)
 		{
 			IEnumerator<Vector3> e = container.GetEnumerator();
 			List<HalfEdge> polygonBoundingEdges = new List<HalfEdge>();
@@ -219,19 +219,17 @@ namespace Delaunay
 			Vertex prevVertex = geomManager.CreateVertex(e.Current);
 			Vertex firstVertex = prevVertex;
 
-			List<Vertex> vertices = new List<Vertex>();
-
 			for (; e.MoveNext(); )
 			{
-				vertices.Add(prevVertex);
-
 				Vertex currentVertex = geomManager.CreateVertex(e.Current);
 				polygonBoundingEdges.AddRange(AddConstraintEdge(prevVertex, currentVertex));
 				prevVertex = currentVertex;
 			}
 
-			vertices.Add(prevVertex);
-			polygonBoundingEdges.AddRange(AddConstraintEdge(prevVertex, firstVertex));
+			if (close)
+			{
+				polygonBoundingEdges.AddRange(AddConstraintEdge(prevVertex, firstVertex));
+			}
 
 			return polygonBoundingEdges;
 		}

@@ -27,6 +27,25 @@ namespace Delaunay
 			delaunayMesh.Load(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
 		}
 
+		void OnGUI()
+		{
+			GUILayout.BeginArea(new Rect(10, 10, 68, 30));
+			GUILayout.BeginVertical("Box");
+
+			if (GUILayout.Button("Load", GUILayout.Width(60)))
+			{
+				string path = UnityEditor.EditorUtility.OpenFilePanel("", EditorConstants.kOutputFolder, "dm");
+				if (!string.IsNullOrEmpty(path))
+				{
+					delaunayMesh.Load(path);
+					print(path + " loaded.");
+				}
+			}
+
+			GUILayout.EndVertical();
+			GUILayout.EndArea();
+		}
+
 		void Update()
 		{
 			Vector3 point = Vector3.zero;
