@@ -334,8 +334,10 @@ namespace Delaunay
 			bool repaint = false;
 			if (keyCode == KeyCode.BackQuote)
 			{
-				repaint = OnBackQuote();
+				repaint = OnBackQuote((Event.current.modifiers & EventModifiers.Shift) != 0);
 			}
+
+			Debug.Log(keyCode);
 
 			if (keyCode == KeyCode.Return)
 			{
@@ -348,10 +350,15 @@ namespace Delaunay
 			}
 		}
 
-		bool OnBackQuote()
+		bool OnBackQuote(bool shift)
 		{
 			if (!planting) { return false; }
 			Vector3 point = FixedMousePosition;
+
+			if (shift && plantedVertices.Count > 0)
+			{
+				NormalizeMousePosition(ref point, plantedVertices.back());
+			}
 
 			if (CheckNewVertex(point))
 			{
@@ -360,6 +367,31 @@ namespace Delaunay
 			}
 
 			return false;
+		}
+
+		void NormalizeMousePosition(ref Vector3 position, Vector3 prev)
+		{
+			float radian = Mathf.Atan2(position.z - prev.z, position.x - prev.x);
+			radian += Mathf.PI;
+
+			const float quater = Mathf.PI / 4;
+
+			if (radian >= quater && radian < 3 * quater)
+			{
+				position.z = prev.z;
+			}
+			else if (radian > 3 * quater && radian < 5 * quater)
+			{
+				position.x = -prev.x;
+			}
+			else if (radian > 5 * quater && radian < 7 * quater)
+			{
+				position.z = -prev.z;
+			}
+			else
+			{
+				position.x = prev.x;
+			}
 		}
 
 		bool OnReturn(EventModifiers modifiers)

@@ -14,6 +14,8 @@ namespace Delaunay
 	[RequireComponent(typeof(Camera))]
 	public class MeshDebugDraw : MonoBehaviour
 	{
+		public Vector3 offset = Vector3.up;
+
 		public Color blockFaceColor = new Color(1, 0, 0, 90 / 255f);
 		public Color walkableFaceColor = new Color(128 / 255f, 128 / 255f, 128 / 255f, 11 / 255f);
 		public Color edgeColor = new Color(0, 205 / 255f, 1, 126 / 255f);
@@ -62,9 +64,9 @@ namespace Delaunay
 						shinkedTriangle[2] = face.C.Position;
 						MathUtility.Shink(shinkedTriangle, kShrink);
 						GL.Color(face.Walkable ? walkableFaceColor : blockFaceColor);
-						GL.Vertex(shinkedTriangle[0] + EditorConstants.kMeshOffset);
-						GL.Vertex(shinkedTriangle[1] + EditorConstants.kMeshOffset);
-						GL.Vertex(shinkedTriangle[2] + EditorConstants.kMeshOffset);
+						GL.Vertex(shinkedTriangle[0] + offset);
+						GL.Vertex(shinkedTriangle[1] + offset);
+						GL.Vertex(shinkedTriangle[2] + offset);
 					}
 				});
 
@@ -80,8 +82,8 @@ namespace Delaunay
 					bool forward = edge.Src.Position.compare2(edge.Dest.Position) < 0;
 					if (forward)
 					{
-						GL.Vertex(edge.Src.Position + EditorConstants.kMeshOffset);
-						GL.Vertex(edge.Dest.Position + EditorConstants.kMeshOffset);
+						GL.Vertex(edge.Src.Position + offset);
+						GL.Vertex(edge.Dest.Position + offset);
 					}
 				});
 
@@ -101,7 +103,7 @@ namespace Delaunay
 					{
 						Tile tile = map[i, j];
 						GL.Color(tile.Face != null ? usedTileFaceColor : freeTileFaceColor);
-						Vector3 center = map.GetTileCenter(i, j) + EditorConstants.kMeshOffset;
+						Vector3 center = map.GetTileCenter(i, j) + offset;
 						Vector3 deltaX = new Vector3(map.TileSize / 2f, 0, 0);
 						Vector3 deltaZ = new Vector3(0, 0, map.TileSize / 2f);
 						GL.Vertex(center - deltaX - deltaZ);
@@ -117,14 +119,14 @@ namespace Delaunay
 
 				for (int i = 0; i < map.RowCount + 1; ++i)
 				{
-					Vector3 start = map.Origin + i * map.TileSize * Vector3.forward + EditorConstants.kMeshOffset;
+					Vector3 start = map.Origin + i * map.TileSize * Vector3.forward + offset;
 					GL.Vertex(start);
 					GL.Vertex(start + width * Vector3.right);
 				}
 
 				for (int i = 0; i < map.ColumnCount + 1; ++i)
 				{
-					Vector3 start = map.Origin + i * map.TileSize * Vector3.right + EditorConstants.kMeshOffset;
+					Vector3 start = map.Origin + i * map.TileSize * Vector3.right + offset;
 					GL.Vertex(start);
 					GL.Vertex(start + height * Vector3.forward);
 				}
@@ -142,7 +144,7 @@ namespace Delaunay
 				for (IEnumerator<Vector3> e = targetMesh.BorderVertices.GetEnumerator(); e.MoveNext(); )
 				{
 					first = first ?? e.Current;
-					GL.Vertex(e.Current + EditorConstants.kMeshOffset);
+					GL.Vertex(e.Current + offset);
 				}
 				
 				if (first.HasValue)

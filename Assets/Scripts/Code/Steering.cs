@@ -5,7 +5,11 @@ namespace Delaunay
 {
 	public class Steering : MonoBehaviour
 	{
-		public float Speed;
+		PlayerComponent playerComponent;
+		void Start()
+		{
+			playerComponent = GetComponent<PlayerComponent>();
+		}
 
 		public void SetPath(List<Vector3> value)
 		{
@@ -26,7 +30,7 @@ namespace Delaunay
 		{
 			if (distance < pathway.Length)
 			{
-				Vector3 newPosition = pathway.DistanceToPoint(distance += Speed * Time.deltaTime);
+				Vector3 newPosition = pathway.DistanceToPoint(distance += playerComponent.Speed * Time.deltaTime);
 				transform.position = new Vector3(newPosition.x, terrain.GetTerrainHeight(newPosition), newPosition.z);
 			}
 		}

@@ -7,11 +7,9 @@ namespace Delaunay
 {
 	public class Stage : MonoBehaviour
 	{
-		public float AgentRadius = 0.5f;
-		public float AgentSpeed = 8f;
-
 		GameObject destination;
 		GameObject player;
+		PlayerComponent playerComponent;
 
 		public DelaunayMesh delaunayMesh;
 
@@ -22,6 +20,8 @@ namespace Delaunay
 			destination = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
 			player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
 			player.GetComponent<Steering>().SetTerrain(delaunayMesh);
+
+			playerComponent = player.GetComponent<PlayerComponent>();
 
 			print(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
 			delaunayMesh.Load(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
@@ -51,22 +51,20 @@ namespace Delaunay
 			Vector3 point = Vector3.zero;
 			if (Input.GetMouseButtonUp(2) && MousePositionToStage(out point))
 			{
-				player.transform.position = delaunayMesh.GetNearestPoint(point, AgentRadius);
+				player.transform.position = delaunayMesh.GetNearestPoint(point, playerComponent.Radius);
 				player.GetComponent<Steering>().SetPath(null);
 			}
 
 			if (Input.GetMouseButtonUp(1) && MousePositionToStage(out point))
 			{
 				Vector3 src = player.transform.position;
-				Vector3 dest = delaunayMesh.GetNearestPoint(point, AgentRadius);
-				player.GetComponent<Steering>().SetPath(delaunayMesh.FindPath(src, dest, AgentRadius));
+				Vector3 dest = delaunayMesh.GetNearestPoint(point, playerComponent.Radius);
+				player.GetComponent<Steering>().SetPath(delaunayMesh.FindPath(src, dest, playerComponent.Radius));
 				destination.transform.position = dest;
 			}
 
-			Vector3 scale = new Vector3(AgentRadius * 2f, 1, AgentRadius * 2f);
+			Vector3 scale = new Vector3(playerComponent.Radius * 2f, 1, playerComponent.Radius * 2f);
 			player.transform.localScale = scale;
-
-			player.GetComponent<Steering>().Speed = AgentSpeed;
 		}
 
 		bool MousePositionToStage(out Vector3 point)
