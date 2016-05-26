@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnityVS.Delaunay.CSharp.Editor", "UnityVS.Delaunay.CSharp.Editor.csproj", "{05F42A26-F934-F252-77C2-C06EEA3F73A9}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnityVS.Delaunay.CSharp", "UnityVS.Delaunay.CSharp.csproj", "{E55E65D9-A453-4CE2-51CF-2A19E634804B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnityVS.Delaunay.CSharp.Editor", "UnityVS.Delaunay.CSharp.Editor.csproj", "{05F42A26-F934-F252-77C2-C06EEA3F73A9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,14 +11,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{05F42A26-F934-F252-77C2-C06EEA3F73A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{05F42A26-F934-F252-77C2-C06EEA3F73A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{05F42A26-F934-F252-77C2-C06EEA3F73A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{05F42A26-F934-F252-77C2-C06EEA3F73A9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E55E65D9-A453-4CE2-51CF-2A19E634804B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E55E65D9-A453-4CE2-51CF-2A19E634804B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E55E65D9-A453-4CE2-51CF-2A19E634804B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E55E65D9-A453-4CE2-51CF-2A19E634804B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05F42A26-F934-F252-77C2-C06EEA3F73A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05F42A26-F934-F252-77C2-C06EEA3F73A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05F42A26-F934-F252-77C2-C06EEA3F73A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05F42A26-F934-F252-77C2-C06EEA3F73A9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

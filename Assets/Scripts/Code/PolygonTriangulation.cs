@@ -95,14 +95,14 @@ namespace Delaunay
 				return false;
 			}
 
-			for (var e = vertices.GetIndexEnumerator(); e.MoveNext(); )
+			for (var e = vertices.GetEnumerator(); e.MoveNext(); )
 			{
-				if (e.ListIndex == current || e.ListIndex == prev || e.ListIndex == next)
+				if (e.CurrentIndex == current || e.CurrentIndex == prev || e.CurrentIndex == next)
 				{
 					continue;
 				}
 
-				if (MathUtility.PolygonContains(points, vertices[e.ListIndex].vertex.Position))
+				if (MathUtility.PolygonContains(points, vertices[e.CurrentIndex].vertex.Position))
 				{
 					return false;
 				}
@@ -122,14 +122,15 @@ namespace Delaunay
 		static List<Vertex> EarClipping(ArrayLinkedList<EarVertex> vertices, ArrayLinkedList<int> earTips)
 		{
 			List<Vertex> answer = new List<Vertex>(vertices.Count - 2);
-			List<EarVertex> removedEars = new List<EarVertex>(vertices.Count);
+			EarVertex[] removedEars = new EarVertex[2];
+			int removedEarCount = 0;
 
 			int earTipIndex = -1;
-			for (var e = earTips.GetIndexEnumerator(); e.MoveNext(); )
+			for (var e = earTips.GetEnumerator(); e.MoveNext(); )
 			{
 				if (earTipIndex >= 0) { earTips.RemoveAt(earTipIndex); }
 
-				earTipIndex = e.ListIndex;
+				earTipIndex = e.CurrentIndex;
 
 				int earTipVertexIndex = earTips[earTipIndex];
 				EarVertex earTipVertex = vertices[earTipVertexIndex];
@@ -153,7 +154,7 @@ namespace Delaunay
 				}
 				else if (state < 0)
 				{
-					removedEars.Add(prevVertex);
+					removedEars[removedEarCount++] = prevVertex;
 				}
 
 				state = UpdateEarVertexState(vertices, nextIndex);
@@ -163,17 +164,17 @@ namespace Delaunay
 				}
 				else if (state < 0)
 				{
-					removedEars.Add(nextVertex);
+					removedEars[removedEarCount++] = nextVertex;
 				}
 
-				removedEars.ForEach(item =>
+				for (int i = 0; i < removedEarCount; ++i)
 				{
-					Utility.Verify(item.earListIndex >= 0);
-					earTips.RemoveAt(item.earListIndex);
-					item.earListIndex = -1;
-				});
+					Utility.Verify(removedEars[i].earListIndex >= 0);
+					earTips.RemoveAt(removedEars[i].earListIndex);
+					removedEars[i].earListIndex = -1;
+				}
 
-				removedEars.Clear();
+				removedEarCount = 0;
 			}
 
 			if (earTipIndex >= 0) { earTips.RemoveAt(earTipIndex); }

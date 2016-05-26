@@ -1,19 +1,25 @@
 using System;
+using System.Collections.Generic;
 
 namespace Delaunay
 {
 	public class ArrayLinkedList<T>
 	{
-		public class IndexEnumerator
+		public class ALEnumerator
 		{
-			public IndexEnumerator(ArrayLinkedList<T> list)
+			public ALEnumerator(ArrayLinkedList<T> list)
 			{
 				this.list = list;
 			}
 
-			public int ListIndex
+			public int CurrentIndex
 			{
 				get { return currentIndex; }
+			}
+
+			public T CurrentValue
+			{
+				get { return list[currentIndex]; }
 			}
 
 			public bool MoveNext()
@@ -142,9 +148,9 @@ namespace Delaunay
 			return text;
 		}
 
-		public IndexEnumerator GetIndexEnumerator()
+		public ALEnumerator GetEnumerator()
 		{
-			return new IndexEnumerator(this);
+			return new ALEnumerator(this);
 		}
 
 		int PopFreeList()
