@@ -56,29 +56,30 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\Code\ArrayLinkedList.cs" />
-    <Compile Include="Assets\Scripts\Code\BorderSet.cs" />
-    <Compile Include="Assets\Scripts\Code\DelaunayMesh.cs" />
-    <Compile Include="Assets\Scripts\Code\EditorConstants.cs" />
-    <Compile Include="Assets\Scripts\Code\Extentions.cs" />
-    <Compile Include="Assets\Scripts\Code\GeomManager.cs" />
-    <Compile Include="Assets\Scripts\Code\HalfEdge.cs" />
-    <Compile Include="Assets\Scripts\Code\IDGenerator.cs" />
-    <Compile Include="Assets\Scripts\Code\IPathTerrain.cs" />
-    <Compile Include="Assets\Scripts\Code\MeshDebugDraw.cs" />
-    <Compile Include="Assets\Scripts\Code\Obstacle.cs" />
-    <Compile Include="Assets\Scripts\Code\PathSmooth.cs" />
-    <Compile Include="Assets\Scripts\Code\Pathfinding.cs" />
-    <Compile Include="Assets\Scripts\Code\Pathway.cs" />
+    <Compile Include="Assets\Scripts\Code\Utilities\ArrayLinkedList.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\BorderSet.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\DelaunayMesh.cs" />
+    <Compile Include="Assets\Scripts\Code\Utilities\EditorConstants.cs" />
+    <Compile Include="Assets\Scripts\Code\Utilities\Extentions.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\GeomManager.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\HalfEdge.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\IDGenerator.cs" />
+    <Compile Include="Assets\Scripts\Code\Path\IPathTerrain.cs" />
+    <Compile Include="Assets\Scripts\Code\Utilities\MeshDebugDraw.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\Obstacle.cs" />
+    <Compile Include="Assets\Scripts\Code\Path\PathSmooth.cs" />
+    <Compile Include="Assets\Scripts\Code\Path\Pathfinding.cs" />
+    <Compile Include="Assets\Scripts\Code\Path\Pathway.cs" />
     <Compile Include="Assets\Scripts\Code\PlayerComponent.cs" />
-    <Compile Include="Assets\Scripts\Code\PolygonTriangulation.cs" />
-    <Compile Include="Assets\Scripts\Code\SerializeTools.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\PolygonTriangulation.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\MeshSerializer.cs" />
     <Compile Include="Assets\Scripts\Code\Stage.cs" />
-    <Compile Include="Assets\Scripts\Code\Steering.cs" />
-    <Compile Include="Assets\Scripts\Code\TiledMap.cs" />
-    <Compile Include="Assets\Scripts\Code\Triangle.cs" />
-    <Compile Include="Assets\Scripts\Code\Utilities.cs" />
-    <Compile Include="Assets\Scripts\Code\Vertex.cs" />
+    <Compile Include="Assets\Scripts\Code\Path\Steering.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\TiledMap.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\Triangle.cs" />
+    <Compile Include="Assets\Scripts\Code\Utilities\Utilities.cs" />
+    <Compile Include="Assets\Scripts\Code\Mesh\Vertex.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath)\SyntaxTree\UnityVS\2013\UnityVS.CSharp.targets" />
 </Project>

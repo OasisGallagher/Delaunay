@@ -67,12 +67,12 @@ namespace Delaunay
 		public void Load(string path)
 		{
 			geomManager.Clear();
-			SerializeTools.Load(path, geomManager, superBorder);
+			MeshSerializer.Load(path, geomManager, superBorder);
 		}
 
 		public void Save(string path)
 		{
-			SerializeTools.Save(path, geomManager, superBorder);
+			MeshSerializer.Save(path, geomManager, superBorder);
 		}
 
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)
@@ -123,6 +123,7 @@ namespace Delaunay
 
 		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
 		{
+			/* TODO:
 			Tuple2<int, Triangle> result = geomManager.FindVertexContainedTriangle(from);
 			Utility.Verify(result.Second != null, "Can not find facet contains " + from);
 			if (result.First < 0)
@@ -130,9 +131,9 @@ namespace Delaunay
 				Vertex vertex = result.Second.FindVertex(from);
 				HalfEdge edge = result.Second.GetOpposite(vertex);
 				Vector2 crossPoint = Vector2.zero;
-				//CrossState crossState = MathUtility.SegmentCross(out crossPoint, from, to, edge.Src.Position, edge.Dest.Position);
+				CrossState crossState = MathUtility.SegmentCross(out crossPoint, from, to, edge.Src.Position, edge.Dest.Position);
 			}
-
+			*/
 			return Vector3.zero;
 		}
 

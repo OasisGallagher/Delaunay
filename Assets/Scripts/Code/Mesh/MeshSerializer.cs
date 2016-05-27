@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public static class SerializeTools
+	public static class MeshSerializer
 	{
 		public static void Save(string path, GeomManager geomManager, List<Vector3> borderVertices)
 		{
