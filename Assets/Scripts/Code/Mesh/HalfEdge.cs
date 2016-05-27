@@ -141,6 +141,5 @@ namespace Delaunay
 		}
 
 		bool isConstraint;
-		Triangle face;
 	}
 }

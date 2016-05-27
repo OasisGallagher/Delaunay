@@ -64,11 +64,11 @@
      <Compile Include="Assets\Scripts\Code\Path\Steering.cs" />
      <Compile Include="Assets\Scripts\Code\PlayerComponent.cs" />
      <Compile Include="Assets\Scripts\Code\Stage.cs" />
-     <Compile Include="Assets\Scripts\Code\Utilities\ArrayLinkedList.cs" />
-     <Compile Include="Assets\Scripts\Code\Utilities\EditorConstants.cs" />
-     <Compile Include="Assets\Scripts\Code\Utilities\Extentions.cs" />
-     <Compile Include="Assets\Scripts\Code\Utilities\MeshDebugDraw.cs" />
-     <Compile Include="Assets\Scripts\Code\Utilities\Utilities.cs" />
+     <Compile Include="Assets\Scripts\Code\Utility\ArrayLinkedList.cs" />
+     <Compile Include="Assets\Scripts\Code\Utility\EditorConstants.cs" />
+     <Compile Include="Assets\Scripts\Code\Utility\Extentions.cs" />
+     <Compile Include="Assets\Scripts\Code\Utility\MeshDebugDraw.cs" />
+     <Compile Include="Assets\Scripts\Code\Utility\Utilities.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>D:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/4.6.3/UnityEngine.UI.dll</HintPath>
  </Reference>

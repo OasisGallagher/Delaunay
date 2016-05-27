@@ -2,18 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using HalfEdgeContainer = System.Collections.Generic.SortedDictionary<Delaunay.Vertex, System.Collections.Generic.List<Delaunay.HalfEdge>>;
-using ObstacleContainer = System.Collections.Generic.List<Delaunay.Obstacle>;
-using BorderSetContainer = System.Collections.Generic.List<Delaunay.BorderSet>;
 
 namespace Delaunay
 {
 	public class GeomManager
 	{
-		HalfEdgeContainer halfEdgeContainer = new HalfEdgeContainer(EditorConstants.kVertexComparer);
-		ObstacleContainer obstacleContainer = new ObstacleContainer();
-		BorderSetContainer borderSetContainer = new BorderSetContainer();
+		List<Obstacle> obstacleContainer = new List<Obstacle>();
+		List<BorderSet> borderSetContainer = new List<BorderSet>();
 		TiledMap tiledMap = new TiledMap(new Vector3(-10, 0, -10), 1f, 20, 20);
+		SortedDictionary<Vertex, List<HalfEdge>> halfEdgeContainer = new SortedDictionary<Vertex, List<HalfEdge>>(EditorConstants.kVertexComparer);
 
 		public Vertex CreateVertex(Vector3 position)
 		{
@@ -86,7 +83,7 @@ namespace Delaunay
 		{
 			GameObject go = new GameObject();
 			Triangle ans = go.AddComponent<Triangle>();
-			ans._Awake();
+
 			return ans;
 		}
 
@@ -95,7 +92,6 @@ namespace Delaunay
 			GameObject go = new GameObject();
 
 			Triangle answer = go.AddComponent<Triangle>();
-			answer._Awake();
 
 			answer.ReadBinary(reader, container);
 
@@ -123,7 +119,6 @@ namespace Delaunay
 			GameObject go = new GameObject();
 
 			Triangle answer = go.AddComponent<Triangle>();
-			answer._Awake();
 
 			ab.Face = bc.Face = ca.Face = answer;
 			answer.Edge = ab;
@@ -150,6 +145,7 @@ namespace Delaunay
 				}
 			}
 
+			Debug.Log("Destroy " + triangle.ID);
 			GameObject.DestroyImmediate(triangle.gameObject);
 		}
 
@@ -368,7 +364,7 @@ namespace Delaunay
 		}
 
 		/// <summary>
-		/// Merge only!
+		/// Only use for Merging!
 		/// </summary>
 		public void _AddEdge(HalfEdge edge)
 		{

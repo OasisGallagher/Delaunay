@@ -5,11 +5,12 @@ namespace Delaunay
 {
 	public class ArrayLinkedList<T>
 	{
-		public class ALEnumerator
+		public struct Enumerator
 		{
-			public ALEnumerator(ArrayLinkedList<T> list)
+			public Enumerator(ArrayLinkedList<T> list)
 			{
 				this.list = list;
+				this.currentIndex = int.MinValue;
 			}
 
 			public int CurrentIndex
@@ -36,8 +37,8 @@ namespace Delaunay
 				return currentIndex >= 0;
 			}
 
-			ArrayLinkedList<T> list = null;
-			int currentIndex = int.MinValue;
+			ArrayLinkedList<T> list;
+			int currentIndex;
 		}
 
 		public ArrayLinkedList(int size)
@@ -148,9 +149,9 @@ namespace Delaunay
 			return text;
 		}
 
-		public ALEnumerator GetEnumerator()
+		public Enumerator GetEnumerator()
 		{
-			return new ALEnumerator(this);
+			return new Enumerator(this);
 		}
 
 		int PopFreeList()

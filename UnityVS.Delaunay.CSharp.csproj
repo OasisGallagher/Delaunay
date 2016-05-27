@@ -56,16 +56,16 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\Code\Utilities\ArrayLinkedList.cs" />
+    <Compile Include="Assets\Scripts\Code\Utility\ArrayLinkedList.cs" />
     <Compile Include="Assets\Scripts\Code\Mesh\BorderSet.cs" />
     <Compile Include="Assets\Scripts\Code\Mesh\DelaunayMesh.cs" />
-    <Compile Include="Assets\Scripts\Code\Utilities\EditorConstants.cs" />
-    <Compile Include="Assets\Scripts\Code\Utilities\Extentions.cs" />
+    <Compile Include="Assets\Scripts\Code\Utility\EditorConstants.cs" />
+    <Compile Include="Assets\Scripts\Code\Utility\Extentions.cs" />
     <Compile Include="Assets\Scripts\Code\Mesh\GeomManager.cs" />
     <Compile Include="Assets\Scripts\Code\Mesh\HalfEdge.cs" />
     <Compile Include="Assets\Scripts\Code\Mesh\IDGenerator.cs" />
     <Compile Include="Assets\Scripts\Code\Path\IPathTerrain.cs" />
-    <Compile Include="Assets\Scripts\Code\Utilities\MeshDebugDraw.cs" />
+    <Compile Include="Assets\Scripts\Code\Utility\MeshDebugDraw.cs" />
     <Compile Include="Assets\Scripts\Code\Mesh\Obstacle.cs" />
     <Compile Include="Assets\Scripts\Code\Path\PathSmooth.cs" />
     <Compile Include="Assets\Scripts\Code\Path\Pathfinding.cs" />
@@ -77,7 +77,7 @@
     <Compile Include="Assets\Scripts\Code\Path\Steering.cs" />
     <Compile Include="Assets\Scripts\Code\Mesh\TiledMap.cs" />
     <Compile Include="Assets\Scripts\Code\Mesh\Triangle.cs" />
-    <Compile Include="Assets\Scripts\Code\Utilities\Utilities.cs" />
+    <Compile Include="Assets\Scripts\Code\Utility\Utilities.cs" />
     <Compile Include="Assets\Scripts\Code\Mesh\Vertex.cs" />
   </ItemGroup>
   <ItemGroup />

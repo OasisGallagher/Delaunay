@@ -4,13 +4,14 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	[ExecuteInEditMode]
 	public class Triangle : MonoBehaviour
 	{
 		public int ID { get; private set; }
 
 		public static IDGenerator TriangleIDGenerator = new IDGenerator();
 
-		public void _Awake()
+		void Awake()
 		{
 			ID = TriangleIDGenerator.Value;
 			Walkable = true;
