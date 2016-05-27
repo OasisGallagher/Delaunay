@@ -155,6 +155,8 @@ namespace Delaunay
 
 			EditorGUILayout.Separator();
 
+			DelaunayMesh.__Test = GUILayout.Toggle(DelaunayMesh.__Test, "Test mode");
+
 			if (GUILayout.Button("Clear All"))
 			{
 				ClearAll();
@@ -337,8 +339,6 @@ namespace Delaunay
 				repaint = OnBackQuote((Event.current.modifiers & EventModifiers.Shift) != 0);
 			}
 
-			Debug.Log(keyCode);
-
 			if (keyCode == KeyCode.Return)
 			{
 				repaint = OnReturn(modifiers);
@@ -371,26 +371,18 @@ namespace Delaunay
 
 		void NormalizeMousePosition(ref Vector3 position, Vector3 prev)
 		{
-			float radian = Mathf.Atan2(position.z - prev.z, position.x - prev.x);
+			float radian = (float)Math.Atan2((double)position.z - prev.z, (double)position.x - prev.x);
 			radian += Mathf.PI;
 
 			const float quater = Mathf.PI / 4;
 
-			if (radian >= quater && radian < 3 * quater)
+			if ((radian >= quater && radian < 3 * quater) || (radian > 5 * quater && radian < 7 * quater))
 			{
-				position.z = prev.z;
-			}
-			else if (radian > 3 * quater && radian < 5 * quater)
-			{
-				position.x = -prev.x;
-			}
-			else if (radian > 5 * quater && radian < 7 * quater)
-			{
-				position.z = -prev.z;
+				position.x = prev.x;
 			}
 			else
 			{
-				position.x = prev.x;
+				position.z = prev.z;
 			}
 		}
 

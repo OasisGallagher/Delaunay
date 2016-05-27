@@ -349,12 +349,15 @@ namespace Delaunay
 			}
 		}
 
+		public static bool __Test = false;
 		List<HalfEdge> AddConstraintEdge(Vertex src, Vertex dest)
 		{
 			Append(src);
 			Append(dest);
 
 			List<HalfEdge> answer = new List<HalfEdge>();
+
+			if (__Test) { return answer; }
 
 			const int maxLoopCount = 4096;
 			for (int i = 0; src != dest; )

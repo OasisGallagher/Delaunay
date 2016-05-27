@@ -107,7 +107,15 @@ namespace Delaunay
 			}
 		}
 
-		public bool Walkable { get; set; }
+		bool walkable;
+		public bool Walkable
+		{
+			get { return walkable; }
+			set
+			{
+				walkable = value;
+			}
+		}
 
 		public List<HalfEdge> BoundingEdges
 		{
