@@ -6,8 +6,9 @@ namespace Delaunay
 {
 	public class DelaunayMesh : IPathTerrain
 	{
-		GeomManager geomManager;
 		List<Vector3> superBorder;
+
+		protected GeomManager geomManager;
 
 		public DelaunayMesh()
 		{
@@ -129,7 +130,7 @@ namespace Delaunay
 				Vertex vertex = result.Second.FindVertex(from);
 				HalfEdge edge = result.Second.GetOpposite(vertex);
 				Vector2 crossPoint = Vector2.zero;
-				CrossState crossState = MathUtility.SegmentCross(out crossPoint, from, to, edge.Src.Position, edge.Dest.Position);
+				//CrossState crossState = MathUtility.SegmentCross(out crossPoint, from, to, edge.Src.Position, edge.Dest.Position);
 			}
 
 			return Vector3.zero;
@@ -176,40 +177,7 @@ namespace Delaunay
 			get { return geomManager.Map; }
 		}
 
-		void CreateSuperBorder(IEnumerable<Vector3> vertices)
-		{
-			if (!HasSuperBorder) { return; }
-			float max = float.NegativeInfinity;
-			foreach (Vector3 item in vertices)
-			{
-				max = Mathf.Max(max, Mathf.Abs(item.x), Mathf.Abs(item.z));
-			}
-
-			Vector3[] superTriangle = new Vector3[] {
-				new Vector3(0, 0, 4 * max),
-				new Vector3(-4 * max, 0, -4 * max),
-				new Vector3(4 * max, 0, 0)
-			};
-
-			SetUpSuperTriangle(superTriangle);
-			AddShape(vertices, true);
-			RemoveSuperTriangle(superTriangle);
-		}
-
-		Triangle FindWalkableTriangle(Vertex src)
-		{
-			foreach (HalfEdge edge in geomManager.GetRays(src))
-			{
-				if (edge.Face != null && edge.Face.Walkable)
-				{
-					return edge.Face;
-				}
-			}
-
-			return null;
-		}
-
-		List<HalfEdge> AddShape(IEnumerable<Vector3> container, bool close)
+		protected List<HalfEdge> AddShape(IEnumerable<Vector3> container, bool close)
 		{
 			IEnumerator<Vector3> e = container.GetEnumerator();
 			List<HalfEdge> polygonBoundingEdges = new List<HalfEdge>();
@@ -234,48 +202,67 @@ namespace Delaunay
 			return polygonBoundingEdges;
 		}
 
-		void RemoveShape(IEnumerable<HalfEdge> boundingEdges)
+		protected List<HalfEdge> AddConstraintEdge(Vertex src, Vertex dest)
 		{
-			List<Vertex> boundingVertices = new List<Vertex>();
-			foreach (HalfEdge e in boundingEdges)
+			Append(src);
+			Append(dest);
+
+			List<HalfEdge> answer = new List<HalfEdge>();
+
+			const int maxLoopCount = 4096;
+			for (int i = 0; src != dest; )
 			{
-				boundingVertices.Add(e.Src);
+				answer.Add(AddConstraintAt(ref src, dest));
+				Utility.Verify(++i < maxLoopCount, "Max loop count exceed");
 			}
 
-			List<Vertex> polygon = new List<Vertex>(boundingVertices.Count * 2);
+			return answer;
+		}
 
-			List<Triangle> triangles = new List<Triangle>();
-			List<Vertex> vertices = new List<Vertex>();
-
-			Vertex benchmark = null;
-			foreach (HalfEdge edge in boundingEdges)
+		protected HalfEdge AddConstraintAt(ref Vertex src, Vertex dest)
+		{
+			Tuple2<HalfEdge, CrossState> crossResult = new Tuple2<HalfEdge, CrossState>(null, CrossState.Parallel);
+			foreach (HalfEdge ray in geomManager.GetRays(src))
 			{
-				foreach (HalfEdge ray in geomManager.GetRays(edge.Src))
-				{
-					if (ray.Face == null) { continue; }
-					if (triangles.IndexOf(ray.Face) < 0) { triangles.Add(ray.Face); }
-
-					if (boundingVertices.Contains(ray.Dest)) { continue; }
-					if (polygon.Contains(ray.Dest)) { continue; }
-
-					vertices.Add(ray.Dest);
-				}
-
-				vertices.Sort(new PolarAngleComparer(edge.Src.Position,
-					(benchmark ?? FindBenchmark(vertices, triangles)).Position));
-
-				if (vertices.Count > 0)
-				{
-					benchmark = vertices.back();
-				}
-
-				polygon.AddRange(vertices);
-				vertices.Clear();
+				if (FindCrossedEdge(out crossResult, ray, src, dest)) { break; }
 			}
 
-			triangles.ForEach(t => { geomManager.ReleaseTriangle(t); });
+			Utility.Verify(crossResult.Second != CrossState.Parallel);
 
-			CreateTriangles(PolygonTriangulation.Triangulate(polygon));
+			if (crossResult.Second == CrossState.FullyOverlaps)
+			{
+				crossResult.First.Constraint = true;
+				src = crossResult.First.Dest;
+				return crossResult.First;
+			}
+
+			Utility.Verify(crossResult.Second == CrossState.CrossOnSegment);
+
+			return ConstraintCrossEdges(ref src, dest, crossResult.First);
+		}
+
+		protected void MarkObstacle(Obstacle obstacle)
+		{
+			obstacle.Mesh.ForEach(triangle => { triangle.Walkable = false; });
+		}
+
+		protected bool Append(Vertex v)
+		{
+			Tuple2<int, Triangle> answer = geomManager.FindVertexContainedTriangle(v.Position);
+
+			if (answer.First < 0) { return false; }
+
+			if (answer.First == 0)
+			{
+				InsertToFacet(v, answer.Second);
+			}
+			else
+			{
+				HalfEdge hitEdge = answer.Second.GetEdgeByDirection(answer.First);
+				InsertOnEdge(v, answer.Second, hitEdge);
+			}
+
+			return true;
 		}
 
 		Vector3 GetNearestPoint(Triangle triangle, Vector3 hit, float radius)
@@ -341,54 +328,17 @@ namespace Delaunay
 			return null;
 		}
 
-		void CreateTriangles(List<Vertex> vertices)
+		Triangle FindWalkableTriangle(Vertex src)
 		{
-			for (int i = 0; i < vertices.Count; i += 3)
+			foreach (HalfEdge edge in geomManager.GetRays(src))
 			{
-				geomManager.CreateTriangle(vertices[i], vertices[i + 1], vertices[i + 2]);
-			}
-		}
-
-		public static bool __Test = false;
-		List<HalfEdge> AddConstraintEdge(Vertex src, Vertex dest)
-		{
-			Append(src);
-			Append(dest);
-
-			List<HalfEdge> answer = new List<HalfEdge>();
-
-			if (__Test) { return answer; }
-
-			const int maxLoopCount = 4096;
-			for (int i = 0; src != dest; )
-			{
-				answer.Add(AddConstraintAt(ref src, dest));
-				Utility.Verify(++i < maxLoopCount, "Max loop count exceed");
+				if (edge.Face != null && edge.Face.Walkable)
+				{
+					return edge.Face;
+				}
 			}
 
-			return answer;
-		}
-
-		HalfEdge AddConstraintAt(ref Vertex src, Vertex dest)
-		{
-			Tuple2<HalfEdge, CrossState> crossResult = new Tuple2<HalfEdge, CrossState>(null, CrossState.Parallel);
-			foreach (HalfEdge ray in geomManager.GetRays(src))
-			{
-				if (FindCrossedEdge(out crossResult, ray, src, dest)) { break; }
-			}
-
-			Utility.Verify(crossResult.Second != CrossState.Parallel);
-
-			if (crossResult.Second == CrossState.FullyOverlaps)
-			{
-				crossResult.First.Constraint = true;
-				src = crossResult.First.Dest;
-				return crossResult.First;
-			}
-
-			Utility.Verify(crossResult.Second == CrossState.CrossOnSegment);
-
-			return ConstraintCrossEdges(ref src, dest, crossResult.First);
+			return null;
 		}
 
 		HalfEdge ConstraintCrossEdges(ref Vertex src, Vertex dest, HalfEdge crossedEdge)
@@ -424,8 +374,7 @@ namespace Delaunay
 			return constraintEdge;
 		}
 
-		Vertex CollectCrossedTriangles(List<HalfEdge> crossedTriangles,
-			List<Vertex> up, List<Vertex> low, Vertex src, Vertex dest, HalfEdge start)
+		Vertex CollectCrossedTriangles(List<HalfEdge> crossedTriangles, List<Vertex> up, List<Vertex> low, Vertex src, Vertex dest, HalfEdge start)
 		{
 			Vector3 srcDest = dest.Position - src.Position;
 
@@ -473,6 +422,78 @@ namespace Delaunay
 			return src;
 		}
 
+		void CreateSuperBorder(IEnumerable<Vector3> vertices)
+		{
+			if (!HasSuperBorder) { return; }
+			float max = float.NegativeInfinity;
+			foreach (Vector3 item in vertices)
+			{
+				max = Mathf.Max(max, Mathf.Abs(item.x), Mathf.Abs(item.z));
+			}
+
+			Vector3[] superTriangle = new Vector3[] {
+				new Vector3(0, 0, 4 * max),
+				new Vector3(-4 * max, 0, -4 * max),
+				new Vector3(4 * max, 0, 0)
+			};
+
+			SetUpSuperTriangle(superTriangle);
+			AddShape(vertices, true);
+			RemoveSuperTriangle(superTriangle);
+		}
+
+		void RemoveShape(IEnumerable<HalfEdge> boundingEdges)
+		{
+			List<Vertex> boundingVertices = new List<Vertex>();
+			foreach (HalfEdge e in boundingEdges)
+			{
+				boundingVertices.Add(e.Src);
+			}
+
+			List<Vertex> polygon = new List<Vertex>(boundingVertices.Count * 2);
+
+			List<Triangle> triangles = new List<Triangle>();
+			List<Vertex> vertices = new List<Vertex>();
+
+			Vertex benchmark = null;
+			foreach (HalfEdge edge in boundingEdges)
+			{
+				foreach (HalfEdge ray in geomManager.GetRays(edge.Src))
+				{
+					if (ray.Face == null) { continue; }
+					if (triangles.IndexOf(ray.Face) < 0) { triangles.Add(ray.Face); }
+
+					if (boundingVertices.Contains(ray.Dest)) { continue; }
+					if (polygon.Contains(ray.Dest)) { continue; }
+
+					vertices.Add(ray.Dest);
+				}
+
+				vertices.Sort(new PolarAngleComparer(edge.Src.Position,
+					(benchmark ?? FindBenchmark(vertices, triangles)).Position));
+
+				if (vertices.Count > 0)
+				{
+					benchmark = vertices.back();
+				}
+
+				polygon.AddRange(vertices);
+				vertices.Clear();
+			}
+
+			triangles.ForEach(t => { geomManager.ReleaseTriangle(t); });
+
+			CreateTriangles(PolygonTriangulation.Triangulate(polygon));
+		}
+
+		void CreateTriangles(List<Vertex> vertices)
+		{
+			for (int i = 0; i < vertices.Count; i += 3)
+			{
+				geomManager.CreateTriangle(vertices[i], vertices[i + 1], vertices[i + 2]);
+			}
+		}
+
 		bool FindCrossedEdge(out Tuple2<HalfEdge, CrossState> answer, HalfEdge ray, Vertex src, Vertex dest)
 		{
 			List<HalfEdge> cycle = ray.Cycle;
@@ -502,32 +523,6 @@ namespace Delaunay
 			}
 
 			return false;
-		}
-
-		void MarkObstacle(Obstacle obstacle)
-		{
-			obstacle.Mesh.ForEach(triangle => { triangle.Walkable = false; });
-		}
-
-		bool Append(Vertex v)
-		{
-			Tuple2<int, Triangle> answer = geomManager.FindVertexContainedTriangle(v.Position);
-
-			if (answer.First < 0) { return false; }
-
-			Utility.Verify(answer.First >= 0);
-
-			if (answer.First == 0)
-			{
-				InsertToFacet(v, answer.Second);
-			}
-			else
-			{
-				HalfEdge hitEdge = answer.Second.GetEdgeByDirection(answer.First);
-				InsertOnEdge(v, answer.Second, hitEdge);
-			}
-
-			return true;
 		}
 
 		void SetUpSuperTriangle(Vector3[] super)
@@ -678,12 +673,14 @@ namespace Delaunay
 			for (; stack.Count != 0; )
 			{
 				halfEdge = stack.Pop();
-				if (halfEdge.Constraint) { continue; }
+				if (halfEdge.Constraint || halfEdge.Pair.Constraint) { continue; }
 
 				Triangle x = halfEdge.Face;
 				Triangle y = halfEdge.Pair.Face;
 
 				if (x == null || y == null) { continue; }
+
+				Utility.Verify(x.Walkable && y.Walkable, "Can not flip unwalkable triangle");
 
 				if (!MathUtility.PointInCircumCircle(x.A.Position, x.B.Position, x.C.Position, halfEdge.Pair.Next.Dest.Position))
 				{
@@ -708,17 +705,27 @@ namespace Delaunay
 				x.BoundingEdges.ForEach(item => { item.Face = x; });
 				y.BoundingEdges.ForEach(item => { item.Face = y; });
 
-				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Pair.Next.Next);
-
-				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Next);
-
-				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Pair.Next);
-
-				if (stack.Count < EditorConstants.kMaxStackCapacity) stack.Push(halfEdge.Next.Next);
+				if (GuardedPushStack(stack, halfEdge.Pair.Next.Next)
+					&& GuardedPushStack(stack, halfEdge.Next)
+					&& GuardedPushStack(stack, halfEdge.Pair.Next)
+					&& GuardedPushStack(stack, halfEdge.Next.Next))
+				{
+				}
 
 				halfEdge.Face = halfEdge.Pair.Face = null;
 				geomManager.ReleaseEdge(halfEdge);
 			}
+		}
+
+		bool GuardedPushStack(Stack<HalfEdge> stack, HalfEdge item)
+		{
+			if (stack.Count < EditorConstants.kMaxStackCapacity)
+			{
+				stack.Push(item);
+				return true;
+			}
+
+			return false;
 		}
 	}
 }

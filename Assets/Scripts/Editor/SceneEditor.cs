@@ -18,10 +18,11 @@ namespace Delaunay
 		List<Vector3> plantedVertices;
 		BitArray editStates;
 
-		DelaunayMesh delaunayMesh;
+		AnimatedDelaunayMesh delaunayMesh;
 		EditCommandSequence cmdSequence;
 
-		bool isPlaying = false;
+		bool playingCreateObstacleAnimation = false;
+
 		bool editDebugDraw = true;
 
 		[MenuItem("Window/Scene Editor")]
@@ -37,7 +38,9 @@ namespace Delaunay
 			plantedVertices = new List<Vector3>(kMaxVertices);
 			editStates = new BitArray(kMaxVertices);
 
-			delaunayMesh = new DelaunayMesh();
+			delaunayMesh = new AnimatedDelaunayMesh();
+			delaunayMesh.Transition = 0.5f;
+
 			debugDraw = new EditorDebugDraw(delaunayMesh);
 
 			cmdSequence = new EditCommandSequence();
@@ -60,14 +63,6 @@ namespace Delaunay
 			SceneView.onSceneGUIDelegate -= OnUpdateSceneGUI;
 		}
 
-		void Update()
-		{
-			if (isPlaying != EditorApplication.isPlaying)
-			{
-				isPlaying = !isPlaying;
-			}
-		}
-
 		void OnUpdateSceneGUI(SceneView sceneView)
 		{
 			if (EditorApplication.isPlaying) { return; }
@@ -80,17 +75,16 @@ namespace Delaunay
 
 			DrawVertexHandles();
 
-			DrawSceneGUI();
-			
-			OnInput();
-		}
+			DrawStats();
 
-		void DrawSceneGUI()
-		{
-			if (delaunayMesh != null)
+			if (!playingCreateObstacleAnimation)
 			{
-				DrawStats();
 				DrawCommands();
+			}
+
+			if (!playingCreateObstacleAnimation)
+			{
+				OnInput();
 			}
 		}
 
@@ -117,6 +111,7 @@ namespace Delaunay
 
 		void DrawCommands()
 		{
+			if (delaunayMesh == null) { return; }
 			GUILayout.BeginArea(new Rect(10, 10, 120, 150));
 
 			GUILayout.BeginVertical("Box", GUILayout.Width(EditorConstants.kPanelWidth));
@@ -154,8 +149,6 @@ namespace Delaunay
 			GUI.enabled = true;
 
 			EditorGUILayout.Separator();
-
-			DelaunayMesh.__Test = GUILayout.Toggle(DelaunayMesh.__Test, "Test mode");
 
 			if (GUILayout.Button("Clear All"))
 			{
@@ -238,6 +231,8 @@ namespace Delaunay
 
 		void DrawStats()
 		{
+			if (delaunayMesh == null) { return; }
+
 			GUILayout.BeginArea(new Rect(Screen.width - 80, Screen.height - 100, 90, 100));
 
 			GUILayout.BeginVertical("Box");
@@ -262,6 +257,11 @@ namespace Delaunay
 			GUILayout.EndVertical();
 
 			GUILayout.BeginVertical("Box");
+
+			GUILayout.BeginVertical("Box");
+			GUILayout.Label("Transition: " + delaunayMesh.Transition, EditorStyles.boldLabel);
+			delaunayMesh.Transition = GUILayout.HorizontalSlider(delaunayMesh.Transition, 0f, 1f);
+			GUILayout.EndVertical();
 
 			GUILayout.BeginHorizontal("Box");
 
@@ -423,7 +423,20 @@ namespace Delaunay
 			}
 			else
 			{
-				cmdSequence.Push(new CreateObstacleCommand(vertices, delaunayMesh));
+				playingCreateObstacleAnimation = true;
+				cmdSequence.Push(new CreateObstacleAnimatedCommand(vertices, delaunayMesh, (obstacle) =>
+				{
+					playingCreateObstacleAnimation = false;
+
+					if (obstacle != null)
+					{
+						SceneView.RepaintAll();
+					}
+					else
+					{
+						Debug.LogError("Failed to create obstacle");
+					}
+				}));
 			}
 		}
 
