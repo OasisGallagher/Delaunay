@@ -15,8 +15,6 @@ namespace Delaunay
 
 	public static class EditorConstants
 	{
-		public const float kPanelWidth = 60;
-		
 		public const int kMaxStackCapacity = 4096;
 		public const int kDebugInvalidCycle = 32;
 

@@ -24,6 +24,10 @@ namespace Delaunay
 		bool playingCreateObstacleAnimation = false;
 
 		bool editDebugDraw = true;
+		bool isPlaying = false;
+
+		Vector2 vertexEditorScrollViewPosition;
+		bool vertexFoldOut;
 
 		[MenuItem("Window/Scene Editor")]
 		static void OpenEditor()
@@ -61,6 +65,15 @@ namespace Delaunay
 			}
 
 			SceneView.onSceneGUIDelegate -= OnUpdateSceneGUI;
+		}
+
+		void Update()
+		{
+			if (Application.isPlaying != isPlaying)
+			{
+				isPlaying = Application.isPlaying;
+				OnPlay(isPlaying);
+			}
 		}
 
 		void OnUpdateSceneGUI(SceneView sceneView)
@@ -112,25 +125,57 @@ namespace Delaunay
 		void DrawCommands()
 		{
 			if (delaunayMesh == null) { return; }
-			GUILayout.BeginArea(new Rect(10, 10, 120, 150));
 
-			GUILayout.BeginVertical("Box", GUILayout.Width(EditorConstants.kPanelWidth));
+			GUILayout.BeginArea(new Rect(10, 10, 240, 30));
+			GUILayout.BeginHorizontal("Box");
 
-			if (GUILayout.Button("Save"))
+			DrawEditCommand();
+
+			EditorGUILayout.Space();
+
+			DrawSerializeCommand();
+
+			GUILayout.EndHorizontal();
+			GUILayout.EndArea();
+		}
+
+		void DrawSerializeCommand()
+		{
+			if (GUILayout.Button("Clear", EditorStyles.miniButtonLeft))
+			{
+				int ans = EditorUtility.DisplayDialogComplex("What do you want to do?",
+					"Please choose one of the following options.",
+					"Clear mesh", "Clear all", "Cancel"
+				);
+
+				if (ans == 0) ClearMesh();
+				else if (ans == 1) ClearAll();
+			}
+
+			if (GUILayout.Button("Save", EditorStyles.miniButtonMid))
 			{
 				SaveMesh();
 			}
 
-			if (GUILayout.Button("Load"))
+			if (GUILayout.Button("Load", EditorStyles.miniButtonRight))
 			{
 				LoadMesh();
 			}
+		}
 
-			EditorGUILayout.Separator();
+		void DrawEditCommand()
+		{
+			Color oldColor = GUI.backgroundColor;
+			GUI.backgroundColor = planting ? Color.red : Color.green;
+			if (GUILayout.Button(planting ? "×" : "√", EditorStyles.miniButtonLeft))
+			{
+				planting = !planting;
+				ClearPlanted();
+			}
+			GUI.backgroundColor = oldColor;
 
-			GUILayout.BeginHorizontal("Box");
 			GUI.enabled = cmdSequence != null && cmdSequence.CanUndo;
-			if (GUILayout.Button("Undo", EditorStyles.miniButtonLeft))
+			if (GUILayout.Button("Undo", EditorStyles.miniButtonMid))
 			{
 				cmdSequence.Undo();
 				Repaint();
@@ -144,27 +189,30 @@ namespace Delaunay
 				Repaint();
 			}
 
-			GUILayout.EndHorizontal();
-
 			GUI.enabled = true;
+		}
 
-			EditorGUILayout.Separator();
+		void DrawVertexEditor()
+		{
+			if (plantedVertices.Count == 0) { return; }
 
-			if (GUILayout.Button("Clear All"))
+			GUILayout.BeginVertical("Box");
+			vertexFoldOut = EditorGUILayout.Foldout(vertexFoldOut, "Vertices");
+			if (vertexFoldOut)
 			{
-				ClearAll();
-			}
+				vertexEditorScrollViewPosition = GUILayout.BeginScrollView(vertexEditorScrollViewPosition);
+				for (int i = 0; i < plantedVertices.Count; ++i)
+				{
+					DrawVertexEditorAt(i);
+				}
 
-			if (GUILayout.Button("Clear Mesh"))
-			{
-				ClearMesh();
+				GUILayout.EndScrollView();
 			}
 
 			GUILayout.EndVertical();
-			GUILayout.EndArea();
 		}
 
-		void DrawVertexEditor(int index)
+		void DrawVertexEditorAt(int index)
 		{
 			GUILayout.BeginHorizontal("Box");
 
@@ -172,15 +220,15 @@ namespace Delaunay
 			
 			plantedVertices[index] = EditorGUILayout.Vector3Field("", plantedVertices[index], GUILayout.Height(16));
 			
-			if (GUILayout.Button("Up", EditorStyles.miniButtonLeft))
-			{
-				cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] + new Vector3(0, kTrimStep, 0)));
-			}
+			//if (GUILayout.Button("Up", EditorStyles.miniButtonLeft))
+			//{
+			//	cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] + new Vector3(0, kTrimStep, 0)));
+			//}
 
-			if (GUILayout.Button("Down", EditorStyles.miniButtonRight))
-			{
-				cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] - new Vector3(0, kTrimStep, 0)));
-			}
+			//if (GUILayout.Button("Down", EditorStyles.miniButtonRight))
+			//{
+			//	cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] - new Vector3(0, kTrimStep, 0)));
+			//}
 
 			GUILayout.EndHorizontal();
 		}
@@ -249,7 +297,7 @@ namespace Delaunay
 			if (EditorApplication.isPlaying) { return; }
 
 			GUILayout.BeginVertical("Box");
-			editDebugDraw = GUILayout.Toggle(editDebugDraw, "Edit debug draw");
+			editDebugDraw = EditorGUILayout.Foldout(editDebugDraw, "DebugDraw editor");
 			if (editDebugDraw && debugDraw != null)
 			{
 				debugDraw.OnGUI();
@@ -263,28 +311,8 @@ namespace Delaunay
 			delaunayMesh.Transition = GUILayout.HorizontalSlider(delaunayMesh.Transition, 0f, 1f);
 			GUILayout.EndVertical();
 
-			GUILayout.BeginHorizontal("Box");
-
-			if (GUILayout.Button(planting ? "Cancel" : "Plant", GUILayout.Width(60)))
-			{
-				OnClickPlant();
-			}
-
-			if (planting)
-			{
-				Color oldColor = GUI.color;
-				GUI.color = Color.green;
-				GUILayout.Label("Click \"~\" in scene to add vertex.", EditorStyles.boldLabel);
-				GUI.color = oldColor;
-			}
-
-			GUILayout.EndHorizontal();
-
-			for (int i = 0; i < plantedVertices.Count; ++i)
-			{
-				DrawVertexEditor(i);
-			}
-
+			DrawVertexEditor();
+			
 			GUILayout.EndVertical();
 
 			if (GUI.changed)
@@ -293,10 +321,9 @@ namespace Delaunay
 			}
 		}
 
-		void OnClickPlant()
+		void OnPlay(bool play)
 		{
-			planting = !planting;
-			ClearPlanted();
+			ClearAll();
 		}
 
 		bool CheckNewVertex(Vector3 point)

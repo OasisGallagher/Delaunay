@@ -81,17 +81,12 @@ namespace Delaunay
 
 		public Triangle CreateTriangle()
 		{
-			GameObject go = new GameObject();
-			Triangle ans = go.AddComponent<Triangle>();
-
-			return ans;
+			return new Triangle();
 		}
 
 		public Triangle CreateTriangle(BinaryReader reader, IDictionary<int, HalfEdge> container)
 		{
-			GameObject go = new GameObject();
-
-			Triangle answer = go.AddComponent<Triangle>();
+			Triangle answer = CreateTriangle();
 
 			answer.ReadBinary(reader, container);
 
@@ -116,9 +111,7 @@ namespace Delaunay
 			bc.Next = ca;
 			ca.Next = ab;
 
-			GameObject go = new GameObject();
-
-			Triangle answer = go.AddComponent<Triangle>();
+			Triangle answer = CreateTriangle();
 
 			ab.Face = bc.Face = ca.Face = answer;
 			answer.Edge = ab;
@@ -144,9 +137,6 @@ namespace Delaunay
 					ReleaseEdge(edge);
 				}
 			}
-
-			Debug.Log("Destroy " + triangle.ID);
-			GameObject.DestroyImmediate(triangle.gameObject);
 		}
 
 		public Obstacle CreateObstacle(List<HalfEdge> boundingEdges)

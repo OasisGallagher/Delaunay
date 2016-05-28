@@ -57,17 +57,14 @@ namespace Delaunay
 				Vector3[] shinkedTriangle = new Vector3[3];
 				targetMesh.AllTriangles.ForEach(face =>
 				{
-					if (face.gameObject.activeSelf)
-					{
-						shinkedTriangle[0] = face.A.Position;
-						shinkedTriangle[1] = face.B.Position;
-						shinkedTriangle[2] = face.C.Position;
-						MathUtility.Shink(shinkedTriangle, kShrink);
-						GL.Color(face.Walkable ? walkableFaceColor : blockFaceColor);
-						GL.Vertex(shinkedTriangle[0] + offset);
-						GL.Vertex(shinkedTriangle[1] + offset);
-						GL.Vertex(shinkedTriangle[2] + offset);
-					}
+					shinkedTriangle[0] = face.A.Position;
+					shinkedTriangle[1] = face.B.Position;
+					shinkedTriangle[2] = face.C.Position;
+					MathUtility.Shink(shinkedTriangle, kShrink);
+					GL.Color(face.Walkable ? walkableFaceColor : blockFaceColor);
+					GL.Vertex(shinkedTriangle[0] + offset);
+					GL.Vertex(shinkedTriangle[1] + offset);
+					GL.Vertex(shinkedTriangle[2] + offset);
 				});
 
 				GL.End();

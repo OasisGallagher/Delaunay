@@ -52,8 +52,6 @@ namespace Delaunay
 			{
 				mesh.AllTriangles.ForEach(face =>
 				{
-					if (!face.gameObject.activeSelf) { return; }
-
 					Color color = face.Walkable ? walkableFaceColor : blockFaceColor;
 					Vector3[] verts = new Vector3[]
 					{

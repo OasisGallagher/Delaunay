@@ -4,34 +4,16 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	[ExecuteInEditMode]
-	public class Triangle : MonoBehaviour
+	public class Triangle
 	{
 		public int ID { get; private set; }
 
 		public static IDGenerator TriangleIDGenerator = new IDGenerator();
 
-		void Awake()
+		public Triangle()
 		{
 			ID = TriangleIDGenerator.Value;
 			Walkable = true;
-			gameObject.name = "Triangle_" + ID;
-		}
-
-		void OnDrawGizmosSelected()
-		{
-			Color oldColor = Gizmos.color;
-
-			Gizmos.color = Color.red;
-			Gizmos.DrawSphere(A.Position + Vector3.up * 0.6f, 0.3f);
-
-			Gizmos.color = Color.green;
-			Gizmos.DrawSphere(B.Position + Vector3.up * 0.6f, 0.3f);
-
-			Gizmos.color = Color.blue;
-			Gizmos.DrawSphere(C.Position + Vector3.up * 0.6f, 0.3f);
-
-			Gizmos.color = oldColor;
 		}
 
 		public float GetWidth(HalfEdge a, HalfEdge b)
@@ -189,7 +171,7 @@ namespace Delaunay
 
 		public override string ToString()
 		{
-			return gameObject.name + "_" + A.ToString() + " => " + B.ToString() + " => " + C.ToString();
+			return "Triangle_" + ID + "_" + A.ToString() + " => " + B.ToString() + " => " + C.ToString();
 		}
 
 		public bool HasVertex(Vertex v)
@@ -270,7 +252,7 @@ namespace Delaunay
 
 			if (t2 == null)
 			{
-				print("Invalid t2");
+				Debug.LogError("Invalid t2");
 				return d;
 			}
 

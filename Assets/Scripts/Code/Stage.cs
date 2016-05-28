@@ -27,6 +27,11 @@ namespace Delaunay
 			delaunayMesh.Load(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
 		}
 
+		void OnDisable()
+		{
+			delaunayMesh.ClearAll();
+		}
+
 		void OnGUI()
 		{
 			GUILayout.BeginArea(new Rect(10, 10, 68, 30));

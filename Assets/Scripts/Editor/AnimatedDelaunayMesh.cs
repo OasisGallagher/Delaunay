@@ -9,24 +9,31 @@ namespace Delaunay
 	{
 		public float Transition = 1f;
 
-		public bool IsRunning { get; private set; }
-
 		public bool AnimatedAddObstacle(IEnumerable<Vector3> vertices, Action<Obstacle> onCreate)
 		{
-			if (IsRunning)
+			if (EditorCoroutineRunner.Instance.Count == 0)
 			{
-				GameObject.FindObjectOfType<Stage>().StartCoroutine(CoAddObstacle(vertices, onCreate));
+				EditorCoroutineRunner.Instance.StartEditorCoroutine(CoAddObstacle(vertices, onCreate));
 				return true;
 			}
 
 			Debug.LogError("Can not AddObstacle while a task is running");
 			if (onCreate != null) { onCreate(null); }
+			
 			return false;
+		}
+
+		IEnumerator Wait(float seconds)
+		{
+			seconds += Time.realtimeSinceStartup;
+			for (; Time.realtimeSinceStartup < seconds; )
+			{
+				yield return null;
+			}
 		}
 
 		IEnumerator CoAddObstacle(IEnumerable<Vector3> container, Action<Obstacle> onCreate)
 		{
-			IsRunning = true;
 			IEnumerator<Vector3> e = container.GetEnumerator();
 			List<HalfEdge> polygonBoundingEdges = new List<HalfEdge>();
 
@@ -53,26 +60,24 @@ namespace Delaunay
 			{
 				onCreate(obstacle);
 			}
-
-			IsRunning = false;
 		}
 
 		IEnumerator CoAddConstraintEdge(List<HalfEdge> container, Vertex src, Vertex dest)
 		{
 			if (Append(src))
 			{
-				yield return new WaitForSeconds(Transition);
+				yield return Wait(Transition);
 			}
 
 			if (Append(dest))
 			{
-				yield return new WaitForSeconds(Transition);
+				yield return Wait(Transition);
 			}
 
 			for (; src != dest; )
 			{
 				container.Add(AddConstraintAt(ref src, dest));
-				yield return new WaitForSeconds(Transition);
+				yield return Wait(Transition);
 			}
 		}
 	}
