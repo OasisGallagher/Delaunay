@@ -126,7 +126,7 @@ namespace Delaunay
 		{
 			if (delaunayMesh == null) { return; }
 
-			GUILayout.BeginArea(new Rect(10, 10, 240, 30));
+			GUILayout.BeginArea(new Rect(10, 10, 250, 30));
 			GUILayout.BeginHorizontal("Box");
 
 			DrawEditCommand();
@@ -141,15 +141,9 @@ namespace Delaunay
 
 		void DrawSerializeCommand()
 		{
-			if (GUILayout.Button("Clear", EditorStyles.miniButtonLeft))
+			if (GUILayout.Button("Load", EditorStyles.miniButtonLeft))
 			{
-				int ans = EditorUtility.DisplayDialogComplex("What do you want to do?",
-					"Please choose one of the following options.",
-					"Clear mesh", "Clear all", "Cancel"
-				);
-
-				if (ans == 0) ClearMesh();
-				else if (ans == 1) ClearAll();
+				LoadMesh();
 			}
 
 			if (GUILayout.Button("Save", EditorStyles.miniButtonMid))
@@ -157,17 +151,27 @@ namespace Delaunay
 				SaveMesh();
 			}
 
-			if (GUILayout.Button("Load", EditorStyles.miniButtonRight))
+			if (GUILayout.Button("Clear", EditorStyles.miniButtonRight))
 			{
-				LoadMesh();
+				int ans  = 1;
+				if (delaunayMesh.HasSuperBorder)
+				{
+					ans = EditorUtility.DisplayDialogComplex("What do you want to do?",
+						"Please choose one of the following options.",
+						"Clear mesh", "Clear all", "Cancel"
+					);
+				}
+
+				if (ans == 0) ClearMesh();
+				else if (ans == 1) ClearAll();
 			}
 		}
 
 		void DrawEditCommand()
 		{
 			Color oldColor = GUI.backgroundColor;
-			GUI.backgroundColor = planting ? Color.red : Color.green;
-			if (GUILayout.Button(planting ? "×" : "√", EditorStyles.miniButtonLeft))
+			GUI.backgroundColor = planting ? Color.green : Color.red;
+			if (GUILayout.Button(planting ? "On" : "Off", EditorStyles.miniButtonLeft))
 			{
 				planting = !planting;
 				ClearPlanted();

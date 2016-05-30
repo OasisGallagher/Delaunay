@@ -16,21 +16,20 @@ namespace Delaunay
 	{
 		public static List<HalfEdge> FindPath(Vector3 startPosition, Vector3 destPosition, Triangle startNode, Triangle destNode, float radius)
 		{
-			BinaryHeap open = new BinaryHeap();
-			CloseList close = new CloseList();
+			BinaryHeap heap = new BinaryHeap();
 
 			startNode.G = 0;
-			open.Push(startNode);
+			heap.Push(startNode);
 
 			Triangle currentNode = null;
 
-			for (; open.Count != 0 && currentNode != destNode; )
+			for (; heap.Count != 0 && currentNode != destNode; )
 			{
-				currentNode = open.Pop();
+				currentNode = heap.Pop();
 
 				foreach (HalfEdge current in currentNode.AdjPortals)
 				{
-					if (!current.Face.Walkable || close.Contains(current.Face))
+					if (!current.Face.Walkable || heap.IsClosed(current.Face))
 					{
 						continue;
 					}
@@ -40,15 +39,9 @@ namespace Delaunay
 						continue;
 					}
 
-					int index = open.IndexOf(current.Face);
-					if (index < 0)
+					if (!heap.Contains(current.Face))
 					{
-						current.Face.Portal = null;
-						current.Face.G = float.PositiveInfinity;
-						current.Face.H = float.PositiveInfinity;
-
-						open.Push(current.Face);
-						index = open.Count - 1;
+						heap.Push(current.Face);
 					}
 
 					Utility.Verify(currentNode.G == 0 || currentNode.Portal != null);
@@ -68,21 +61,16 @@ namespace Delaunay
 
 					if (newG + newH < current.Face.G + current.Face.H)
 					{
-						current.Face.H = newH;
-						current.Face.G = newG;
-						open.AdjustHeap(index);
+						heap.DecrGH(current.Face, newG, newH);
 						current.Face.Portal = current;
 					}
 				}
-
-				close.Add(currentNode);
 			}
 
 			List<HalfEdge> path = CreatePath(currentNode);
 			//if (currentNode == destNode) { path = CreatePath(destNode); }
 
-			open.Dispose();
-			close.Dispose();
+			heap.Dispose();
 
 			return path;
 		}
@@ -168,104 +156,6 @@ namespace Delaunay
 			}
 
 			HashSet<Triangle> container = new HashSet<Triangle>();
-		}
-
-		internal class BinaryHeap : IDisposable
-		{
-			public void Dispose()
-			{
-				container.ForEach(item => { item.Portal = null; });
-			}
-
-			public void Push(Triangle node)
-			{
-				container.Add(node);
-
-				AdjustHeap(container.Count - 1);
-			}
-
-			public int Count { get { return container.Count; } }
-
-			public Triangle Pop()
-			{
-				Swap(0, container.Count - 1);
-				Triangle result = container[container.Count - 1];
-				container.RemoveAt(container.Count - 1);
-
-				int current = 0;
-				for (; ; )
-				{
-					int min = current;
-					int lchild = LeftChild(min), rchild = RightChild(min);
-					if (lchild < container.Count && F(container[lchild]) < F(container[min]))
-					{
-						min = lchild;
-					}
-
-					if (rchild < container.Count && F(container[rchild]) < F(container[min]))
-					{
-						min = rchild;
-					}
-
-					if (min == current)
-					{
-						break;
-					}
-
-					Swap(min, current);
-
-					current = min;
-				}
-
-				return result;
-			}
-
-			public void AdjustHeap(int from)
-			{
-				int parent = Parent(from);
-				for (; parent >= 0 && F(container[from]) < F(container[parent]); )
-				{
-					Swap(from, parent);
-					from = parent;
-					parent = Parent(parent);
-				}
-			}
-
-			// TODO: O(n).
-			public int IndexOf(Triangle node)
-			{
-				return container.IndexOf(node);
-			}
-
-			float F(Triangle node) { return node.G + node.H; }
-
-			bool IsHeap()
-			{
-				for (int i = 1; i < container.Count; ++i)
-				{
-					if (F(container[Parent(i)]) > F(container[i]))
-					{
-						return false;
-					}
-				}
-
-				return true;
-			}
-
-			void Swap(int i, int j)
-			{
-				Triangle tmp = container[i];
-				container[i] = container[j];
-				container[j] = tmp;
-			}
-
-			int Parent(int i) { return (i - 1) / 2; }
-
-			int LeftChild(int i) { return 2 * i + 1; }
-
-			int RightChild(int i) { return 2 * i + 2; }
-
-			List<Triangle> container = new List<Triangle>();
 		}
 	}
 }

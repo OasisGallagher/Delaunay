@@ -57,6 +57,7 @@
      <Compile Include="Assets\Scripts\Code\Mesh\TiledMap.cs" />
      <Compile Include="Assets\Scripts\Code\Mesh\Triangle.cs" />
      <Compile Include="Assets\Scripts\Code\Mesh\Vertex.cs" />
+     <Compile Include="Assets\Scripts\Code\Path\BinaryHeap.cs" />
      <Compile Include="Assets\Scripts\Code\Path\IPathTerrain.cs" />
      <Compile Include="Assets\Scripts\Code\Path\PathSmooth.cs" />
      <Compile Include="Assets\Scripts\Code\Path\Pathfinding.cs" />

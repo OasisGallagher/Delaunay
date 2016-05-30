@@ -282,15 +282,23 @@ namespace Delaunay
 		}
 
 		#region Pathfinding
-		public HalfEdge Portal { get; set; }
+		public HalfEdge Portal = null;
 
 		public HalfEdge[] AdjPortals { get { return GetAdjPortals(); } }
 
-		public float G { get; set; }
+		public float G = float.PositiveInfinity;
 
-		public float H { get; set; }
+		public float H = float.PositiveInfinity;
 
-		public uint Flag { get; set; }
+		public uint Flag = 0;
+
+		public void ClearPathfinding()
+		{
+			Flag = 0;
+			Portal = null;
+			G = float.PositiveInfinity;
+			H = float.PositiveInfinity;
+		}
 		#endregion
 
 		HalfEdge[] GetAdjPortals()
