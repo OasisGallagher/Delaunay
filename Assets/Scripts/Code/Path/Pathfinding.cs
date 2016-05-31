@@ -1,27 +1,52 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+
 namespace Delaunay
 {
+	public abstract class PathfindingNode
+	{
+		public PathfindingNode()
+		{
+			ClearPathfinding();
+		}
+
+		public abstract HalfEdge[] AdjPortals { get; }
+
+		public float G;
+		public float H;
+		public int Flag;
+		public HalfEdge Portal;
+
+		public void ClearPathfinding()
+		{
+			G = H = float.PositiveInfinity;
+			Flag = -1;
+			Portal = null;
+		}
+	}
+
 	public static class Pathfinding
 	{
-		public static List<Vector3> FindPath(Vector3 startPosition, Vector3 destPosition, Triangle startNode, Triangle destNode, float radius)
+		public static List<Vector3> FindPath(Vector3 startPosition, Vector3 destPosition, PathfindingNode startNode, PathfindingNode destNode, float radius)
 		{
 			List<HalfEdge> portals = AStarPathfinding.FindPath(startPosition, destPosition, startNode, destNode, radius);
 			return PathSmooth.Smooth(startPosition, destPosition, portals, radius);
 		}
 	}
 
-	internal static class AStarPathfinding
+	public static class AStarPathfinding
 	{
-		public static List<HalfEdge> FindPath(Vector3 startPosition, Vector3 destPosition, Triangle startNode, Triangle destNode, float radius)
+		public static List<HalfEdge> FindPath(Vector3 startPosition, Vector3 destPosition, 
+			PathfindingNode startNode, PathfindingNode destNode, 
+			float radius)
 		{
 			BinaryHeap heap = new BinaryHeap();
 
 			startNode.G = 0;
 			heap.Push(startNode);
 
-			Triangle currentNode = null;
+			PathfindingNode currentNode = null;
 
 			for (; heap.Count != 0 && currentNode != destNode; )
 			{
@@ -75,7 +100,7 @@ namespace Delaunay
 			return path;
 		}
 
-		static bool CheckEntranceWidthLimit(Triangle currentNode, Triangle startNode, Triangle destNode, HalfEdge current, float radius)
+		static bool CheckEntranceWidthLimit(PathfindingNode currentNode, PathfindingNode startNode, PathfindingNode destNode, HalfEdge current, float radius)
 		{
 			if (currentNode == destNode)
 			{
@@ -105,7 +130,7 @@ namespace Delaunay
 			return false;
 		}
 
-		static bool CheckCorridorWidthLimit(Triangle currentNode, Triangle startNode, Triangle destNode, HalfEdge current, float radius)
+		static bool CheckCorridorWidthLimit(PathfindingNode currentNode, PathfindingNode startNode, PathfindingNode destNode, HalfEdge current, float radius)
 		{
 			if (currentNode == startNode)
 			{
@@ -124,7 +149,7 @@ namespace Delaunay
 			return current.Pair.Face.GetWidth(lastPortal, current.Pair) >= diameter;
 		}
 
-		static List<HalfEdge> CreatePath(Triangle dest)
+		static List<HalfEdge> CreatePath(PathfindingNode dest)
 		{
 			List<HalfEdge> result = new List<HalfEdge>();
 			for (HalfEdge entry; (entry = dest.Portal) != null; dest = entry.Pair.Face)
@@ -136,26 +161,6 @@ namespace Delaunay
 			result.Reverse();
 
 			return result;
-		}
-
-		internal class CloseList : IDisposable
-		{
-			public void Dispose()
-			{
-				foreach (Triangle node in container) { node.Portal = null; }
-			}
-
-			public void Add(Triangle item)
-			{
-				container.Add(item);
-			}
-
-			public bool Contains(Triangle item)
-			{
-				return container.Contains(item);
-			}
-
-			HashSet<Triangle> container = new HashSet<Triangle>();
 		}
 	}
 }

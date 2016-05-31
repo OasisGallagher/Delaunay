@@ -3,45 +3,14 @@ namespace Delaunay
 {
 	public class BinaryHeap
 	{
-		const uint kNodeStateInHeap = 0x80000000;
-		const uint kNodeStateClosed = 0x40000000;
+		const int kNodeStateOutOfHeap = -1;
+		const int kNodeStateClosed = -2;
 
-		void SetNodeState(Triangle node, uint state)
+		float F(PathfindingNode node) { return node.G + node.H; }
+
+		public void Push(PathfindingNode node)
 		{
-			Utility.Verify(!GetNodeState(node, state));
-			node.Flag |= state;
-		}
-
-		void ClearNodeState(Triangle node, uint state)
-		{
-			Utility.Verify(GetNodeState(node, state));
-			node.Flag &= (~state);
-		}
-
-		bool GetNodeState(Triangle node, uint state)
-		{
-			return (node.Flag & state) != 0;
-		}
-
-		void SetHeapIndex(Triangle node, int index)
-		{
-			node.Flag &= 0xC0000000;
-
-			index &= 0x3FFFFFFF;
-			node.Flag |= (uint)index;
-		}
-
-		int GetHeapIndex(Triangle node)
-		{
-			return (int)(node.Flag & 0x3FFFFFFF);
-		}
-
-		float F(Triangle node) { return node.G + node.H; }
-
-		public void Push(Triangle node)
-		{
-			SetNodeState(node, kNodeStateInHeap);
-			SetHeapIndex(node, container.Count);
+			node.Flag = container.Count;
 
 			container.Add(node);
 
@@ -51,31 +20,30 @@ namespace Delaunay
 
 		public void Dispose()
 		{
-			foreach (Triangle triangle in container)
+			foreach (PathfindingNode node in container)
 			{
-				triangle.ClearPathfinding();
+				node.ClearPathfinding();
 			}
 
 			container.Clear();
 
-			foreach (Triangle triangle in close)
+			foreach (PathfindingNode node in close)
 			{
-				triangle.ClearPathfinding();
+				node.ClearPathfinding();
 			}
 
 			close.Clear();
 		}
 
-		public Triangle Pop()
+		public PathfindingNode Pop()
 		{
 			Swap(0, container.Count - 1);
-			Triangle result = container[container.Count - 1];
+			PathfindingNode result = container[container.Count - 1];
 
 			close.Add(result);
 			container.RemoveAt(container.Count - 1);
 
-			ClearNodeState(result, kNodeStateInHeap);
-			SetNodeState(result, kNodeStateClosed);
+			result.Flag = kNodeStateClosed;
 
 			int current = 0;
 			for (; ; )
@@ -100,7 +68,7 @@ namespace Delaunay
 			return result;
 		}
 
-		public void DecrGH(Triangle node, float newG, float newH)
+		public void DecrGH(PathfindingNode node, float newG, float newH)
 		{
 			Utility.Assert(newG + newH < node.G + node.H);
 
@@ -112,14 +80,14 @@ namespace Delaunay
 			Utility.Verify(IsHeap());
 		}
 
-		public bool Contains(Triangle node)
+		public bool Contains(PathfindingNode node)
 		{
-			return GetNodeState(node, kNodeStateInHeap);
+			return node.Flag >= 0;
 		}
 
-		public bool IsClosed(Triangle node)
+		public bool IsClosed(PathfindingNode node)
 		{
-			return GetNodeState(node, kNodeStateClosed);
+			return node.Flag == kNodeStateClosed;
 		}
 
 		public int Count
@@ -140,23 +108,23 @@ namespace Delaunay
 			return true;
 		}
 
-		void AdjustHeap(Triangle node)
+		void AdjustHeap(PathfindingNode node)
 		{
-			int parent = Parent(GetHeapIndex(node));
+			int parent = Parent(node.Flag);
 			for (; parent >= 0 && F(node) < F(container[parent]); parent = Parent(parent))
 			{
-				Swap(GetHeapIndex(node), parent);
+				Swap(node.Flag, parent);
 			}
 		}
 
 		void Swap(int i, int j)
 		{
-			Triangle tmp = container[i];
+			PathfindingNode tmp = container[i];
 			container[i] = container[j];
 			container[j] = tmp;
 
-			SetHeapIndex(container[i], i);
-			SetHeapIndex(container[j], j);
+			container[i].Flag = i;
+			container[j].Flag = j;
 		}
 
 		int Parent(int i) { return (i - 1) / 2; }
@@ -165,7 +133,7 @@ namespace Delaunay
 
 		int RightChild(int i) { return 2 * i + 2; }
 
-		List<Triangle> close = new List<Triangle>();
-		List<Triangle> container = new List<Triangle>();
+		List<PathfindingNode> close = new List<PathfindingNode>();
+		List<PathfindingNode> container = new List<PathfindingNode>();
 	}
 }

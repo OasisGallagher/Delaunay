@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public class Triangle
+	public class Triangle : PathfindingNode
 	{
 		public int ID { get; private set; }
 
@@ -281,24 +281,12 @@ namespace Delaunay
 			Walkable = reader.ReadBoolean();
 		}
 
-		#region Pathfinding
-		public HalfEdge Portal = null;
-
-		public HalfEdge[] AdjPortals { get { return GetAdjPortals(); } }
-
-		public float G = float.PositiveInfinity;
-
-		public float H = float.PositiveInfinity;
-
-		public uint Flag = 0;
-
-		public void ClearPathfinding()
+		#region PathfindingNode
+		public override HalfEdge[] AdjPortals
 		{
-			Flag = 0;
-			Portal = null;
-			G = float.PositiveInfinity;
-			H = float.PositiveInfinity;
+			get { return GetAdjPortals(); }
 		}
+
 		#endregion
 
 		HalfEdge[] GetAdjPortals()

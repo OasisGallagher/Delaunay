@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	internal static class PathSmooth
+	public static class PathSmooth
 	{
 		public static List<Vector3> Smooth(Vector3 start, Vector3 dest, List<HalfEdge> edges, float radius)
 		{
@@ -26,7 +26,7 @@ namespace Delaunay
 	/// <summary>
 	/// http://www.koffeebird.com/2014/05/towards-modified-simple-stupid-funnel.html
 	/// </summary>
-	internal static class NonPointObjectFunnel
+	public static class NonPointObjectFunnel
 	{
 		enum ApexType
 		{
@@ -324,7 +324,7 @@ namespace Delaunay
 	///<summary>
 	// http://gamedev.stackexchange.com/questions/68302/how-does-the-simple-stupid-funnel-algorithm-work
 	///</summary>
-	internal static class PointObjectFunnel
+	public static class PointObjectFunnel
 	{
 		static List<Vector3> Funnel(List<Vector3> portals)
 		{
