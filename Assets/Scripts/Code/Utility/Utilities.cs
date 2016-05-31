@@ -427,7 +427,6 @@ namespace Delaunay
 		{
 			if (Mathf.Approximately(radius1, radius2))
 			{
-				Debug.Log("Mathf.Approximately(radius1, radius2)");
 				Vector3 d = center2 - center1;
 				d = d.normalized * radius1;
 				float radian = Mathf.PI / 2f;

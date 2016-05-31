@@ -10,8 +10,8 @@ namespace Delaunay
 		{
 			MeshDebugDraw debugDraw = target as MeshDebugDraw;
 			EditorGUILayout.BeginVertical("Box");
-			debugDraw.offset = EditorGUILayout.Vector3Field("Offset", debugDraw.offset);
 			debugDraw.drawMask = (DebugDrawMask)EditorGUILayout.EnumMaskField("Draw mask", debugDraw.drawMask);
+			debugDraw.offset = EditorGUILayout.Vector3Field("Offset", debugDraw.offset);
 			debugDraw.blockFaceColor = EditorGUILayout.ColorField("Block face color", debugDraw.blockFaceColor);
 			debugDraw.walkableFaceColor = EditorGUILayout.ColorField("Walkable face color", debugDraw.walkableFaceColor);
 			debugDraw.edgeColor = EditorGUILayout.ColorField("Edge color", debugDraw.edgeColor);
