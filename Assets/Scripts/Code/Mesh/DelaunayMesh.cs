@@ -95,7 +95,7 @@ namespace Delaunay
 			}
 			Utility.Verify(findResult.Second != null, "Invalid dest point");
 
-			return Pathfinding.FindPath(start, dest, facet1, findResult.Second, radius);
+			return Pathfinding.FindPath(facet1, start, findResult.Second, dest, radius);
 		}
 
 		public Vector3 GetNearestPoint(Vector3 hit, float radius)
@@ -380,7 +380,7 @@ namespace Delaunay
 			Vector3 srcDest = dest.Position - src.Position;
 
 			Vertex v = src;
-			for (; !start.Face.Contains(dest); )
+			for (; !start.Face.Contains(dest.Position); )
 			{
 				Utility.Verify(!start.Constraint, "Crossed constraint edge");
 				crossedTriangles.Add(start);

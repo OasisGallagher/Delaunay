@@ -1,24 +1,13 @@
 ﻿using System.Collections.Generic;
+
 namespace Delaunay
 {
-	public class BinaryHeap
+	public class AStarNodeContainer
 	{
 		const int kNodeStateOutOfHeap = -1;
 		const int kNodeStateClosed = -2;
 
-		float F(PathfindingNode node) { return node.G + node.H; }
-
-		public void Push(PathfindingNode node)
-		{
-			node.Flag = container.Count;
-
-			container.Add(node);
-
-			AdjustHeap(node);
-			Utility.Assert(IsHeap());
-		}
-
-		public void Dispose()
+		public void Clear()
 		{
 			foreach (PathfindingNode node in container)
 			{
@@ -35,15 +24,28 @@ namespace Delaunay
 			close.Clear();
 		}
 
+		public void Push(PathfindingNode node)
+		{
+			node.Flag = container.Count;
+
+			container.Add(node);
+
+			AdjustHeap(node);
+			Utility.Assert(IsHeap());
+		}
+
+		public void Close(PathfindingNode node)
+		{
+			close.Add(node);
+			node.Flag = kNodeStateClosed;
+		}
+
 		public PathfindingNode Pop()
 		{
 			Swap(0, container.Count - 1);
 			PathfindingNode result = container[container.Count - 1];
 
-			close.Add(result);
 			container.RemoveAt(container.Count - 1);
-
-			result.Flag = kNodeStateClosed;
 
 			int current = 0;
 			for (; ; )
@@ -68,7 +70,7 @@ namespace Delaunay
 			return result;
 		}
 
-		public void DecrGH(PathfindingNode node, float newG, float newH)
+		public void DecreaseGH(PathfindingNode node, float newG, float newH)
 		{
 			Utility.Assert(newG + newH < node.G + node.H);
 
@@ -77,7 +79,7 @@ namespace Delaunay
 
 			AdjustHeap(node);
 
-			Utility.Verify(IsHeap());
+			Utility.Assert(IsHeap());
 		}
 
 		public bool Contains(PathfindingNode node)
@@ -126,6 +128,8 @@ namespace Delaunay
 			container[i].Flag = i;
 			container[j].Flag = j;
 		}
+
+		float F(PathfindingNode node) { return node.G + node.H; }
 
 		int Parent(int i) { return (i - 1) / 2; }
 

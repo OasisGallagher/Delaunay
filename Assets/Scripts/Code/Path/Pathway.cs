@@ -42,6 +42,7 @@ namespace Delaunay
 
 				remaining -= lengths[i];
 			}
+
 			if (i >= points.Length)
 			{
 			}

@@ -6,8 +6,6 @@ namespace Delaunay
 {
 	public class Triangle : PathfindingNode
 	{
-		public int ID { get; private set; }
-
 		public static IDGenerator TriangleIDGenerator = new IDGenerator();
 
 		public Triangle()
@@ -15,6 +13,51 @@ namespace Delaunay
 			ID = TriangleIDGenerator.Value;
 			Walkable = true;
 		}
+
+		public int ID { get; private set; }
+
+		/// <summary>
+		/// One of the half-edges bordering the face.
+		/// </summary>
+		public HalfEdge Edge
+		{
+			get { return halfEdge; }
+			set
+			{
+				if (halfEdge == value) { return; }
+				halfEdge = value;
+				widthA = widthB = widthC = float.NaN;
+			}
+		}
+
+		public bool Walkable { get; set; }
+
+		public List<HalfEdge> BoundingEdges
+		{
+			get
+			{
+				List<HalfEdge> answer = new List<HalfEdge>();
+				if (AB == null) { return answer; }
+
+				answer.Add(AB);
+				if (BC != AB) { answer.Add(BC); }
+				if (CA != AB) { answer.Add(CA); }
+
+				return answer;
+			}
+		}
+
+		public HalfEdge AB { get { return Edge; } }
+		public HalfEdge BC { get { return AB.Next; } }
+		public HalfEdge CA { get { return AB.Next.Next; } }
+
+		public HalfEdge BA { get { return AB.Pair; } }
+		public HalfEdge CB { get { return BC.Pair; } }
+		public HalfEdge AC { get { return CA.Pair; } }
+
+		public Vertex A { get { return AB.Pair.Dest; } }
+		public Vertex B { get { return AB.Dest; } }
+		public Vertex C { get { return AB.Next.Dest; } }
 
 		public float GetWidth(HalfEdge a, HalfEdge b)
 		{
@@ -74,54 +117,6 @@ namespace Delaunay
 			direction = Mathf.Abs(direction);
 			Utility.Verify(direction >= 1 && direction <= 3);
 			return (direction == 1) ? AB : (direction == 2 ? BC : CA);
-		}
-
-		/// <summary>
-		/// One of the half-edges bordering the face.
-		/// </summary>
-		public HalfEdge Edge
-		{
-			get { return halfEdge; }
-			set
-			{
-				if (halfEdge == value) { return; }
-				halfEdge = value;
-				widthA = widthB = widthC = float.NaN;
-			}
-		}
-
-		public bool Walkable { get; set; }
-
-		public List<HalfEdge> BoundingEdges
-		{
-			get
-			{
-				List<HalfEdge> answer = new List<HalfEdge>();
-				if (AB == null) { return answer; }
-
-				answer.Add(AB);
-				if (BC != AB) { answer.Add(BC); }
-				if (CA != AB) { answer.Add(CA); }
-
-				return answer;
-			}
-		}
-
-		public HalfEdge AB { get { return Edge; } }
-		public HalfEdge BC { get { return AB.Next; } }
-		public HalfEdge CA { get { return AB.Next.Next; } }
-
-		public HalfEdge BA { get { return AB.Pair; } }
-		public HalfEdge CB { get { return BC.Pair; } }
-		public HalfEdge AC { get { return CA.Pair; } }
-
-		public Vertex A { get { return AB.Pair.Dest; } }
-		public Vertex B { get { return AB.Dest; } }
-		public Vertex C { get { return AB.Next.Dest; } }
-
-		public bool Contains(Vertex t, bool onEdge = true)
-		{
-			return Contains(t.Position);
 		}
 
 		public bool Contains(Vector3 p, bool onEdge = true)
@@ -282,14 +277,14 @@ namespace Delaunay
 		}
 
 		#region PathfindingNode
-		public override HalfEdge[] AdjPortals
+		public override HalfEdge[] AdjacencyPortals
 		{
-			get { return GetAdjPortals(); }
+			get { return GetAdjacencyPortals(); }
 		}
 
 		#endregion
 
-		HalfEdge[] GetAdjPortals()
+		HalfEdge[] GetAdjacencyPortals()
 		{
 			List<HalfEdge> answer = new List<HalfEdge>(3);
 			foreach (HalfEdge edge in BoundingEdges)

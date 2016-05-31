@@ -9,6 +9,11 @@ namespace Delaunay
 	{
 		public static IDGenerator HalfEdgeIDGenerator = new IDGenerator();
 
+		public HalfEdge()
+		{
+			ID = HalfEdgeIDGenerator.Value;
+		}
+
 		public int ID { get; set; }
 
 		/// <summary>
@@ -38,20 +43,7 @@ namespace Delaunay
 
 		public Vector3 Center { get { return (Src.Position + Dest.Position) / 2f; } }
 
-		public HalfEdge()
-		{
-			ID = HalfEdgeIDGenerator.Value;
-		}
-
-		public bool Constraint
-		{
-			get { return isConstraint; }
-			set
-			{
-				if (isConstraint == value) { return; }
-				isConstraint = value;
-			}
-		}
+		public bool Constraint { get; set; }
 
 		public Vertex Src
 		{
@@ -117,7 +109,7 @@ namespace Delaunay
 
 			Utility.Verify(Pair != null);
 
-			isConstraint = reader.ReadBoolean();
+			Constraint = reader.ReadBoolean();
 
 			// Face is updated by Triangle.
 		}
@@ -139,7 +131,5 @@ namespace Delaunay
 
 			return answer;
 		}
-
-		bool isConstraint;
 	}
 }

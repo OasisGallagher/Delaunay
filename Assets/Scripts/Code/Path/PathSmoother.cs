@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public static class PathSmooth
+	public static class PathSmoother
 	{
 		public static List<Vector3> Smooth(Vector3 start, Vector3 dest, List<HalfEdge> edges, float radius)
 		{
@@ -183,14 +183,12 @@ namespace Delaunay
 
 				// Left Side
 				// Does new 'left' reduce the funnel?
-				//if (MyMath2D.CrossProduct2D(previousValidLSegment, currentLSegment) < MyMath2D.tolerance)
 				if (previousValidLSegment.cross2(currentLSegment) <= 0)
 				{
 					// Does it NOT cross the right side?
 					// Is the apex the same as portal left? (if true, no chance but to move)
 					if (portalApex.equals2(portalLeft) ||
 						previousValidRSegment.cross2(currentLSegment) >= 0
-						//MyMath2D.CrossProduct2D(previousValidRSegment, currentLSegment) > -MyMath2D.tolerance
 					)
 					{
 						portalLeft = left;
@@ -269,18 +267,14 @@ namespace Delaunay
 			List<Vector3> path = new List<Vector3>();
 
 			// Add first node
-			//path.Add(contactVertices[contactVertices.Count - 1].position);
 			path.Add(contactVertices[0].position);
 
-			/*for (int i = contactVertices.Count - 2; i >= 0; --i)*/
 			for (int i = 1; i < contactVertices.Count; ++i)
 			{
 				Tuple2<Vector3, Vector3> tuple = GetTangentPoints(contactVertices[i - 1], contactVertices[i], radius);
 
 				path.Add(tuple.First);
 				path.Add(tuple.Second);
-				//path.Add(contactVertices[i - 1].position);
-				//path.Add(contactVertices[i].position);
 			}
 
 			return path;

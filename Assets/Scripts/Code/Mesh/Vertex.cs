@@ -5,6 +5,14 @@ namespace Delaunay
 {
 	public class Vertex
 	{
+		public static IDGenerator VertexIDGenerator = new IDGenerator();
+
+		public Vertex(Vector3 position)
+		{
+			ID = VertexIDGenerator.Value;
+			this.Position = position;
+		}
+
 		public int ID;
 
 		/// <summary>
@@ -15,14 +23,6 @@ namespace Delaunay
 		*/
 
 		public Vector3 Position;
-
-		public static IDGenerator VertexIDGenerator = new IDGenerator();
-
-		public Vertex(Vector3 position)
-		{
-			ID = VertexIDGenerator.Value;
-			this.Position = position;
-		}
 
 		public override string ToString()
 		{

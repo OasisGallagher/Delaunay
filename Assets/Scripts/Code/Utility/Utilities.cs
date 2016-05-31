@@ -390,6 +390,7 @@ namespace Delaunay
 
 			if (Mathf.Approximately(dist, radius))
 			{
+				Debug.Log("Mathf.Approximately(dist, radius)");
 				return point;
 			}
 
@@ -406,6 +407,7 @@ namespace Delaunay
 
 			if (Mathf.Approximately(dist, radius1 + radius2))
 			{
+				Debug.Log("Mathf.Approximately(dist, radius1 + radius2)");
 				Vector3 point = (center2 - center1).normalized * radius1 + center1;
 				return new Tuple2<Vector3, Vector3>(point, point);
 			}
@@ -425,6 +427,7 @@ namespace Delaunay
 		{
 			if (Mathf.Approximately(radius1, radius2))
 			{
+				Debug.Log("Mathf.Approximately(radius1, radius2)");
 				Vector3 d = center2 - center1;
 				d = d.normalized * radius1;
 				float radian = Mathf.PI / 2f;

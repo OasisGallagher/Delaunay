@@ -11,7 +11,7 @@ namespace Delaunay
 			ClearPathfinding();
 		}
 
-		public abstract HalfEdge[] AdjPortals { get; }
+		public abstract HalfEdge[] AdjacencyPortals { get; }
 
 		public float G;
 		public float H;
@@ -28,101 +28,102 @@ namespace Delaunay
 
 	public static class Pathfinding
 	{
-		public static List<Vector3> FindPath(Vector3 startPosition, Vector3 destPosition, PathfindingNode startNode, PathfindingNode destNode, float radius)
+		public static List<Vector3> FindPath(PathfindingNode startNode, Vector3 startPosition, PathfindingNode destNode, Vector3 destPosition, float radius)
 		{
-			List<HalfEdge> portals = AStarPathfinding.FindPath(startPosition, destPosition, startNode, destNode, radius);
-			return PathSmooth.Smooth(startPosition, destPosition, portals, radius);
+			List<HalfEdge> portals = AStarPathfinding.FindPath(startNode, startPosition, destNode, destPosition, radius);
+			return PathSmoother.Smooth(startPosition, destPosition, portals, radius);
 		}
 	}
 
 	public static class AStarPathfinding
 	{
-		public static List<HalfEdge> FindPath(Vector3 startPosition, Vector3 destPosition, 
-			PathfindingNode startNode, PathfindingNode destNode, 
-			float radius)
+		public static List<HalfEdge> FindPath(PathfindingNode startNode, Vector3 startPosition, PathfindingNode destNode, Vector3 destPosition, float radius)
 		{
-			BinaryHeap heap = new BinaryHeap();
+			AStarNodeContainer container = new AStarNodeContainer();
 
 			startNode.G = 0;
-			heap.Push(startNode);
+			container.Push(startNode);
 
 			PathfindingNode currentNode = null;
 
-			for (; heap.Count != 0 && currentNode != destNode; )
+			for (; container.Count != 0 && currentNode != destNode; )
 			{
-				currentNode = heap.Pop();
+				currentNode = container.Pop();
 
-				foreach (HalfEdge current in currentNode.AdjPortals)
+				foreach (HalfEdge portal in currentNode.AdjacencyPortals)
 				{
-					if (!current.Face.Walkable || heap.IsClosed(current.Face))
+					if (!portal.Face.Walkable || container.IsClosed(portal.Face))
 					{
 						continue;
 					}
 
-					if (!CheckEntranceWidthLimit(currentNode, startNode, destNode, current, radius))
+					if (!CheckEntryAndExitWidthLimit(currentNode, destNode, portal, radius))
 					{
 						continue;
 					}
 
-					if (!heap.Contains(current.Face))
+					if (!CheckCorridorWidthLimit(portal.Pair.Face.Portal, portal, radius))
 					{
-						heap.Push(current.Face);
+						continue;
+					}
+
+					if (!container.Contains(portal.Face))
+					{
+						container.Push(portal.Face);
 					}
 
 					Utility.Verify(currentNode.G == 0 || currentNode.Portal != null);
 
-					if (!CheckCorridorWidthLimit(currentNode, startNode, destNode, current, radius))
-					{
-						continue;
-					}
-
-					float newH = MathUtility.MinDistance(destPosition, current.Src.Position, current.Dest.Position);
+					float newH = MathUtility.MinDistance(destPosition, portal.Src.Position, portal.Dest.Position);
 
 					float newG = currentNode.G;
 					if (currentNode.Portal != null)
 					{
-						newG += (currentNode.Portal.Center - current.Center).magnitude2();
+						newG += (currentNode.Portal.Center - portal.Center).magnitude2();
 					}
 
-					if (newG + newH < current.Face.G + current.Face.H)
+					if (newG + newH < portal.Face.G + portal.Face.H)
 					{
-						heap.DecrGH(current.Face, newG, newH);
-						current.Face.Portal = current;
+						container.DecreaseGH(portal.Face, newG, newH);
+						portal.Face.Portal = portal;
 					}
 				}
+
+				container.Close(currentNode);
 			}
 
 			List<HalfEdge> path = CreatePath(currentNode);
+			TruncateByRadius(path, radius);
+
 			//if (currentNode == destNode) { path = CreatePath(destNode); }
 
-			heap.Dispose();
+			container.Clear();
 
 			return path;
 		}
 
-		static bool CheckEntranceWidthLimit(PathfindingNode currentNode, PathfindingNode startNode, PathfindingNode destNode, HalfEdge current, float radius)
+		static bool CheckEntryAndExitWidthLimit(PathfindingNode currentNode, PathfindingNode destNode, HalfEdge portal, float radius)
 		{
 			if (currentNode == destNode)
 			{
-				// TODO: 
-				return true;
+				return (portal.Dest.Position - portal.Src.Position).magnitude2() >= radius * 2;
 			}
 
-			HalfEdge other1 = current.Face.AB, other2 = current.Face.BC;
-			if (current == current.Face.AB)
+			HalfEdge other1 = portal.Face.AB, other2 = portal.Face.BC;
+			if (portal == portal.Face.AB)
 			{
-				other1 = current.Face.BC;
-				other2 = current.Face.CA;
+				other1 = portal.Face.BC;
+				other2 = portal.Face.CA;
 			}
-			else if (current == current.Face.BC)
+			else if (portal == portal.Face.BC)
 			{
-				other1 = current.Face.AB;
-				other2 = current.Face.CA;
+				other1 = portal.Face.AB;
+				other2 = portal.Face.CA;
 			}
 
 			float diameter = radius * 2f;
-			if (current.Face.GetWidth(current, other1) >= diameter
-				|| current.Face.GetWidth(current, other2) >= diameter)
+			if (portal.Face.GetWidth(portal, other1) >= diameter
+				|| portal.Face.GetWidth(portal, other2) >= diameter)
 			{
 				return true;
 			}
@@ -130,23 +131,14 @@ namespace Delaunay
 			return false;
 		}
 
-		static bool CheckCorridorWidthLimit(PathfindingNode currentNode, PathfindingNode startNode, PathfindingNode destNode, HalfEdge current, float radius)
+		static bool CheckCorridorWidthLimit(HalfEdge prevPortal, HalfEdge currentPortal, float radius)
 		{
-			if (currentNode == startNode)
-			{
-				// ???
-				return true;
-			}
-
-			HalfEdge lastPortal = current.Pair.Face.Portal;
-
-			if (lastPortal == null)
+			if (prevPortal == null)
 			{
 				return true;
 			}
 
-			float diameter = radius * 2f;
-			return current.Pair.Face.GetWidth(lastPortal, current.Pair) >= diameter;
+			return currentPortal.Pair.Face.GetWidth(prevPortal, currentPortal.Pair) >= (radius * 2f);
 		}
 
 		static List<HalfEdge> CreatePath(PathfindingNode dest)
@@ -161,6 +153,11 @@ namespace Delaunay
 			result.Reverse();
 
 			return result;
+		}
+
+		static void TruncateByRadius(List<HalfEdge> path, float radius)
+		{
+
 		}
 	}
 }
