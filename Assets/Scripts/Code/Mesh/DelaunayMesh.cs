@@ -80,9 +80,13 @@ namespace Delaunay
 			Tuple2<int, Triangle> findResult = geomManager.FindVertexContainedTriangle(start);
 			if (findResult.Second != null && !findResult.Second.Walkable)
 			{
+				Debug.LogError("Invalid start position " + start);
+				return null;
+				/*
 				int fromTriangleID = findResult.Second.ID;
 				findResult.Second = FindWalkableTriangle(findResult.Second.FindVertex(start));
 				Debug.Log(string.Format(start + "Reposition start point from triangle {0} to {1} ", fromTriangleID, findResult.Second.ID));
+				 */
 			}
 			Utility.Verify(findResult.Second != null, "Invalid start point");
 			Triangle facet1 = findResult.Second;
@@ -90,9 +94,14 @@ namespace Delaunay
 			findResult = geomManager.FindVertexContainedTriangle(dest);
 			if (findResult.Second != null && !findResult.Second.Walkable)
 			{
+				Debug.LogError("Invalid dest position " + dest);
+				return null;
+				/*
 				findResult.Second = FindWalkableTriangle(findResult.Second.FindVertex(dest));
 				Debug.Log("Reposition dest point to triangle " + findResult.Second.ID);
+				 */
 			}
+
 			Utility.Verify(findResult.Second != null, "Invalid dest point");
 
 			return Pathfinding.FindPath(facet1, start, findResult.Second, dest, radius);

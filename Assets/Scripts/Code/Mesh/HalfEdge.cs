@@ -1,4 +1,6 @@
-﻿using System;
+﻿// http://www.flipcode.com/archives/The_Half-Edge_Data_Structure.shtml
+
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
