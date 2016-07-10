@@ -101,23 +101,6 @@ namespace Delaunay
 
 	public static class MathUtility
 	{
-		public static void DrawGizmosCircle(Vector3 center, float radius, Color color, float y = 0f)
-		{
-			Color oldColor = Gizmos.color;
-			Gizmos.color = color;
-			Vector3 from = new Vector3(center.x + radius, y, center.z);
-			for (float i = 1; i < 360; ++i)
-			{
-				float radian = Mathf.Deg2Rad * i;
-				float x = Mathf.Cos(radian) * radius + center.x;
-				float z = Mathf.Sin(radian) * radius + center.z;
-				Vector3 to = new Vector3(x, y, z);
-				Gizmos.DrawLine(from, to);
-				from = to;
-			}
-			Gizmos.color = oldColor;
-		}
-
 		public static Vector3 Centroid(Vector3[] a)
 		{
 			return Centroid(a[0], a[1], a[2]);

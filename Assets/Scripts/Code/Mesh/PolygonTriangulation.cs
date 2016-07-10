@@ -121,7 +121,7 @@ namespace Delaunay
 
 		static List<Vertex> EarClipping(ArrayLinkedList<EarVertex> vertices, ArrayLinkedList<int> earTips)
 		{
-			List<Vertex> answer = new List<Vertex>(vertices.Count - 2);
+			List<Vertex> answer = new List<Vertex>((vertices.Count - 2) * 3);
 			EarVertex[] removedEars = new EarVertex[2];
 			int removedEarCount = 0;
 

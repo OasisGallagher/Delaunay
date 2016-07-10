@@ -18,10 +18,13 @@ namespace Delaunay
 		List<Vector3> plantedVertices;
 		BitArray editStates;
 
+#if ANIMATED_DELAUNAY_MESH
 		AnimatedDelaunayMesh delaunayMesh;
-		EditCommandSequence cmdSequence;
-
 		bool playingCreateObstacleAnimation = false;
+#else
+		DelaunayMesh delaunayMesh;
+#endif
+		EditCommandSequence cmdSequence;
 
 		bool editDebugDraw = true;
 		bool isPlaying = false;
@@ -42,9 +45,12 @@ namespace Delaunay
 			plantedVertices = new List<Vector3>(kMaxVertices);
 			editStates = new BitArray(kMaxVertices);
 
+#if ANIMATED_DELAUNAY_MESH
 			delaunayMesh = new AnimatedDelaunayMesh();
 			delaunayMesh.Transition = 0.5f;
-
+#else
+			delaunayMesh = new DelaunayMesh();
+#endif
 			debugDraw = new EditorDebugDraw(delaunayMesh);
 
 			cmdSequence = new EditCommandSequence();
@@ -90,15 +96,23 @@ namespace Delaunay
 
 			DrawStats();
 
+#if ANIMATED_DELAUNAY_MESH
 			if (!playingCreateObstacleAnimation)
 			{
+#endif
 				DrawCommands();
+#if ANIMATED_DELAUNAY_MESH
 			}
+#endif
 
+#if ANIMATED_DELAUNAY_MESH
 			if (!playingCreateObstacleAnimation)
 			{
+#endif
 				OnInput();
+#if ANIMATED_DELAUNAY_MESH
 			}
+#endif
 		}
 
 		void DrawVertexHandles()
@@ -310,10 +324,12 @@ namespace Delaunay
 
 			GUILayout.BeginVertical("Box");
 
+#if ANIMATED_DELAUNAY_MESH
 			GUILayout.BeginVertical("Box");
 			GUILayout.Label("Transition: " + delaunayMesh.Transition, EditorStyles.boldLabel);
 			delaunayMesh.Transition = GUILayout.HorizontalSlider(delaunayMesh.Transition, 0f, 1f);
 			GUILayout.EndVertical();
+#endif
 
 			DrawVertexEditor();
 			
@@ -454,7 +470,9 @@ namespace Delaunay
 			}
 			else
 			{
+#if ANIMATED_DELAUNAY_MESH
 				playingCreateObstacleAnimation = true;
+
 				cmdSequence.Push(new CreateObstacleAnimatedCommand(vertices, delaunayMesh, (obstacle) =>
 				{
 					playingCreateObstacleAnimation = false;
@@ -468,6 +486,9 @@ namespace Delaunay
 						Debug.LogError("Failed to create obstacle");
 					}
 				}));
+#else
+				cmdSequence.Push(new CreateObstacleCommand(vertices, delaunayMesh));
+#endif
 			}
 		}
 
