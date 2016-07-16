@@ -1,13 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Delaunay
 {
-	public class AStarNodeContainer
+	/// <summary>
+	/// ! Call Dispose() manually.
+	/// </summary>
+	public class AStarNodeContainer : IDisposable
 	{
 		const int kNodeStateOutOfHeap = -1;
 		const int kNodeStateClosed = -2;
 
-		public void Clear()
+		public void Dispose()
 		{
 			foreach (PathfindingNode node in container)
 			{

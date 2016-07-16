@@ -74,12 +74,16 @@ namespace Delaunay
 
 					Utility.Verify(currentNode.G == 0 || currentNode.Portal != null);
 
+					// https://raygun.com/blog/2015/01/game-development-triangulated-spaces-part-2/
+
 					float newH = MathUtility.MinDistance(destPosition, portal.Src.Position, portal.Dest.Position);
 
-					float newG = currentNode.G;
+					float newG = MathUtility.MinDistance(startPosition, portal.Src.Position, portal.Dest.Position);
+					newG = Mathf.Max(newG, (currentNode.H - newH) + currentNode.G);
+
 					if (currentNode.Portal != null)
 					{
-						newG += (currentNode.Portal.Center - portal.Center).magnitude2();
+						newG = Mathf.Max(newG, CalculateArcLengthBetweenPortals(currentNode.Portal, portal, radius));
 					}
 
 					if (newG + newH < portal.Face.G + portal.Face.H)
@@ -95,9 +99,10 @@ namespace Delaunay
 			List<HalfEdge> path = CreatePath(currentNode);
 			TruncateByRadius(path, radius);
 
+			// Create truncated path if currentNode != destNode.
 			//if (currentNode == destNode) { path = CreatePath(destNode); }
 
-			container.Clear();
+			container.Dispose();
 
 			return path;
 		}
@@ -153,6 +158,35 @@ namespace Delaunay
 			result.Reverse();
 
 			return result;
+		}
+
+		public static float CalculateArcLengthBetweenPortals(HalfEdge portal1, HalfEdge portal2, float radius)
+		{
+			Vector3 v1 = Vector3.zero, v2 = Vector3.zero;
+
+			// TODO: Any good idea?
+			if (portal1.Src == portal2.Src)
+			{
+				v1 = portal1.Dest.Position - portal1.Src.Position; v2 = portal2.Dest.Position - portal1.Src.Position;
+			}
+			else if (portal1.Src == portal2.Dest)
+			{
+				v1 = portal1.Dest.Position - portal1.Src.Position; v2 = portal2.Src.Position - portal1.Src.Position;
+			}
+			else if (portal1.Dest == portal2.Src)
+			{
+				v1 = portal1.Src.Position - portal1.Dest.Position; v2 = portal2.Dest.Position - portal1.Dest.Position;
+			}
+			else if (portal1.Dest == portal2.Dest)
+			{
+				v1 = portal1.Src.Position - portal1.Dest.Position; v2 = portal2.Src.Position - portal1.Dest.Position;
+			}
+			else
+			{
+				Utility.Verify(false, "failed to find common vertex, portals are {0} and {1}", portal1, portal2);
+			}
+
+			return Mathf.Acos(v1.dot2(v2) / (v1.magnitude2() * v2.magnitude2())) * radius;
 		}
 
 		static void TruncateByRadius(List<HalfEdge> path, float radius)
