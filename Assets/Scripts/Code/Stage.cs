@@ -72,18 +72,17 @@ namespace Delaunay
 			player.transform.localScale = scale;
 		}
 
-		bool MousePositionToStage(out Vector3 point)
+		bool MousePositionToStage(out Vector3 point, Vector3? src = null)
 		{
 			RaycastHit hit;
 			point = Vector3.zero;
-			if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100))
+			if (!Physics.Raycast(Camera.main.ScreenPointToRay(src ?? Input.mousePosition), out hit, 100))
 			{
 				Debug.LogError("Raycast failed");
 				return false;
 			}
 
 			point = hit.point;
-			point.y = 0;
 
 			return true;
 		}

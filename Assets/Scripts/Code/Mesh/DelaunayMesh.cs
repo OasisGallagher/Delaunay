@@ -8,6 +8,10 @@ namespace Delaunay
 	{
 		List<Vector3> superBorder;
 
+		public float GetNearestMaxDistance = 8;
+		public int GetNearestDistanceSampleCount = 10;
+		public int GetNearestRadianSampleCount = 8;
+
 		protected GeomManager geomManager;
 
 		public DelaunayMesh()
@@ -107,27 +111,15 @@ namespace Delaunay
 			return Pathfinding.FindPath(facet1, start, findResult.Second, dest, radius);
 		}
 
-		public Vector3 GetNearestPoint(Vector3 hit, float radius)
+		public Vector3 GetNearestPoint(Vector3 position, float radius)
 		{
-			return new Vector3(hit.x, GetTerrainHeight(hit), hit.z);
-			// TODO:
-			//	Triangle triangle = FindFacetContainsVertex(hit).Second;
-			/*
-			foreach (Obstacle obstacle in GeomManager.AllObstacles)
+			if (!IsValidPosition(position, radius) && !SearchValidPosition(ref position, radius, GetNearestMaxDistance, GetNearestDistanceSampleCount, GetNearestRadianSampleCount))
 			{
-				triangle = obstacle.Mesh.Find(item =>
-				{
-					return MathUtility.MinDistance(hit, item.A.Position, item.B.Position) < radius
-					|| MathUtility.MinDistance(hit, item.B.Position, item.C.Position) < radius
-					|| MathUtility.MinDistance(hit, item.C.Position, item.A.Position) < radius;
-				});
-
-				if (triangle != null) { break; }
+				Debug.LogError("Failed to GetNearestPoint for " + position);
 			}
 
-			if (triangle == null) { return hit; }
-			 */
-			//return GetNearestPoint(triangle, hit, radius);
+			position.y = GetTerrainHeight(position);
+			return position;
 		}
 
 		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
@@ -146,10 +138,24 @@ namespace Delaunay
 			return Vector3.zero;
 		}
 
-		public float GetTerrainHeight(Vector3 position)
+		public bool IsValidPosition(Vector3 position, float radius)
 		{
 			Triangle triangle = geomManager.FindVertexContainedTriangle(position).Second;
+			if (triangle == null || !triangle.Walkable)
+			{
+				return false;
+			}
+
+			return IsValidMeshPosition(triangle, position, radius);
+		}
+
+		public float GetTerrainHeight(Vector3 position)
+		{
+			return position.y;
+			/*
+			Triangle triangle = geomManager.FindVertexContainedTriangle(position).Second;
 			return MathUtility.LineCrossPlane(triangle.A.Position, triangle.B.Position,triangle.C.Position, position, Vector3.down).y;
+			 */
 		}
 
 		public bool HasSuperBorder
@@ -275,42 +281,70 @@ namespace Delaunay
 			return true;
 		}
 
-		Vector3 GetNearestPoint(Triangle triangle, Vector3 hit, float radius)
+		bool SearchValidPosition(ref Vector3 position, float radius, float maxDist, int distSampleCount, int circularSampleCount)
 		{
-			Queue<Triangle> queue = new Queue<Triangle>();
-			List<Triangle> visited = new List<Triangle>() { triangle };
+			float radianStep = Mathf.PI * 2f / circularSampleCount;
+			float distStep = maxDist / distSampleCount;
 
-			queue.Enqueue(triangle);
-			Vector3 answer = Vector3.zero;
-
-			for (; queue.Count > 0; )
+			for (int i = 1; i <= distSampleCount; ++i)
 			{
-				triangle = queue.Dequeue();
-				if (triangle.Walkable && triangle.Place(out answer, hit, radius))
-				{
-					break;
-				}
-
-				if (triangle.AB.Pair.Face != null && !visited.Contains(triangle.AB.Pair.Face))
-				{
-					queue.Enqueue(triangle.AB.Pair.Face);
-					visited.Add(triangle.AB.Pair.Face);
-				}
-
-				if (triangle.BC.Pair.Face != null && !visited.Contains(triangle.BC.Pair.Face))
-				{
-					queue.Enqueue(triangle.BC.Pair.Face);
-					visited.Add(triangle.BC.Pair.Face);
-				}
-
-				if (triangle.CA.Pair.Face != null && !visited.Contains(triangle.CA.Pair.Face))
-				{
-					queue.Enqueue(triangle.CA.Pair.Face);
-					visited.Add(triangle.CA.Pair.Face);
+				Vector3 sample = position + Vector3.forward * i * distStep;
+				for (int j = 0; j < circularSampleCount; ++j)
+				{	
+					Vector3 answer = MathUtility.Rotate(sample, j * radianStep, position);
+					if (IsValidPosition(answer, radius))
+					{
+						position = answer;
+						return true;
+					}
 				}
 			}
 
-			return answer;
+			return false;
+		}
+
+		bool IsValidMeshPosition(Triangle triangle, Vector3 position, float radius)
+		{
+			List<HalfEdge> edges = new List<HalfEdge> { triangle.AB, triangle.BC, triangle.CA };
+			for (; edges.Count != 0; )
+			{
+				HalfEdge current = edges.popBack();
+				if (MathUtility.PointInCircle(current.Src.Position, position, radius)
+					|| MathUtility.PointInCircle(current.Dest.Position, position, radius))
+				{
+					return false;
+				}
+
+				// Line cross circle.
+				if (MathUtility.MinDistance(position, current.Src.Position, current.Dest.Position) >= radius)
+				{
+					continue;
+				}
+
+				// Cross constraint edge.
+				if (current.Constraint || current.Pair.Constraint)
+				{
+					return false;
+				}
+
+				Triangle triangle2 = current.Pair.Face;
+				if (triangle2 == null) { continue; }
+
+				HalfEdge e1 = triangle2.AB, e2 = triangle2.BC;
+				if (triangle2.AB.Pair == current)
+				{
+					e1 = triangle2.BC; e2 = triangle2.CA;
+				}
+				else if (triangle2.BC.Pair == current)
+				{
+					e1 = triangle2.AB; e2 = triangle2.CA;
+				}
+
+				edges.Add(e1);
+				edges.Add(e2);
+			}
+
+			return true;
 		}
 
 		Vertex FindBenchmark(List<Vertex> vertices, List<Triangle> triangles)
@@ -335,19 +369,6 @@ namespace Delaunay
 			}
 
 			Utility.Verify(false, "Failed to find benchmark");
-			return null;
-		}
-
-		Triangle FindWalkableTriangle(Vertex src)
-		{
-			foreach (HalfEdge edge in geomManager.GetRays(src))
-			{
-				if (edge.Face != null && edge.Face.Walkable)
-				{
-					return edge.Face;
-				}
-			}
-
 			return null;
 		}
 

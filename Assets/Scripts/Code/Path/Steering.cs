@@ -3,11 +3,17 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	[RequireComponent(typeof(Pathway))]
 	public class Steering : MonoBehaviour
 	{
 		PlayerComponent playerComponent;
+		float distance = 0f;
+		IPathTerrain terrain = null;
+		Pathway pathway = null;
+
 		void Start()
 		{
+			pathway = GetComponent<Pathway>();
 			playerComponent = GetComponent<PlayerComponent>();
 		}
 
@@ -22,10 +28,6 @@ namespace Delaunay
 			this.terrain = terrain;
 		}
 
-		float distance = 0f;
-		IPathTerrain terrain = null;
-		Pathway pathway = new Pathway();
-
 		void Update()
 		{
 			if (distance < pathway.Length)
@@ -33,20 +35,6 @@ namespace Delaunay
 				Vector3 newPosition = pathway.DistanceToPoint(distance += playerComponent.Speed * Time.deltaTime);
 				transform.position = new Vector3(newPosition.x, terrain.GetTerrainHeight(newPosition), newPosition.z);
 			}
-		}
-
-		void OnDrawGizmos()
-		{
-			if (pathway.Points == null) { return; }
-			Color oldColor = Gizmos.color;
-			Gizmos.color = Color.gray;
-
-			for (int i = 1; i < pathway.Points.Length; ++i)
-			{
-				Gizmos.DrawLine(pathway.Points[i - 1] + EditorConstants.kPathOffset, pathway.Points[i] + EditorConstants.kPathOffset);
-			}
-
-			Gizmos.color = oldColor;
 		}
 	}
 }

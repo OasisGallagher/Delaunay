@@ -41,7 +41,9 @@ namespace Delaunay
 		{
 			AStarNodeContainer container = new AStarNodeContainer();
 
-			startNode.G = 0;
+			startNode.G = 0f;
+			startNode.H = 0f;
+
 			container.Push(startNode);
 
 			PathfindingNode currentNode = null;
@@ -75,14 +77,12 @@ namespace Delaunay
 					Utility.Verify(currentNode.G == 0 || currentNode.Portal != null);
 
 					// https://raygun.com/blog/2015/01/game-development-triangulated-spaces-part-2/
-
 					float newH = MathUtility.MinDistance(destPosition, portal.Src.Position, portal.Dest.Position);
-
 					float newG = MathUtility.MinDistance(startPosition, portal.Src.Position, portal.Dest.Position);
-					newG = Mathf.Max(newG, (currentNode.H - newH) + currentNode.G);
-
+					
 					if (currentNode.Portal != null)
 					{
+						newG = Mathf.Max(newG, (currentNode.H - newH) + currentNode.G);
 						newG = Mathf.Max(newG, CalculateArcLengthBetweenPortals(currentNode.Portal, portal, radius));
 					}
 
@@ -164,18 +164,9 @@ namespace Delaunay
 		{
 			Vector3 v1 = Vector3.zero, v2 = Vector3.zero;
 
-			// TODO: Any good idea?
 			if (portal1.Src == portal2.Src)
 			{
 				v1 = portal1.Dest.Position - portal1.Src.Position; v2 = portal2.Dest.Position - portal1.Src.Position;
-			}
-			else if (portal1.Src == portal2.Dest)
-			{
-				v1 = portal1.Dest.Position - portal1.Src.Position; v2 = portal2.Src.Position - portal1.Src.Position;
-			}
-			else if (portal1.Dest == portal2.Src)
-			{
-				v1 = portal1.Src.Position - portal1.Dest.Position; v2 = portal2.Dest.Position - portal1.Dest.Position;
 			}
 			else if (portal1.Dest == portal2.Dest)
 			{

@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public class Pathway
+	[RequireComponent(typeof(LineRenderer))]
+	public class Pathway : MonoBehaviour
 	{
 		public Vector3[] Points
 		{
@@ -50,6 +51,12 @@ namespace Delaunay
 			return ans;
 		}
 
+		void Start()
+		{
+			pathRenderer = GetComponent<LineRenderer>();
+			pathRenderer.SetVertexCount(0);
+		}
+
 		void Recalculate()
 		{
 			totalLength = 0f;
@@ -71,7 +78,15 @@ namespace Delaunay
 				normals[i] /= lengths[i];
 				totalLength += lengths[i];
 			}
+
+			pathRenderer.SetVertexCount(points.Length);
+			for (int i = 0; i < points.Length; ++i)
+			{
+				pathRenderer.SetPosition(i, points[i] + EditorConstants.kPathOffset);
+			}
 		}
+
+		LineRenderer pathRenderer;
 
 		Vector3[] points = null;
 		Vector3[] normals = null;

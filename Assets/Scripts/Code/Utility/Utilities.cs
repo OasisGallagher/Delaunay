@@ -331,6 +331,18 @@ namespace Delaunay
 			return answer + pivot;
 		}
 
+		public static bool PointInCircle(Vector3 point, Vector3 center, float radius, bool onCircle = false)
+		{
+			radius *= radius;
+			float lengthSquared = (point - center).sqrMagnitude2();
+			if (Mathf.Approximately(lengthSquared, radius))
+			{
+				return onCircle;
+			}
+
+			return lengthSquared < radius;
+		}
+
 		public static bool PointInCircumCircle(Vector3 a, Vector3 b, Vector3 c, Vector3 v)
 		{
 			// https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcircle_equations
@@ -369,11 +381,11 @@ namespace Delaunay
 		public static Vector3 GetTangent(Vector3 center, float radius, Vector3 point, bool clockwise)
 		{
 			float dist = (center - point).magnitude2();
-			Utility.Verify(dist >= radius);
+
+			Utility.Verify(dist >= radius, "center = {0}, radius = {1}, point = {2}, clockwise = {3}", center, radius, point, clockwise);
 
 			if (Mathf.Approximately(dist, radius))
 			{
-				Debug.Log("Mathf.Approximately(dist, radius)");
 				return point;
 			}
 

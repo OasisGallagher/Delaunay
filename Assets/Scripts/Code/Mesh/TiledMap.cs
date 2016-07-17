@@ -106,7 +106,7 @@ namespace Delaunay
 
 				int x = (int)position.x;
 				int z = (int)position.z;
-				if (x >= columnCount || z >= rowCount)
+				if (x < 0 || z < 0 || x >= columnCount || z >= rowCount)
 				{
 					return null;
 				}
