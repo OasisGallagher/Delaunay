@@ -10,6 +10,7 @@ namespace Delaunay
 		GameObject destination;
 		GameObject player;
 		PlayerComponent playerComponent;
+		Vector3? raycastResult;
 
 		public DelaunayMesh delaunayMesh;
 
@@ -59,7 +60,7 @@ namespace Delaunay
 				player.transform.position = delaunayMesh.GetNearestPoint(point, playerComponent.Radius);
 				player.GetComponent<Steering>().SetPath(null);
 			}
-
+			/*
 			if (Input.GetMouseButtonUp(1) && MousePositionToStage(out point))
 			{
 				Vector3 src = player.transform.position;
@@ -67,9 +68,30 @@ namespace Delaunay
 				player.GetComponent<Steering>().SetPath(delaunayMesh.FindPath(src, dest, playerComponent.Radius));
 				destination.transform.position = dest;
 			}
+			*/
+			if (Input.GetMouseButtonUp(1) && MousePositionToStage(out point))
+			{
+				raycastResult = delaunayMesh.Raycast(playerComponent.transform.position, point, playerComponent.Radius);
+				print("Raycast finished");
+				/*
+				point.Set(5.05952263f, 0.1f, 4.396843f);
+				delaunayMesh.GetNearestPoint(point, 0.5f);
+				 */
+			}
 
 			Vector3 scale = new Vector3(playerComponent.Radius * 2f, 1, playerComponent.Radius * 2f);
 			player.transform.localScale = scale;
+		}
+
+		void OnDrawGizmos()
+		{
+			if (raycastResult != null)
+			{
+				Color oldColor = Gizmos.color;
+				Gizmos.color = Color.red;
+				Gizmos.DrawLine(playerComponent.transform.position + EditorConstants.kMeshOffset, raycastResult.Value + EditorConstants.kMeshOffset);
+				Gizmos.color = oldColor;
+			}
 		}
 
 		bool MousePositionToStage(out Vector3 point, Vector3? src = null)

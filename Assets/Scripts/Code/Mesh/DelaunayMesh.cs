@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,13 +7,13 @@ namespace Delaunay
 {
 	public class DelaunayMesh : IPathTerrain
 	{
+		const float kGetNearestMaxDistance = 8;
+		const int kGetNearestDistanceSampleCount = 10;
+		const int kGetNearestRadianSampleCount = 8;
+
 		List<Vector3> superBorder;
-
-		public float GetNearestMaxDistance = 8;
-		public int GetNearestDistanceSampleCount = 10;
-		public int GetNearestRadianSampleCount = 8;
-
-		protected GeomManager geomManager;
+		
+		public GeomManager geomManager;
 
 		public DelaunayMesh()
 		{
@@ -86,12 +87,8 @@ namespace Delaunay
 			{
 				Debug.LogError("Invalid start position " + start);
 				return null;
-				/*
-				int fromTriangleID = findResult.Second.ID;
-				findResult.Second = FindWalkableTriangle(findResult.Second.FindVertex(start));
-				Debug.Log(string.Format(start + "Reposition start point from triangle {0} to {1} ", fromTriangleID, findResult.Second.ID));
-				 */
 			}
+
 			Utility.Verify(findResult.Second != null, "Invalid start point");
 			Triangle facet1 = findResult.Second;
 
@@ -100,10 +97,6 @@ namespace Delaunay
 			{
 				Debug.LogError("Invalid dest position " + dest);
 				return null;
-				/*
-				findResult.Second = FindWalkableTriangle(findResult.Second.FindVertex(dest));
-				Debug.Log("Reposition dest point to triangle " + findResult.Second.ID);
-				 */
 			}
 
 			Utility.Verify(findResult.Second != null, "Invalid dest point");
@@ -113,7 +106,7 @@ namespace Delaunay
 
 		public Vector3 GetNearestPoint(Vector3 position, float radius)
 		{
-			if (!IsValidPosition(position, radius) && !SearchValidPosition(ref position, radius, GetNearestMaxDistance, GetNearestDistanceSampleCount, GetNearestRadianSampleCount))
+			if (!IsValidPosition(position, radius) && !SearchValidPosition(ref position, radius, kGetNearestMaxDistance, kGetNearestDistanceSampleCount, kGetNearestRadianSampleCount))
 			{
 				Debug.LogError("Failed to GetNearestPoint for " + position);
 			}
@@ -124,29 +117,101 @@ namespace Delaunay
 
 		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
 		{
-			/* TODO:
-			Tuple2<int, Triangle> result = geomManager.FindVertexContainedTriangle(from);
-			Utility.Verify(result.Second != null, "Can not find facet contains " + from);
-			if (result.First < 0)
+			Debug.Log("Raycast");
+			if (!IsValidPosition(from, radius))
 			{
-				Vertex vertex = result.Second.FindVertex(from);
-				HalfEdge edge = result.Second.GetOpposite(vertex);
-				Vector2 crossPoint = Vector2.zero;
-				CrossState crossState = MathUtility.SegmentCross(out crossPoint, from, to, edge.Src.Position, edge.Dest.Position);
+				Debug.Log("Stuck at " + from);
+				return from;
 			}
-			*/
-			return Vector3.zero;
+
+			Tuple2<int, Triangle> containedInfo = geomManager.FindVertexContainedTriangle(from);
+
+			Utility.Verify(containedInfo.Second != null, "can not locate position " + from);
+
+			if (containedInfo.First < 0)	// [-1, -2, -3]
+			{
+				Debug.LogError("Unhandled case. radius = " + radius);
+				return from;
+			}
+
+			Vector3 ans = Vector3.zero;
+			if (containedInfo.First == 0)
+			{
+				ans = RaycastFromTriangle(containedInfo.Second, from, to, radius);
+				Debug.Log("~ Raycast");
+				return ans;
+			}
+
+			HalfEdge edge = containedInfo.Second.GetEdgeByDirection(containedInfo.First);
+			ans = RaycastFromEdge(edge, from, to, radius);
+			Debug.Log("~ Raycast");
+			return ans;
+		}
+
+		Vector3 RaycastFromEdge(HalfEdge edge, Vector3 from, Vector3 to, float radius)
+		{
+			if (from.equals2(to)) { return from; }
+
+			if (!IsValidPosition(from, radius))
+			{
+				return from;
+			}
+
+			if ((to - from).cross2(edge.Dest.Position - edge.Src.Position) < 0)
+			{
+				edge = edge.Pair;
+			}
+
+			return RaycastWithEdges(new HalfEdge[] { edge.Next, edge.Next.Next }, from, to, radius);
+		}
+
+		Vector3 RaycastWithEdges(IEnumerable<HalfEdge> edges, Vector3 from, Vector3 to, float radius)
+		{
+			Debug.Log("Raycast with edges");
+			Vector2 segCrossAnswer = Vector2.zero;
+			foreach (HalfEdge edge in edges)
+			{
+				CrossState crossState = MathUtility.SegmentCross(out segCrossAnswer, from, to, edge.Src.Position, edge.Dest.Position);
+
+				Utility.Verify(crossState == CrossState.CrossOnSegment || crossState == CrossState.CrossOnExtLine);
+
+				if (segCrossAnswer.x < 0) { continue; }
+
+				if (crossState == CrossState.CrossOnExtLine)
+				{
+					from = to;
+					break;
+				}
+
+				if (crossState == CrossState.CrossOnSegment)
+				{
+					Vector3 cross = from + segCrossAnswer.x * (to - from);
+					from = RaycastFromEdge(edge, cross, to, radius);
+					break;
+				}
+			}
+
+			Debug.Log("~ Raycast with edges");
+			return from;
+		}
+
+		Vector3 RaycastFromTriangle(Triangle triangle, Vector3 from, Vector3 to, float radius)
+		{
+			if (from.equals2(to)) { return from; }
+
+			HalfEdge[] edges = new HalfEdge[] { triangle.AB, triangle.BC, triangle.CA };
+			return RaycastWithEdges(edges, from, to, radius);
 		}
 
 		public bool IsValidPosition(Vector3 position, float radius)
 		{
-			Triangle triangle = geomManager.FindVertexContainedTriangle(position).Second;
-			if (triangle == null || !triangle.Walkable)
+			Tuple2<int, Triangle> containedInfo = geomManager.FindVertexContainedTriangle(position);
+			if (containedInfo.Second == null || !containedInfo.Second.Walkable)
 			{
 				return false;
 			}
 
-			return IsValidMeshPosition(triangle, position, radius);
+			return IsValidMeshPosition(containedInfo, position, radius);
 		}
 
 		public float GetTerrainHeight(Vector3 position)
@@ -206,19 +271,19 @@ namespace Delaunay
 			for (; e.MoveNext(); )
 			{
 				Vertex currentVertex = geomManager.CreateVertex(e.Current);
-				polygonBoundingEdges.AddRange(AddConstraintEdge(prevVertex, currentVertex));
+				polygonBoundingEdges.AddRange(AddConstrainedEdge(prevVertex, currentVertex));
 				prevVertex = currentVertex;
 			}
 
 			if (close)
 			{
-				polygonBoundingEdges.AddRange(AddConstraintEdge(prevVertex, firstVertex));
+				polygonBoundingEdges.AddRange(AddConstrainedEdge(prevVertex, firstVertex));
 			}
 
 			return polygonBoundingEdges;
 		}
 
-		protected List<HalfEdge> AddConstraintEdge(Vertex src, Vertex dest)
+		protected List<HalfEdge> AddConstrainedEdge(Vertex src, Vertex dest)
 		{
 			Append(src);
 			Append(dest);
@@ -228,33 +293,33 @@ namespace Delaunay
 			const int maxLoopCount = 4096;
 			for (int i = 0; src != dest; )
 			{
-				answer.Add(AddConstraintAt(ref src, dest));
+				answer.Add(AddConstrainedEdgeAt(ref src, dest));
 				Utility.Verify(++i < maxLoopCount, "Max loop count exceed");
 			}
 
 			return answer;
 		}
 
-		protected HalfEdge AddConstraintAt(ref Vertex src, Vertex dest)
+		protected HalfEdge AddConstrainedEdgeAt(ref Vertex src, Vertex dest)
 		{
 			Tuple2<HalfEdge, CrossState> crossResult = new Tuple2<HalfEdge, CrossState>(null, CrossState.Parallel);
 			foreach (HalfEdge ray in geomManager.GetRays(src))
 			{
-				if (FindCrossedEdge(out crossResult, ray, src, dest)) { break; }
+				if (FindCrossedEdge(out crossResult, ray, src.Position, dest.Position)) { break; }
 			}
 
 			Utility.Verify(crossResult.Second != CrossState.Parallel);
 
 			if (crossResult.Second == CrossState.FullyOverlaps)
 			{
-				crossResult.First.Constraint = true;
+				crossResult.First.Constrained = true;
 				src = crossResult.First.Dest;
 				return crossResult.First;
 			}
 
 			Utility.Verify(crossResult.Second == CrossState.CrossOnSegment);
 
-			return ConstraintCrossEdges(ref src, dest, crossResult.First);
+			return OnConstrainedEdgeCrossEdges(ref src, dest, crossResult.First);
 		}
 
 		protected void MarkObstacle(Obstacle obstacle)
@@ -303,9 +368,23 @@ namespace Delaunay
 			return false;
 		}
 
-		bool IsValidMeshPosition(Triangle triangle, Vector3 position, float radius)
+		bool IsValidMeshPosition(Tuple2<int, Triangle> containedInfo, Vector3 position, float radius)
 		{
-			List<HalfEdge> edges = new List<HalfEdge> { triangle.AB, triangle.BC, triangle.CA };
+			List<HalfEdge> edges = new List<HalfEdge>();
+			if (containedInfo.First < 0) { return false; }
+
+			if (containedInfo.First == 0)
+			{
+				edges.Add(containedInfo.Second.AB);
+				edges.Add(containedInfo.Second.BC);
+				edges.Add(containedInfo.Second.CA);
+			}
+			else
+			{
+				edges.Add(containedInfo.Second.GetEdgeByDirection(containedInfo.First));
+				edges.Add(edges.back().Pair);
+			}
+
 			for (; edges.Count != 0; )
 			{
 				HalfEdge current = edges.popBack();
@@ -316,32 +395,21 @@ namespace Delaunay
 				}
 
 				// Line cross circle.
-				if (MathUtility.MinDistance(position, current.Src.Position, current.Dest.Position) >= radius)
+				if (MathUtility.MinDistance2Segment(position, current.Src.Position, current.Dest.Position) >= radius)
 				{
 					continue;
 				}
 
-				// Cross constraint edge.
-				if (current.Constraint || current.Pair.Constraint)
+				// Cross constrained edge.
+				if (current.Constrained || current.Pair.Constrained)
 				{
 					return false;
 				}
 
-				Triangle triangle2 = current.Pair.Face;
-				if (triangle2 == null) { continue; }
+				if (current.Pair.Face == null) { continue; }
 
-				HalfEdge e1 = triangle2.AB, e2 = triangle2.BC;
-				if (triangle2.AB.Pair == current)
-				{
-					e1 = triangle2.BC; e2 = triangle2.CA;
-				}
-				else if (triangle2.BC.Pair == current)
-				{
-					e1 = triangle2.AB; e2 = triangle2.CA;
-				}
-
-				edges.Add(e1);
-				edges.Add(e2);
+				edges.Add(current.Pair.Next);
+				edges.Add(current.Pair.Next.Next);
 			}
 
 			return true;
@@ -372,17 +440,17 @@ namespace Delaunay
 			return null;
 		}
 
-		HalfEdge ConstraintCrossEdges(ref Vertex src, Vertex dest, HalfEdge crossedEdge)
+		HalfEdge OnConstrainedEdgeCrossEdges(ref Vertex src, Vertex dest, HalfEdge crossedEdge)
 		{
-			List<Vertex> up = new List<Vertex>();
-			List<Vertex> low = new List<Vertex>();
-			List<HalfEdge> crossedEdges = new List<HalfEdge>();
+			List<Vertex> upper = new List<Vertex>();
+			List<Vertex> lower = new List<Vertex>();
+			List<HalfEdge> edges = new List<HalfEdge>();
 
-			Vertex newSrc = CollectCrossedTriangles(crossedEdges, up, low, src, dest, crossedEdge);
+			Vertex newSrc = CollectCrossedUnconstrainedEdges(edges, lower, upper, src, dest, crossedEdge);
 
-			for (int i = 0; i < crossedEdges.Count; ++i)
+			for (int i = 0; i < edges.Count; ++i)
 			{
-				HalfEdge edge = crossedEdges[i];
+				HalfEdge edge = edges[i];
 				if (edge.Face != null)
 				{
 					geomManager.ReleaseTriangle(edge.Face);
@@ -394,55 +462,92 @@ namespace Delaunay
 				}
 			}
 
-			CreateTriangles(PolygonTriangulation.Triangulate(low, dest, src));
-			CreateTriangles(PolygonTriangulation.Triangulate(up, src, dest));
+			CreateTriangles(PolygonTriangulation.Triangulate(lower, dest, src));
+			CreateTriangles(PolygonTriangulation.Triangulate(upper, src, dest));
 
-			HalfEdge constraintEdge = geomManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
-			Utility.Verify(constraintEdge != null);
-			constraintEdge.Constraint = true;
+			HalfEdge constrainedEdge = geomManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
+			Utility.Verify(constrainedEdge != null);
+			constrainedEdge.Constrained = true;
 
 			src = newSrc;
-			return constraintEdge;
+			return constrainedEdge;
 		}
 
-		Vertex CollectCrossedTriangles(List<HalfEdge> crossedTriangles, List<Vertex> up, List<Vertex> low, Vertex src, Vertex dest, HalfEdge start)
+		Vector3 CollectCrossedUnconstrainedEdges(List<HalfEdge> answer, Vector3 src, Vector3 dest, float radius)
+		{
+			Vector3 srcDest = dest - src;
+
+			HalfEdge first = null;
+
+			for (; !first.Face.Contains(dest); )
+			{
+				Utility.Verify(!first.Constrained, "Crossed constrained edge");
+				answer.Add(first);
+
+				HalfEdge opposedTriangle = first.Pair;
+
+				Utility.Verify(opposedTriangle != null);
+
+				Vertex opposedVertex = opposedTriangle.Next.Dest;
+				if ((opposedVertex.Position - src).cross2(srcDest) < 0)
+				{
+					first = opposedTriangle.Next;
+				}
+				else
+				{
+					first = opposedTriangle.Next.Next;
+				}
+
+				if (MathUtility.PointOnSegment(opposedVertex.Position, src, dest))
+				{
+					answer.Add(opposedTriangle);
+					src = opposedVertex.Position;
+					break;
+				}
+			}
+
+			return src;
+		}
+
+		Vertex CollectCrossedUnconstrainedEdges(List<HalfEdge> answer, List<Vertex> lowerVertices, List<Vertex> upperVertices, Vertex src, Vertex dest, HalfEdge start)
 		{
 			Vector3 srcDest = dest.Position - src.Position;
 
-			Vertex v = src;
+			Vertex current = src;
 			for (; !start.Face.Contains(dest.Position); )
 			{
-				Utility.Verify(!start.Constraint, "Crossed constraint edge");
-				crossedTriangles.Add(start);
+				Utility.Verify(!start.Constrained, "Crossed constrained edge");
+				answer.Add(start);
 
-				HalfEdge opposedTriangle = start.Face.GetOpposite(v);
+				HalfEdge opposedTriangle = start.Face.GetOpposite(current);
 
 				Utility.Verify(opposedTriangle != null);
 
 				Vertex opposedVertex = opposedTriangle.Next.Dest;
 				if ((opposedVertex.Position - src.Position).cross2(srcDest) < 0)
 				{
-					v = opposedTriangle.Src;
+					current = opposedTriangle.Src;
 				}
 				else
 				{
-					v = opposedTriangle.Dest;
+					current = opposedTriangle.Dest;
 				}
 
 				float cr = (opposedTriangle.Dest.Position - src.Position).cross2(srcDest);
-				Utility.Verify(!Mathf.Approximately(0, cr), "Not implement");
-				List<Vertex> activeContainer = ((cr < 0) ? up : low);
+				Utility.Verify(!MathUtility.Approximately(0, cr), "Not implement");
+
+				List<Vertex> activeContainer = ((cr < 0) ? upperVertices : lowerVertices);
 
 				if (!activeContainer.Contains(opposedTriangle.Dest)) { activeContainer.Add(opposedTriangle.Dest); }
 
 				cr = (opposedTriangle.Src.Position - src.Position).cross2(srcDest);
-				activeContainer = ((cr < 0) ? up : low);
+				activeContainer = ((cr < 0) ? upperVertices : lowerVertices);
 
 				if (!activeContainer.Contains(opposedTriangle.Src)) { activeContainer.Add(opposedTriangle.Src); }
 
 				if (MathUtility.PointOnSegment(opposedVertex.Position, src.Position, dest.Position))
 				{
-					crossedTriangles.Add(opposedTriangle);
+					answer.Add(opposedTriangle);
 					src = opposedVertex;
 					break;
 				}
@@ -525,7 +630,7 @@ namespace Delaunay
 			}
 		}
 
-		bool FindCrossedEdge(out Tuple2<HalfEdge, CrossState> answer, HalfEdge ray, Vertex src, Vertex dest)
+		bool FindCrossedEdge(out Tuple2<HalfEdge, CrossState> answer, HalfEdge ray, Vector3 src, Vector3 dest)
 		{
 			List<HalfEdge> cycle = ray.Cycle;
 			answer = new Tuple2<HalfEdge, CrossState>();
@@ -535,7 +640,7 @@ namespace Delaunay
 				Vector3 point;
 				CrossState crossState = MathUtility.GetLineCrossPoint(out point,
 					edge.Src.Position, edge.Dest.Position,
-					src.Position, dest.Position
+					src, dest
 				);
 
 				if (crossState == CrossState.FullyOverlaps
@@ -544,7 +649,7 @@ namespace Delaunay
 					answer.Second = crossState;
 					answer.First = edge;
 					if (crossState == CrossState.FullyOverlaps
-						&& (dest.Position.equals2(edge.Src.Position) || src.Position.equals2(edge.Dest.Position)))
+						&& (dest.equals2(edge.Src.Position) || src.equals2(edge.Dest.Position)))
 					{
 						answer.First = answer.First.Pair;
 					}
@@ -704,7 +809,7 @@ namespace Delaunay
 			for (; stack.Count != 0; )
 			{
 				halfEdge = stack.Pop();
-				if (halfEdge.Constraint || halfEdge.Pair.Constraint) { continue; }
+				if (halfEdge.Constrained || halfEdge.Pair.Constrained) { continue; }
 
 				Triangle x = halfEdge.Face;
 				Triangle y = halfEdge.Pair.Face;

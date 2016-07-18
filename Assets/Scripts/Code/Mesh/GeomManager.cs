@@ -203,9 +203,10 @@ namespace Delaunay
 
 			for (; face != null; )
 			{
-				if (face.HasVertex(position))
+				int index = face.VertexIndex(position);
+				if (index >= 0)
 				{
-					answer.Set(-1, face);
+					answer.Set(-(index + 1), face);
 					return answer;
 				}
 

@@ -77,8 +77,8 @@ namespace Delaunay
 					Utility.Verify(currentNode.G == 0 || currentNode.Portal != null);
 
 					// https://raygun.com/blog/2015/01/game-development-triangulated-spaces-part-2/
-					float newH = MathUtility.MinDistance(destPosition, portal.Src.Position, portal.Dest.Position);
-					float newG = MathUtility.MinDistance(startPosition, portal.Src.Position, portal.Dest.Position);
+					float newH = MathUtility.MinDistance2Segment(destPosition, portal.Src.Position, portal.Dest.Position);
+					float newG = MathUtility.MinDistance2Segment(startPosition, portal.Src.Position, portal.Dest.Position);
 					
 					if (currentNode.Portal != null)
 					{
@@ -97,7 +97,6 @@ namespace Delaunay
 			}
 
 			List<HalfEdge> path = CreatePath(currentNode);
-			TruncateByRadius(path, radius);
 
 			// Create truncated path if currentNode != destNode.
 			//if (currentNode == destNode) { path = CreatePath(destNode); }
@@ -178,11 +177,6 @@ namespace Delaunay
 			}
 
 			return Mathf.Acos(v1.dot2(v2) / (v1.magnitude2() * v2.magnitude2())) * radius;
-		}
-
-		static void TruncateByRadius(List<HalfEdge> path, float radius)
-		{
-
 		}
 	}
 }

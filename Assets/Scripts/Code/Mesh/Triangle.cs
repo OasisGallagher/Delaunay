@@ -84,11 +84,6 @@ namespace Delaunay
 			return float.NaN;
 		}
 
-		public bool Place(out Vector3 center, Vector3 reference, float radius)
-		{
-			return MathUtility.Place(out center, A.Position, B.Position, C.Position, reference, radius);
-		}
-
 		public HalfEdge GetOpposite(Vertex from)
 		{
 			foreach (HalfEdge edge in BoundingEdges)
@@ -124,42 +119,37 @@ namespace Delaunay
 			return MathUtility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, p, onEdge);
 		}
 
-		public Vertex FindVertex(Vector3 point)
-		{
-			if (A.Position.equals2(point)) { return A; }
-			if (B.Position.equals2(point)) { return B; }
-			if (C.Position.equals2(point)) { return C; }
-			return null;
-		}
-
 		public int GetPointDirection(Vector3 point)
 		{
 			float t0 = point.cross2(B.Position, A.Position);
-			if (t0 > 0) { return -1; }
-
-			if (Mathf.Approximately(t0, 0)
+			
+			if (MathUtility.Approximately(t0, 0)
 				&& MathUtility.DiagonalRectContains(point, B.Position, A.Position))
 			{
 				return 1;
 			}
 
-			float t1 = point.cross2(C.Position, B.Position);
-			if (t1 > 0) { return -2; }
+			if (t0 > 0) { return -1; }
 
-			if (Mathf.Approximately(t1, 0)
+			float t1 = point.cross2(C.Position, B.Position);
+
+			if (MathUtility.Approximately(t1, 0)
 				&& MathUtility.DiagonalRectContains(point, C.Position, B.Position))
 			{
 				return 2;
 			}
 
-			float t2 = point.cross2(A.Position, C.Position);
-			if (t2 > 0) { return -3; }
+			if (t1 > 0) { return -2; }
 
-			if (Mathf.Approximately(t2, 0)
+			float t2 = point.cross2(A.Position, C.Position);
+
+			if (MathUtility.Approximately(t2, 0)
 				&& MathUtility.DiagonalRectContains(point, A.Position, C.Position))
 			{
 				return 3;
 			}
+
+			if (t2 > 0) { return -3; }
 
 			return 0;
 		}
@@ -169,23 +159,24 @@ namespace Delaunay
 			return "Triangle_" + ID + "_" + A.ToString() + " => " + B.ToString() + " => " + C.ToString();
 		}
 
-		public bool HasVertex(Vertex v)
+		public Vertex GetVertexByIndex(int index)
 		{
-			return A.equals2(v) || B.equals2(v) || C.equals2(v);
+			Utility.Verify(index >= 1 && index <= 3);
+			return (index == 1) ? A : (index == 2 ? B : C);
+		}
+
+		public int VertexIndex(Vector3 position)
+		{
+			if (A.Position.equals2(position)) { return 0; }
+			if (B.Position.equals2(position)) { return 1; }
+			if (C.Position.equals2(position)) { return 2; }
+
+			return -1;
 		}
 
 		public bool HasVertex(Vector3 position)
 		{
-			return A.Position.equals2(position)
-				|| B.Position.equals2(position) 
-				|| C.Position.equals2(position);
-		}
-
-		void UpdateWidth()
-		{
-			widthA = CalculateWidth(AB, CA);
-			widthB = CalculateWidth(BC, AB);
-			widthC = CalculateWidth(CA, BC);
+			return VertexIndex(position) >= 0;
 		}
 
 		Vertex GetIntersectVertex(HalfEdge ea, HalfEdge eb)
@@ -215,9 +206,9 @@ namespace Delaunay
 				return d;
 			}
 
-			if (ec.Constraint)
+			if (ec.Constrained)
 			{
-				return MathUtility.MinDistance(vc.Position, ec.Src.Position, ec.Dest.Position);
+				return MathUtility.MinDistance2Segment(vc.Position, ec.Src.Position, ec.Dest.Position);
 			}
 
 			return SearchWidth(vc, this, ec, d);
@@ -232,13 +223,13 @@ namespace Delaunay
 				return d;
 			}
 
-			float d2 = MathUtility.MinDistance(c.Position, e.Src.Position, e.Dest.Position);
+			float d2 = MathUtility.MinDistance2Segment(c.Position, e.Src.Position, e.Dest.Position);
 			if (d2 > d)
 			{
 				return d;
 			}
 
-			if (e.Constraint)
+			if (e.Constrained)
 			{
 				return d2;
 			}
@@ -289,7 +280,7 @@ namespace Delaunay
 			List<HalfEdge> answer = new List<HalfEdge>(3);
 			foreach (HalfEdge edge in BoundingEdges)
 			{
-				if (edge.Constraint || edge.Pair.Constraint) { continue; }
+				if (edge.Constrained || edge.Pair.Constrained) { continue; }
 
 				if (edge.Pair.Face != null && edge.Pair.Face.Walkable)
 				{

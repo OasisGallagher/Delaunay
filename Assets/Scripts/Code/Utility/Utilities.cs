@@ -31,7 +31,7 @@ namespace Delaunay
 			if (b1 != b2) { return (b2 ? -1 : 1); }
 
 			float cr = lhs.Position.cross2(rhs.Position, pivot);
-			if (Mathf.Approximately(0, cr))
+			if (MathUtility.Approximately(0, cr))
 			{
 				Vector3 lp = lhs.Position - pivot;
 				Vector3 rp = rhs.Position - pivot;
@@ -101,6 +101,12 @@ namespace Delaunay
 
 	public static class MathUtility
 	{
+		public static bool Approximately(float a, float b = 0f)
+		{
+			//Debug.Log("FIX ME");
+			return Mathf.Abs(a - b) < 1e-5f;
+		}
+
 		public static Vector3 Centroid(Vector3[] a)
 		{
 			return Centroid(a[0], a[1], a[2]);
@@ -153,64 +159,12 @@ namespace Delaunay
 			triangle[2] = triangle[2] + (center - triangle[2]) * value;
 		}
 
-		public static Vector3 Nearest(Vector3 position, params Vector3[] list)
-		{
-			Vector3 answer = position;
-			float minSqrDist = float.PositiveInfinity;
-			
-			foreach (Vector3 item in list)
-			{
-				float sqrDist = (item - position).sqrMagnitude2();
-				if (sqrDist < minSqrDist)
-				{
-					answer = item;
-					minSqrDist = sqrDist;
-				}
-			}
-
-			return answer;
-		}
-
 		public static float GetInscribeCircleRadius(Vector3 va, Vector3 vb, Vector3 vc)
 		{
 			float la = (va - vb).magnitude2();
 			float lb = (vb - vc).magnitude2();
 			float lc = (vc - va).magnitude2();
 			return Mathf.Sqrt((la + lb - lc) * (la - lb + lc) * (-la + lb + lc) / (la + lb + lc)) / 2f;
-		}
-
-		public static bool Place(out Vector3 answer, Vector3 va, Vector3 vb, Vector3 vc, Vector3 reference, float radius)
-		{
-			answer = Vector3.zero;
-
-			if (GetInscribeCircleRadius(va, vb, vc) < radius)
-			{
-				return false;
-			}
-
-			Vector3 nearestVertex = MathUtility.Nearest(reference, va, vb, vc);
-			Vector3 other1 = va, other2 = vb;
-			if (nearestVertex == va)
-			{
-				other1 = vb;
-				other2 = vc;
-			}
-			else if (nearestVertex == vb)
-			{
-				other1 = va;
-				other2 = vc;
-			}
-
-			float magnitude = (other1 - nearestVertex).magnitude2() * (other2 - nearestVertex).magnitude2();
-			float radian = other1.cross2(other2, nearestVertex) / magnitude;
-
-			radian = Mathf.Asin(radian) / 2f;
-			magnitude = Mathf.Abs(radius / Mathf.Sin(radian));
-
-			answer = (other1 - nearestVertex).normalized * magnitude;
-			answer = Rotate(answer, -radian, Vector3.zero) + nearestVertex;
-
-			return true;
 		}
 
 		public static CrossState SegmentCross(out Vector2 answer, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
@@ -221,7 +175,7 @@ namespace Delaunay
 
 			answer = Vector2.zero;
 
-			if (Mathf.Approximately(0, crs))
+			if (MathUtility.Approximately(0, crs))
 			{
 				bool onSeg1 = PointOnSegment(p, q, qd);
 				bool onSeg2 = PointOnSegment(pd, q, qd);
@@ -266,7 +220,7 @@ namespace Delaunay
 		public static bool PointOnSegment(Vector3 point, Vector3 segSrc, Vector3 segDest)
 		{
 			if (!DiagonalRectContains(point, segSrc, segDest)) { return false; }
-			return Mathf.Approximately(0, point.cross2(segDest, segSrc));
+			return MathUtility.Approximately(0, point.cross2(segDest, segSrc));
 		}
 
 		public static bool DiagonalRectContains(Vector3 point, Vector3 tl, Vector3 rb)
@@ -291,7 +245,7 @@ namespace Delaunay
 			{
 				Vector3 currentPosition = (i < positions.Count) ? positions[i] : positions[0];
 				float cr = point.cross2(currentPosition, positions[i - 1]);
-				if (Mathf.Approximately(0f, cr) && DiagonalRectContains(point, currentPosition, positions[i - 1]))
+				if (MathUtility.Approximately(0f, cr) && DiagonalRectContains(point, currentPosition, positions[i - 1]))
 				{
 					return onEdge;
 				}
@@ -305,7 +259,7 @@ namespace Delaunay
 			return true;
 		}
 		
-		public static float MinDistance(Vector3 point, Vector3 segSrc, Vector3 segDest)
+		public static float MinDistance2Segment(Vector3 point, Vector3 segSrc, Vector3 segDest)
 		{
 			Vector3 ray = segDest - segSrc;
 			float ratio = (point - segSrc).dot2(ray) / ray.sqrMagnitude2();
@@ -335,7 +289,7 @@ namespace Delaunay
 		{
 			radius *= radius;
 			float lengthSquared = (point - center).sqrMagnitude2();
-			if (Mathf.Approximately(lengthSquared, radius))
+			if (MathUtility.Approximately(lengthSquared, radius))
 			{
 				return onCircle;
 			}
@@ -374,7 +328,7 @@ namespace Delaunay
 			Vector3 normal = Vector3.Cross(b - a, c - a);
 			float t = Vector3.Dot(dir, normal);
 			float d = Vector3.Dot(a - p, normal);
-			Utility.Verify(!Mathf.Approximately(0, t), "the line and plane are parallel");
+			Utility.Verify(!MathUtility.Approximately(0, t), "the line and plane are parallel");
 			return p + dir * d / t;
 		}
 
@@ -384,7 +338,7 @@ namespace Delaunay
 
 			Utility.Verify(dist >= radius, "center = {0}, radius = {1}, point = {2}, clockwise = {3}", center, radius, point, clockwise);
 
-			if (Mathf.Approximately(dist, radius))
+			if (MathUtility.Approximately(dist, radius))
 			{
 				return point;
 			}
@@ -400,9 +354,9 @@ namespace Delaunay
 			float dist = (center1 - center2).magnitude2();
 			Utility.Verify(dist >= (radius1 + radius2));
 
-			if (Mathf.Approximately(dist, radius1 + radius2))
+			if (MathUtility.Approximately(dist, radius1 + radius2))
 			{
-				Debug.Log("Mathf.Approximately(dist, radius1 + radius2)");
+				Debug.Log("MathUtility.Approximately(dist, radius1 + radius2)");
 				Vector3 point = (center2 - center1).normalized * radius1 + center1;
 				return new Tuple2<Vector3, Vector3>(point, point);
 			}
@@ -420,7 +374,7 @@ namespace Delaunay
 
 		public static Tuple2<Vector3, Vector3> GetOutterTangent(Vector3 center1, float radius1, Vector3 center2, float radius2, bool clockwise)
 		{
-			if (Mathf.Approximately(radius1, radius2))
+			if (MathUtility.Approximately(radius1, radius2))
 			{
 				Vector3 d = center2 - center1;
 				d = d.normalized * radius1;

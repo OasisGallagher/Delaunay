@@ -66,12 +66,14 @@ namespace Delaunay
 
 				answer.Add(edge.Face);
 
+				HalfEdge e1 = edge.Next, e2 = e1.Next;
+				/*
 				HalfEdge e1 = edge.Face.BC, e2 = edge.Face.CA;
 				if (edge == edge.Face.BC) { e1 = edge.Face.AB; e2 = edge.Face.CA; }
 				if (edge == edge.Face.CA) { e1 = edge.Face.AB; e2 = edge.Face.BC; }
-
-				if (!e1.Constraint && !e1.Pair.Constraint) { queue.Enqueue(e1.Pair); }
-				if (!e2.Constraint && !e2.Pair.Constraint) { queue.Enqueue(e2.Pair); }
+				*/
+				if (!e1.Constrained && !e1.Pair.Constrained) { queue.Enqueue(e1.Pair); }
+				if (!e2.Constrained && !e2.Pair.Constrained) { queue.Enqueue(e2.Pair); }
 			}
 
 			return answer;

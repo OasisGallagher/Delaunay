@@ -63,7 +63,7 @@ namespace Delaunay
 				if (b1 != b2) { return b2 ? -1 : 1; }
 
 				float c = (lhs - start).cross2(rhs - start);
-				if (!Mathf.Approximately(c, 0)) { return c > 0 ? -1 : 1; }
+				if (!MathUtility.Approximately(c, 0)) { return c > 0 ? -1 : 1; }
 
 				Vector3 drhs = rhs - start;
 				Vector3 dlhs = lhs - start;

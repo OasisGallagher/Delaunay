@@ -10,9 +10,9 @@ namespace Delaunay
 			return EarClipping(polygon);
 		}
 
-		public static List<Vertex> Triangulate(List<Vertex> polygon, Vertex constraintSrc, Vertex constraintDest)
+		public static List<Vertex> Triangulate(List<Vertex> polygon, Vertex constrainedEdgeSrc, Vertex constrainedEdgeDest)
 		{
-			return TriangulatePolygonDelaunay(polygon, constraintSrc, constraintDest);
+			return TriangulatePolygonDelaunay(polygon, constrainedEdgeSrc, constrainedEdgeDest);
 		}
 
 		#region Ear clipping
@@ -90,7 +90,7 @@ namespace Delaunay
 				vertices[next].vertex.Position 
 			};
 
-			if (Mathf.Approximately(points[0].cross2(points[2], points[1]), 0f))
+			if (MathUtility.Approximately(points[0].cross2(points[2], points[1]), 0f))
 			{
 				return false;
 			}

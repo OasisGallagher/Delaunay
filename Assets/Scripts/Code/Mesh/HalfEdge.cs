@@ -45,7 +45,7 @@ namespace Delaunay
 
 		public Vector3 Center { get { return (Src.Position + Dest.Position) / 2f; } }
 
-		public bool Constraint { get; set; }
+		public bool Constrained { get; set; }
 
 		public Vertex Src
 		{
@@ -78,7 +78,7 @@ namespace Delaunay
 			writer.Write(Dest != null ? Dest.ID : -1);
 			writer.Write(Next != null ? Next.ID : -1);
 			writer.Write(Pair != null ? Pair.ID : -1);
-			writer.Write(Constraint);
+			writer.Write(Constrained);
 		}
 
 		public void ReadBinary(BinaryReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
@@ -111,7 +111,7 @@ namespace Delaunay
 
 			Utility.Verify(Pair != null);
 
-			Constraint = reader.ReadBoolean();
+			Constrained = reader.ReadBoolean();
 
 			// Face is updated by Triangle.
 		}

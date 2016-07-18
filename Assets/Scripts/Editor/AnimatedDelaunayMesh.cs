@@ -45,12 +45,12 @@ namespace Delaunay
 				for (; e.MoveNext(); )
 				{
 					Vertex currentVertex = geomManager.CreateVertex(e.Current);
-					yield return CoAddConstraintEdge(polygonBoundingEdges, prevVertex, currentVertex);
+					yield return CoAddConstrainedEdge(polygonBoundingEdges, prevVertex, currentVertex);
 
 					prevVertex = currentVertex;
 				}
 
-				yield return CoAddConstraintEdge(polygonBoundingEdges, prevVertex, firstVertex);
+				yield return CoAddConstrainedEdge(polygonBoundingEdges, prevVertex, firstVertex);
 			}
 
 			Obstacle obstacle = geomManager.CreateObstacle(polygonBoundingEdges);
@@ -62,7 +62,7 @@ namespace Delaunay
 			}
 		}
 
-		IEnumerator CoAddConstraintEdge(List<HalfEdge> container, Vertex src, Vertex dest)
+		IEnumerator CoAddConstrainedEdge(List<HalfEdge> container, Vertex src, Vertex dest)
 		{
 			if (Append(src))
 			{
@@ -76,7 +76,7 @@ namespace Delaunay
 
 			for (; src != dest; )
 			{
-				container.Add(AddConstraintAt(ref src, dest));
+				container.Add(AddConstrainedEdgeAt(ref src, dest));
 				yield return Wait(Transition);
 			}
 		}
