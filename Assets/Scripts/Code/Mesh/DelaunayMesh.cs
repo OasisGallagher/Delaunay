@@ -157,7 +157,7 @@ namespace Delaunay
 				return from;
 			}
 
-			if ((to - from).cross2(edge.Dest.Position - edge.Src.Position) < 0)
+			if ((to - from).cross2(edge.Dest.Position - edge.Src.Position) > 0)
 			{
 				edge = edge.Pair;
 			}
@@ -175,24 +175,18 @@ namespace Delaunay
 
 				Utility.Verify(crossState == CrossState.CrossOnSegment || crossState == CrossState.CrossOnExtLine);
 
-				if (segCrossAnswer.x < 0) { continue; }
-
-				if (crossState == CrossState.CrossOnExtLine)
-				{
-					from = to;
-					break;
-				}
+				if (segCrossAnswer.x < 0 || segCrossAnswer.x > 1) { continue; }
 
 				if (crossState == CrossState.CrossOnSegment)
 				{
 					Vector3 cross = from + segCrossAnswer.x * (to - from);
-					from = RaycastFromEdge(edge, cross, to, radius);
+					to = RaycastFromEdge(edge, cross, to, radius);
 					break;
 				}
 			}
 
 			Debug.Log("~ Raycast with edges");
-			return from;
+			return to;
 		}
 
 		Vector3 RaycastFromTriangle(Triangle triangle, Vector3 from, Vector3 to, float radius)
