@@ -27,7 +27,7 @@ namespace Delaunay
 			return hit.point;
 		}
 
-		void Start()
+		void Awake()
 		{
 			delaunayMesh = new DelaunayMesh(new Vector3(-10, 0, -10), 20f, 20f);
 
@@ -35,8 +35,6 @@ namespace Delaunay
 			print("Load dm file: " + dm);
 
 			delaunayMesh.Load(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
-
-			gameObject.AddComponent<StressTest>();
 		}
 
 		void OnDisable()

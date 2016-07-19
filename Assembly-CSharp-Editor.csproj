@@ -50,7 +50,6 @@
      <Compile Include="Assets\Scripts\Editor\ConvexHull.cs" />
      <Compile Include="Assets\Scripts\Editor\CustomEditors\MeshDebugDrawEditor.cs" />
      <Compile Include="Assets\Scripts\Editor\CustomEditors\PlayerComponentEditor.cs" />
-     <Compile Include="Assets\Scripts\Editor\CustomEditors\StressTestEditor.cs" />
      <Compile Include="Assets\Scripts\Editor\EditCommand.cs" />
      <Compile Include="Assets\Scripts\Editor\EditorCoroutineRunner.cs" />
      <Compile Include="Assets\Scripts\Editor\EditorDebugDraw.cs" />
