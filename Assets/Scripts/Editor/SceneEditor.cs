@@ -46,10 +46,10 @@ namespace Delaunay
 			editStates = new BitArray(kMaxVertices);
 
 #if ANIMATED_DELAUNAY_MESH
-			delaunayMesh = new AnimatedDelaunayMesh();
+			delaunayMesh = new AnimatedDelaunayMesh(new Vector3(-10f, 0, -10f), 20f, 20f);
 			delaunayMesh.Transition = 0.5f;
 #else
-			delaunayMesh = new DelaunayMesh();
+			delaunayMesh = new DelaunayMesh(new Vector3(-10f, 0, -10f), 20f, 20f);
 #endif
 			debugDraw = new EditorDebugDraw(delaunayMesh);
 

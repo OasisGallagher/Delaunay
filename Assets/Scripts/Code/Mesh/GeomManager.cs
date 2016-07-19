@@ -7,10 +7,16 @@ namespace Delaunay
 {
 	public class GeomManager
 	{
+		TiledMap tiledMap = null;
+
 		List<Obstacle> obstacleContainer = new List<Obstacle>();
 		List<BorderSet> borderSetContainer = new List<BorderSet>();
-		TiledMap tiledMap = new TiledMap(new Vector3(-10, 0, -10), 1f, 20, 20);
 		SortedDictionary<Vertex, List<HalfEdge>> halfEdgeContainer = new SortedDictionary<Vertex, List<HalfEdge>>(EditorConstants.kVertexComparer);
+
+		public GeomManager(Vector3 origin, float width, float height)
+		{
+			tiledMap = new TiledMap(origin, 1f, Mathf.CeilToInt(height), Mathf.CeilToInt(width));
+		}
 
 		public Vertex CreateVertex(Vector3 position)
 		{

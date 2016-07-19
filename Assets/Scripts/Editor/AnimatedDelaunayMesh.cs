@@ -9,6 +9,12 @@ namespace Delaunay
 	{
 		public float Transition = 1f;
 
+		public AnimatedDelaunayMesh(Vector3 origin, float width, float height)
+			: base(origin, width, height)
+		{
+
+		}
+
 		public bool AnimatedAddObstacle(IEnumerable<Vector3> vertices, Action<Obstacle> onCreate)
 		{
 			if (EditorCoroutineRunner.Instance.Count == 0)

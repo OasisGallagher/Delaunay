@@ -7,25 +7,36 @@ namespace Delaunay
 {
 	public class Stage : MonoBehaviour
 	{
-		GameObject destination;
-		GameObject player;
-		PlayerComponent playerComponent;
-		Vector3? raycastResult;
-
 		public DelaunayMesh delaunayMesh;
+
+		public float Width { get { return delaunayMesh.Width; } }
+		public float Height { get { return delaunayMesh.Height; } }
+
+		public Vector3 Origin { get { return delaunayMesh.Origin; } }
+
+		public Vector3 PhysicsHeightTest(Vector3 point)
+		{
+			point.y = 25f;
+			RaycastHit hit;
+			if (!Physics.Raycast(point, Vector3.down, out hit, 100f))
+			{
+				Debug.LogError("Raycast failed");
+				return point;
+			}
+
+			return hit.point;
+		}
 
 		void Start()
 		{
-			delaunayMesh = new DelaunayMesh();
+			delaunayMesh = new DelaunayMesh(new Vector3(-10, 0, -10), 20f, 20f);
 
-			destination = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/BallDest"));
-			player = (GameObject)GameObject.Instantiate(Resources.Load("Prefabs/Player"));
-			player.GetComponent<Steering>().SetTerrain(delaunayMesh);
+			string dm = Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm").Replace('\\', '/');
+			print("Load dm file: " + dm);
 
-			playerComponent = player.GetComponent<PlayerComponent>();
-
-			print(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
 			delaunayMesh.Load(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
+
+			gameObject.AddComponent<StressTest>();
 		}
 
 		void OnDisable()
@@ -52,53 +63,11 @@ namespace Delaunay
 			GUILayout.EndArea();
 		}
 
-		void Update()
-		{
-			Vector3 point = Vector3.zero;
-			if (Input.GetMouseButtonUp(2) && MousePositionToStage(out point))
-			{
-				player.transform.position = delaunayMesh.GetNearestPoint(point, playerComponent.Radius);
-				player.GetComponent<Steering>().SetPath(null);
-			}
-			/*
-			if (Input.GetMouseButtonUp(1) && MousePositionToStage(out point))
-			{
-				Vector3 src = player.transform.position;
-				Vector3 dest = delaunayMesh.GetNearestPoint(point, playerComponent.Radius);
-				player.GetComponent<Steering>().SetPath(delaunayMesh.FindPath(src, dest, playerComponent.Radius));
-				destination.transform.position = dest;
-			}
-			*/
-			if (Input.GetMouseButtonUp(1) && MousePositionToStage(out point))
-			{
-				raycastResult = delaunayMesh.Raycast(playerComponent.transform.position, point, playerComponent.Radius);
-				print("Raycast finished");
-				/*
-				point.Set(5.05952263f, 0.1f, 4.396843f);
-				delaunayMesh.GetNearestPoint(point, 0.5f);
-				 */
-			}
-
-			Vector3 scale = new Vector3(playerComponent.Radius * 2f, 1, playerComponent.Radius * 2f);
-			player.transform.localScale = scale;
-		}
-
-		void OnDrawGizmos()
-		{
-			if (raycastResult != null)
-			{
-				Color oldColor = Gizmos.color;
-				Gizmos.color = Color.red;
-				Gizmos.DrawLine(playerComponent.transform.position + EditorConstants.kMeshOffset, raycastResult.Value + EditorConstants.kMeshOffset);
-				Gizmos.color = oldColor;
-			}
-		}
-
-		bool MousePositionToStage(out Vector3 point, Vector3? src = null)
+		bool MousePositionToStage(out Vector3 point)
 		{
 			RaycastHit hit;
 			point = Vector3.zero;
-			if (!Physics.Raycast(Camera.main.ScreenPointToRay(src ?? Input.mousePosition), out hit, 100))
+			if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100))
 			{
 				Debug.LogError("Raycast failed");
 				return false;

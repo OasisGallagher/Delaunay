@@ -10,14 +10,19 @@ namespace Delaunay
 		const float kGetNearestMaxDistance = 8;
 		const int kGetNearestDistanceSampleCount = 10;
 		const int kGetNearestRadianSampleCount = 8;
+		const float kRaycastSearchStep = 0.1f;
 
 		List<Vector3> superBorder;
 		
-		public GeomManager geomManager;
+		protected GeomManager geomManager;
 
-		public DelaunayMesh()
+		public DelaunayMesh(Vector3 origin, float width, float height)
 		{
-			geomManager = new GeomManager();
+			Width = width;
+			Height = height;
+			Origin = origin;
+
+			geomManager = new GeomManager(origin, width, height);
 			superBorder = new List<Vector3>();
 		}
 
@@ -117,84 +122,13 @@ namespace Delaunay
 
 		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
 		{
-			Debug.Log("Raycast");
 			if (!IsValidPosition(from, radius))
 			{
 				Debug.Log("Stuck at " + from);
 				return from;
 			}
 
-			Tuple2<int, Triangle> containedInfo = geomManager.FindVertexContainedTriangle(from);
-
-			Utility.Verify(containedInfo.Second != null, "can not locate position " + from);
-
-			if (containedInfo.First < 0)	// [-1, -2, -3]
-			{
-				Debug.LogError("Unhandled case. radius = " + radius);
-				return from;
-			}
-
-			Vector3 ans = Vector3.zero;
-			if (containedInfo.First == 0)
-			{
-				ans = RaycastFromTriangle(containedInfo.Second, from, to, radius);
-				Debug.Log("~ Raycast");
-				return ans;
-			}
-
-			HalfEdge edge = containedInfo.Second.GetEdgeByDirection(containedInfo.First);
-			ans = RaycastFromEdge(edge, from, to, radius);
-			Debug.Log("~ Raycast");
-			return ans;
-		}
-
-		Vector3 RaycastFromEdge(HalfEdge edge, Vector3 from, Vector3 to, float radius)
-		{
-			if (from.equals2(to)) { return from; }
-
-			if (!IsValidPosition(from, radius))
-			{
-				return from;
-			}
-
-			if ((to - from).cross2(edge.Dest.Position - edge.Src.Position) > 0)
-			{
-				edge = edge.Pair;
-			}
-
-			return RaycastWithEdges(new HalfEdge[] { edge.Next, edge.Next.Next }, from, to, radius);
-		}
-
-		Vector3 RaycastWithEdges(IEnumerable<HalfEdge> edges, Vector3 from, Vector3 to, float radius)
-		{
-			Debug.Log("Raycast with edges");
-			Vector2 segCrossAnswer = Vector2.zero;
-			foreach (HalfEdge edge in edges)
-			{
-				CrossState crossState = MathUtility.SegmentCross(out segCrossAnswer, from, to, edge.Src.Position, edge.Dest.Position);
-
-				Utility.Verify(crossState == CrossState.CrossOnSegment || crossState == CrossState.CrossOnExtLine);
-
-				if (segCrossAnswer.x < 0 || segCrossAnswer.x > 1) { continue; }
-
-				if (crossState == CrossState.CrossOnSegment)
-				{
-					Vector3 cross = from + segCrossAnswer.x * (to - from);
-					to = RaycastFromEdge(edge, cross, to, radius);
-					break;
-				}
-			}
-
-			Debug.Log("~ Raycast with edges");
-			return to;
-		}
-
-		Vector3 RaycastFromTriangle(Triangle triangle, Vector3 from, Vector3 to, float radius)
-		{
-			if (from.equals2(to)) { return from; }
-
-			HalfEdge[] edges = new HalfEdge[] { triangle.AB, triangle.BC, triangle.CA };
-			return RaycastWithEdges(edges, from, to, radius);
+			return RaycastFrom(from, to, radius);
 		}
 
 		public bool IsValidPosition(Vector3 position, float radius)
@@ -216,6 +150,11 @@ namespace Delaunay
 			return MathUtility.LineCrossPlane(triangle.A.Position, triangle.B.Position,triangle.C.Position, position, Vector3.down).y;
 			 */
 		}
+
+		public float Width { get; private set; }
+		public float Height { get; private set; }
+
+		public Vector3 Origin { get; private set; }
 
 		public bool HasSuperBorder
 		{
@@ -338,6 +277,103 @@ namespace Delaunay
 			}
 
 			return true;
+		}
+
+		Vector3 RaycastFrom(Vector3 from, Vector3 to, float radius)
+		{
+			Tuple2<int, Triangle> containedInfo = geomManager.FindVertexContainedTriangle(from);
+
+			Utility.Verify(containedInfo.Second != null, "can not locate position " + from);
+
+			if (containedInfo.First < 0)	// [-1, -2, -3]
+			{
+				Debug.LogError("Unhandled case. radius = " + radius);
+				return from;
+			}
+
+			Vector3 border = Vector3.zero;
+			if (containedInfo.First == 0)
+			{
+				border = RaycastWithEdges(containedInfo.Second.BoundingEdges, from, to, radius);
+			}
+			else
+			{
+				HalfEdge edge = containedInfo.Second.GetEdgeByDirection(containedInfo.First);
+				border = RaycastFromEdge(edge, from, to, radius);
+			}
+
+			return SearchRaycastPosition(from, border, radius, kRaycastSearchStep);
+		}
+
+		Vector3 SearchRaycastPosition(Vector3 from, Vector3 to, float radius, float step)
+		{
+			Vector3 dir = from - to;
+			float dist = dir.magnitude2();
+			dir.Normalize();
+
+			int count = Mathf.FloorToInt(dist / step);
+			for (int i = 0; i < count; ++i)
+			{
+				Vector3 position = i * step * dir + to;
+				if (IsValidPosition(position, radius))
+				{
+					return position;
+				}
+			}
+
+			return from;
+		}
+
+		Vector3 RaycastFromEdge(HalfEdge edge, Vector3 from, Vector3 to, float radius)
+		{
+			if (from.equals2(to) || edge.Constrained || edge.Pair.Constrained)
+			{
+				return from;
+			}
+
+			if (!IsValidPosition(from, radius))
+			{
+				return from;
+			}
+
+			if ((to - from).cross2(edge.Dest.Position - edge.Src.Position) > 0)
+			{
+				edge = edge.Pair;
+			}
+
+			if (edge.Face == null)
+			{
+				return from;
+			}
+
+			return RaycastWithEdges(new HalfEdge[] { edge.Next, edge.Next.Next }, from, to, radius);
+		}
+
+		Vector3 RaycastWithEdges(IEnumerable<HalfEdge> edges, Vector3 from, Vector3 to, float radius)
+		{
+			if (from.equals2(to))
+			{
+				return to;
+			}
+
+			Vector2 segCrossAnswer = Vector2.zero;
+			foreach (HalfEdge edge in edges)
+			{
+				CrossState crossState = MathUtility.SegmentCross(out segCrossAnswer, from, to, edge.Src.Position, edge.Dest.Position);
+
+				Utility.Verify(crossState == CrossState.CrossOnSegment || crossState == CrossState.CrossOnExtLine);
+
+				if (segCrossAnswer.x < 0 || segCrossAnswer.x > 1) { continue; }
+
+				if (crossState == CrossState.CrossOnSegment)
+				{
+					Vector3 cross = from + segCrossAnswer.x * (to - from);
+					to = RaycastFromEdge(edge, cross, to, radius);
+					break;
+				}
+			}
+
+			return to;
 		}
 
 		bool SearchValidPosition(ref Vector3 position, float radius, float maxDist, int distSampleCount, int circularSampleCount)
