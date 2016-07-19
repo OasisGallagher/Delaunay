@@ -5,6 +5,8 @@ namespace Delaunay
 {
 	public class StressTest : MonoBehaviour
 	{
+		public int playerCount = 1;
+
 		class TestCase
 		{
 			public float repathRemaining;
@@ -13,8 +15,6 @@ namespace Delaunay
 		}
 
 		Stage stage;
-		int playerCount = 1;
-
 		List<TestCase> testCases = new List<TestCase>();
 
 		void Awake()
@@ -40,13 +40,9 @@ namespace Delaunay
 					Vector3 dest = GetRandomPosition(test.player.Radius);
 					Vector3 src = test.player.transform.position;
 
-					test.territory.Mesh.ForEach(t => { t.Walkable = true; });
-					test.territory.BoundingEdges.ForEach(e => { e.Constrained = false; });
+					//test.territory.Mesh.ForEach(t => { t.Walkable = true; });
 
 					test.player.GetComponent<Steering>().SetPath(stage.delaunayMesh.FindPath(src, dest, test.player.Radius));
-
-					test.territory.Mesh.ForEach(t => { t.Walkable = false; });
-					test.territory.BoundingEdges.ForEach(e => { e.Constrained = true; });
 
 					test.repathRemaining = Random.Range(1f, 5f);
 				}
@@ -57,9 +53,9 @@ namespace Delaunay
 		{
 			for (int i = 0; i < testCases.Count; ++i)
 			{
-				testCases[i].player.GetComponent<Steering>().onPositionChanged -= OnPlayerMove;
-				stage.delaunayMesh.RemoveObstacle(testCases[i].territory.ID);
-				GameObject.Destroy(testCases[i].player.gameObject);
+				//testCases[i].player.GetComponent<Steering>().onPositionChanged -= OnPlayerMove;
+				//stage.delaunayMesh.RemoveObstacle(testCases[i].territory.ID);
+				//GameObject.Destroy(testCases[i].player.gameObject);
 			}
 
 			testCases.Clear();
@@ -79,26 +75,26 @@ namespace Delaunay
 				steering.onPositionChanged += OnPlayerMove;
 
 				PlayerComponent pc = player.GetComponent<PlayerComponent>();
-				Vector3 position = stage.delaunayMesh.GetNearestPoint(GetRandomPosition(pc.Radius), pc.Radius);
+				Vector3 position = GetRandomPosition(pc.Radius);
 				pc.transform.position = position;
 
-				Vector3[] circleVertices = CalculateCircleVertices(position, pc.Radius);
-				Obstacle obstacle = stage.delaunayMesh.AddObstacle(circleVertices);
+				//Vector3[] circleVertices = CalculateCircleVertices(position, pc.Radius);
+				Obstacle obstacle = null;// stage.delaunayMesh.AddObstacle(circleVertices);
 				testCases.Add(new TestCase { player = pc, territory = obstacle, repathRemaining = 0 });
 			}
 		}
 
 		void OnPlayerMove(PlayerComponent player, Vector3 oldPosition, Vector3 newPosition)
 		{
-			int index = testCases.FindIndex(item => { return item.player == player; });
-			stage.delaunayMesh.RemoveObstacle(testCases[index].territory.ID);
-			testCases[index].territory = stage.delaunayMesh.AddObstacle(CalculateCircleVertices(newPosition, player.Radius));
+			//int index = testCases.FindIndex(item => { return item.player == player; });
+			//stage.delaunayMesh.RemoveObstacle(testCases[index].territory.ID);
+			//testCases[index].territory = stage.delaunayMesh.AddObstacle(CalculateCircleVertices(newPosition, player.Radius));
 		}
 
 		Vector3 GetRandomPosition(float radius)
 		{
-			float w = MathUtility.GetUniqueRandomInteger() % stage.Width;
-			float h = MathUtility.GetUniqueRandomInteger() % stage.Height;
+			float w = Random.value * stage.Width;
+			float h = Random.value * stage.Height;
 
 			Vector3 pos = new Vector3(w, 0, h) + stage.Origin;
 			pos = stage.PhysicsHeightTest(pos);
@@ -108,7 +104,7 @@ namespace Delaunay
 
 		Vector3[] CalculateCircleVertices(Vector3 center, float radius)
 		{
-			int vertexCount = 360 / 30;
+			int vertexCount = 360 / 120;
 
 			Vector3[] ans = new Vector3[vertexCount];
 

@@ -336,9 +336,7 @@ namespace Delaunay
 		{
 			float dist = (center - point).magnitude2();
 
-			Utility.Verify(dist >= radius, "center = {0}, radius = {1}, point = {2}, clockwise = {3}", center, radius, point, clockwise);
-
-			if (MathUtility.Approximately(dist, radius))
+			if (dist <= radius)
 			{
 				return point;
 			}
