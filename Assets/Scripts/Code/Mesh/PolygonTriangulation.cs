@@ -5,209 +5,207 @@ namespace Delaunay
 {
 	public static class PolygonTriangulation
 	{
+		/// <summary>
+		/// 将由polygon内的顶点组成的多边形三角形化.
+		/// </summary>
 		public static List<Vertex> Triangulate(List<Vertex> polygon)
 		{
-			return EarClipping(polygon);
+			return EarClipping.Triangulate(polygon);
 		}
 
+		/// <summary>
+		/// 将由polygon内的顶点组成的多边形三角形化, 且保证constrainedEdgeSrc存在一条到constrainedEdgeDest的边.
+		/// </summary>
 		public static List<Vertex> Triangulate(List<Vertex> polygon, Vertex constrainedEdgeSrc, Vertex constrainedEdgeDest)
 		{
 			return TriangulatePolygonDelaunay(polygon, constrainedEdgeSrc, constrainedEdgeDest);
 		}
 
-		#region Ear clipping
-		class EarVertex
+		public static class EarClipping
 		{
-			public Vertex vertex;
-			public int earListIndex = -1;
-			public int mask = 0;
-
-			public enum Mask
+			/// <summary>
+			/// 用耳切法, 将由polygon表示的多边形三角形化.
+			/// </summary>
+			public static List<Vertex> Triangulate(List<Vertex> polygon)
 			{
-				IsReflex = 1,
-				IsEar = 2,
-			}
+				// 构造链表, 方便插入和删除.
+				// TODO: polygon.Count + 2 ???
+				ArrayLinkedList<EarVertex> vertices = new ArrayLinkedList<EarVertex>(polygon.Count + 2);
+				polygon.ForEach(item => { vertices.Add(new EarVertex() { vertex = item }); });
 
-			public bool SetMask(Mask value, bool addMask)
-			{
-				if (addMask)
+				// 收集当前所有的耳朵的索引.
+				ArrayLinkedList<int> earTips = new ArrayLinkedList<int>(polygon.Count);
+
+				for (int index = 0; index < polygon.Count; ++index)
 				{
-					mask |= (int)value;
-				}
-				else
-				{
-					mask &= (int)(~value);
-				}
-
-				return addMask;
-			}
-
-			public bool TestMask(Mask value)
-			{
-				return (mask & (int)value) != 0;
-			}
-
-			public override string ToString()
-			{
-				return vertex.ID + "&" + mask;
-			}
-		}
-
-		static List<Vertex> EarClipping(List<Vertex> polygon)
-		{
-			ArrayLinkedList<EarVertex> vertices = new ArrayLinkedList<EarVertex>(polygon.Count + 2);
-			polygon.ForEach(item => { vertices.Add(new EarVertex() { vertex = item, mask = 0 }); });
-
-			ArrayLinkedList<int> earTips = new ArrayLinkedList<int>(polygon.Count);
-
-			for (int index = 0; index < polygon.Count; ++index)
-			{
-				if (CheckIsReflex(vertices, index))
-				{
-					vertices[index].SetMask(EarVertex.Mask.IsReflex, true);
-				}
-				else if (CheckIsEar(vertices, index))
-				{
-					vertices[index].SetMask(EarVertex.Mask.IsEar, true);
-					vertices[index].earListIndex = earTips.Add(index);
-				}
-			}
-
-			return EarClipping(vertices, earTips);
-		}
-
-		static bool CheckIsEar(ArrayLinkedList<EarVertex> vertices, int current)
-		{
-			if (vertices.Count < 3) { return false; }
-
-			int prev = vertices.PrevIndex(current);
-			int next = vertices.NextIndex(current);
-
-			Vector3[] points = new Vector3[]
-			{
-				vertices[prev].vertex.Position, 
-				vertices[current].vertex.Position,
-				vertices[next].vertex.Position 
-			};
-
-			if (MathUtility.Approximately(points[0].cross2(points[2], points[1]), 0f))
-			{
-				return false;
-			}
-
-			for (var e = vertices.GetEnumerator(); e.MoveNext(); )
-			{
-				if (e.CurrentIndex == current || e.CurrentIndex == prev || e.CurrentIndex == next)
-				{
-					continue;
+					// 检查以index为索引的顶点的内角是否为优角.
+					if (CheckIsReflex(vertices, index))
+					{
+						vertices[index].SetMask((int)EarVertex.Mask.IsReflex, true);
+					}
+					// 如果该角不为优角, 检查它是否为耳朵(优角不可能为耳朵).
+					else if (CheckIsEar(vertices, index))
+					{
+						vertices[index].SetMask((int)EarVertex.Mask.IsEar, true);
+						vertices[index].earListIndex = earTips.Add(index);
+					}
 				}
 
-				if (MathUtility.PolygonContains(points, vertices[e.CurrentIndex].vertex.Position))
+				return DoTriangulate(vertices, earTips);
+			}
+
+			static bool CheckIsEar(ArrayLinkedList<EarVertex> vertices, int current)
+			{
+				if (vertices.Count < 3) { return false; }
+
+				int prev = vertices.PrevIndex(current);
+				int next = vertices.NextIndex(current);
+
+				Vector3[] points = new Vector3[]
+				{
+					vertices[prev].vertex.Position, 
+					vertices[current].vertex.Position,
+					vertices[next].vertex.Position 
+				};
+
+				if (MathUtility.Approximately(points[0].cross2(points[2], points[1]), 0f))
 				{
 					return false;
 				}
+
+				for (var e = vertices.GetEnumerator(); e.MoveNext(); )
+				{
+					if (e.CurrentIndex == current || e.CurrentIndex == prev || e.CurrentIndex == next)
+					{
+						continue;
+					}
+
+					if (MathUtility.PolygonContains(points, vertices[e.CurrentIndex].vertex.Position))
+					{
+						return false;
+					}
+				}
+
+				return true;
 			}
 
-			return true;
-		}
-
-		static bool CheckIsReflex(ArrayLinkedList<EarVertex> vertices, int index)
-		{
-			Vertex current = vertices[index].vertex;
-			Vertex prev = vertices.PrevValue(index).vertex;
-			Vertex next = vertices.NextValue(index).vertex;
-			return next.Position.cross2(prev.Position, current.Position) < 0f;
-		}
-
-		static List<Vertex> EarClipping(ArrayLinkedList<EarVertex> vertices, ArrayLinkedList<int> earTips)
-		{
-			List<Vertex> answer = new List<Vertex>((vertices.Count - 2) * 3);
-			EarVertex[] removedEars = new EarVertex[2];
-			int removedEarCount = 0;
-
-			int earTipIndex = -1;
-			for (var e = earTips.GetEnumerator(); e.MoveNext(); )
+			static bool CheckIsReflex(ArrayLinkedList<EarVertex> vertices, int index)
 			{
+				Vertex current = vertices[index].vertex;
+				Vertex prev = vertices.PrevValue(index).vertex;
+				Vertex next = vertices.NextValue(index).vertex;
+				return next.Position.cross2(prev.Position, current.Position) < 0f;
+			}
+
+			static List<Vertex> DoTriangulate(ArrayLinkedList<EarVertex> vertices, ArrayLinkedList<int> earTips)
+			{
+				List<Vertex> answer = new List<Vertex>((vertices.Count - 2) * 3);
+				EarVertex[] removedEars = new EarVertex[2];
+				int removedEarCount = 0;
+
+				int earTipIndex = -1;
+				for (var e = earTips.GetEnumerator(); e.MoveNext(); )
+				{
+					if (earTipIndex >= 0) { earTips.RemoveAt(earTipIndex); }
+
+					earTipIndex = e.CurrentIndex;
+
+					int earTipVertexIndex = earTips[earTipIndex];
+					EarVertex earTipVertex = vertices[earTipVertexIndex];
+
+					int prevIndex = vertices.PrevIndex(earTipVertexIndex);
+					EarVertex prevVertex = vertices.PrevValue(earTipVertexIndex);
+
+					int nextIndex = vertices.NextIndex(earTipVertexIndex);
+					EarVertex nextVertex = vertices.NextValue(earTipVertexIndex);
+
+					answer.Add(prevVertex.vertex);
+					answer.Add(earTipVertex.vertex);
+					answer.Add(nextVertex.vertex);
+
+					vertices.RemoveAt(earTipVertexIndex);
+
+					int state = UpdateEarVertexState(vertices, prevIndex);
+					if (state > 0)
+					{
+						prevVertex.earListIndex = earTips.Add(prevIndex);
+					}
+					else if (state < 0)
+					{
+						removedEars[removedEarCount++] = prevVertex;
+					}
+
+					state = UpdateEarVertexState(vertices, nextIndex);
+					if (state > 0)
+					{
+						nextVertex.earListIndex = earTips.Add(nextIndex);
+					}
+					else if (state < 0)
+					{
+						removedEars[removedEarCount++] = nextVertex;
+					}
+
+					for (int i = 0; i < removedEarCount; ++i)
+					{
+						Utility.Verify(removedEars[i].earListIndex >= 0);
+						earTips.RemoveAt(removedEars[i].earListIndex);
+						removedEars[i].earListIndex = -1;
+					}
+
+					removedEarCount = 0;
+				}
+
 				if (earTipIndex >= 0) { earTips.RemoveAt(earTipIndex); }
 
-				earTipIndex = e.CurrentIndex;
-
-				int earTipVertexIndex = earTips[earTipIndex];
-				EarVertex earTipVertex = vertices[earTipVertexIndex];
-
-				int prevIndex = vertices.PrevIndex(earTipVertexIndex);
-				EarVertex prevVertex = vertices.PrevValue(earTipVertexIndex);
-
-				int nextIndex = vertices.NextIndex(earTipVertexIndex);
-				EarVertex nextVertex = vertices.NextValue(earTipVertexIndex);
-
-				answer.Add(prevVertex.vertex);
-				answer.Add(earTipVertex.vertex);
-				answer.Add(nextVertex.vertex);
-
-				vertices.RemoveAt(earTipVertexIndex);
-
-				int state = UpdateEarVertexState(vertices, prevIndex);
-				if (state > 0)
-				{
-					prevVertex.earListIndex = earTips.Add(prevIndex);
-				}
-				else if (state < 0)
-				{
-					removedEars[removedEarCount++] = prevVertex;
-				}
-
-				state = UpdateEarVertexState(vertices, nextIndex);
-				if (state > 0)
-				{
-					nextVertex.earListIndex = earTips.Add(nextIndex);
-				}
-				else if (state < 0)
-				{
-					removedEars[removedEarCount++] = nextVertex;
-				}
-
-				for (int i = 0; i < removedEarCount; ++i)
-				{
-					Utility.Verify(removedEars[i].earListIndex >= 0);
-					earTips.RemoveAt(removedEars[i].earListIndex);
-					removedEars[i].earListIndex = -1;
-				}
-
-				removedEarCount = 0;
+				return answer;
 			}
 
-			if (earTipIndex >= 0) { earTips.RemoveAt(earTipIndex); }
-
-			return answer;
-		}
-
-		static int UpdateEarVertexState(ArrayLinkedList<EarVertex> vertices, int vertexIndex)
-		{
-			EarVertex earVertex = vertices[vertexIndex];
-
-			int result = 0;
-
-			bool isEar = earVertex.TestMask(EarVertex.Mask.IsEar);
-			if (earVertex.TestMask(EarVertex.Mask.IsReflex))
+			static int UpdateEarVertexState(ArrayLinkedList<EarVertex> vertices, int vertexIndex)
 			{
-				Utility.Verify(!isEar);
-				if (!earVertex.SetMask(EarVertex.Mask.IsReflex, CheckIsReflex(vertices, vertexIndex))
-					&& earVertex.SetMask(EarVertex.Mask.IsEar, CheckIsEar(vertices, vertexIndex)))
+				EarVertex earVertex = vertices[vertexIndex];
+
+				int result = 0;
+
+				bool isEar = earVertex.TestMask((int)EarVertex.Mask.IsEar);
+				if (earVertex.TestMask((int)EarVertex.Mask.IsReflex))
+				{
+					Utility.Verify(!isEar);
+					if (!earVertex.SetMask((int)EarVertex.Mask.IsReflex, CheckIsReflex(vertices, vertexIndex))
+						&& earVertex.SetMask((int)EarVertex.Mask.IsEar, CheckIsEar(vertices, vertexIndex)))
+					{
+						result = 1;
+					}
+				}
+				else if (isEar != earVertex.SetMask((int)EarVertex.Mask.IsEar, CheckIsEar(vertices, vertexIndex)))
 				{
 					result = 1;
+					if (isEar) { result = -result; }
+				}
+
+				return result;
+			}
+
+			class EarVertex : Maskable
+			{
+				public Vertex vertex;
+
+				/// <summary>
+				/// 如果当前顶点为耳朵, 记录该节点在耳朵表中的索引. 当需要移除该节点时
+				/// </summary>
+				public int earListIndex = -1;
+
+				public enum Mask
+				{
+					IsReflex = 1,
+					IsEar = 2,
+				}
+
+				public override string ToString()
+				{
+					return vertex.ID + "&" + GetMask();
 				}
 			}
-			else if (isEar != earVertex.SetMask(EarVertex.Mask.IsEar, CheckIsEar(vertices, vertexIndex)))
-			{
-				result = 1;
-				if (isEar) { result = -result; }
-			}
-
-			return result;
 		}
-
-		#endregion
 
 		static List<Vertex> TriangulatePolygonDelaunay(List<Vertex> polygon, Vertex src, Vertex dest)
 		{

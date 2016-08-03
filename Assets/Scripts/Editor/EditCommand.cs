@@ -4,17 +4,26 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 编辑命令, 用于撤销和重做.
+	/// </summary>
 	public interface IEditCommand
 	{
 		void PlayForward();
 		void PlayReverse();
 	}
 
+	/// <summary>
+	/// 编辑命令序列.
+	/// </summary>
 	public class EditCommandSequence
 	{
 		int index = -1;
 		List<IEditCommand> sequence = new List<IEditCommand>();
 
+		/// <summary>
+		/// 加入一个编辑命令, 并正向运行.
+		/// </summary>
 		public void Push(IEditCommand item)
 		{
 			sequence.RemoveRange(index + 1, sequence.Count - (index + 1));
@@ -25,35 +34,53 @@ namespace Delaunay
 			index = sequence.Count - 1;
 		}
 
+		/// <summary>
+		/// 撤销.
+		/// </summary>
 		public void Undo()
 		{
 			Utility.Verify(CanUndo);
 			sequence[index--].PlayReverse();
 		}
 
+		/// <summary>
+		/// 重做.
+		/// </summary>
 		public void Redo()
 		{
 			Utility.Verify(CanRedo);
 			sequence[++index].PlayForward();
 		}
 
+		/// <summary>
+		/// 清空命令序列.
+		/// </summary>
 		public void Clear()
 		{
 			sequence.Clear();
 			index = -1;
 		}
 
+		/// <summary>
+		/// 是否可以撤销(即序列内是否存在上一个命令).
+		/// </summary>
 		public bool CanUndo
 		{
 			get { return index >= 0; }
 		}
 
+		/// <summary>
+		/// 是否可以重做(即序列内是否存在下一个命令).
+		/// </summary>
 		public bool CanRedo
 		{
 			get { return index < sequence.Count - 1; }
 		}
 	}
 
+	/// <summary>
+	/// 添加节点命令.
+	/// </summary>
 	public class AddVertexCommand : IEditCommand
 	{
 		List<Vector3> target;
@@ -83,6 +110,9 @@ namespace Delaunay
 		}
 	}
 
+	/// <summary>
+	/// 移动节点命令.
+	/// </summary>
 	public class MoveVertexCommand : IEditCommand
 	{
 		int index;
@@ -108,6 +138,9 @@ namespace Delaunay
 		}
 	}
 
+	/// <summary>
+	/// 创建边集.
+	/// </summary>
 	public class CreateBorderSetCommand : IEditCommand
 	{
 		DelaunayMesh mesh;
@@ -140,6 +173,9 @@ namespace Delaunay
 		}
 	}
 
+	/// <summary>
+	/// 创建超级边框.
+	/// </summary>
 	public class CreateSuperBorderCommand : IEditCommand
 	{
 		DelaunayMesh mesh;
@@ -167,6 +203,9 @@ namespace Delaunay
 		}
 	}
 
+	/// <summary>
+	/// 创建障碍物.
+	/// </summary>
 	public class CreateObstacleCommand : IEditCommand
 	{
 		DelaunayMesh mesh;
@@ -197,6 +236,9 @@ namespace Delaunay
 		}
 	}
 
+	/// <summary>
+	/// 创建障碍物, 创建过程以动画的形势展示.
+	/// </summary>
 	public class CreateObstacleAnimatedCommand : IEditCommand
 	{
 		AnimatedDelaunayMesh mesh;

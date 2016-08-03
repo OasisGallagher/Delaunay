@@ -9,13 +9,26 @@ namespace Delaunay
 {
 	public class SceneEditor : EditorWindow
 	{
+		/// <summary>
+		/// 一次性最多可"种"的坐标点个数.
+		/// </summary>
 		const int kMaxVertices = 32;
-		const float kTrimStep = 0.1f;
 
 		EditorDebugDraw debugDraw;
+
+		/// <summary>
+		/// 是否开启"种点".
+		/// </summary>
 		bool planting = false;
 
+		/// <summary>
+		/// 已"种"下的坐标点.
+		/// </summary>
 		List<Vector3> plantedVertices;
+
+		/// <summary>
+		/// 是否编辑该节点. 该结构中的第i位表示是否编辑plantedVertices[i].
+		/// </summary>
 		BitArray editStates;
 
 #if ANIMATED_DELAUNAY_MESH
@@ -24,13 +37,23 @@ namespace Delaunay
 #else
 		DelaunayMesh delaunayMesh;
 #endif
+		/// <summary>
+		/// 编辑命令序列.
+		/// </summary>
 		EditCommandSequence cmdSequence;
 
+		/// <summary>
+		/// 是否编辑调试视图.
+		/// </summary>
 		bool editDebugDraw = true;
+
+		/// <summary>
+		/// 是否在play.
+		/// </summary>
 		bool isPlaying = false;
 
 		Vector2 vertexEditorScrollViewPosition;
-		bool vertexFoldOut;
+		bool vertexFoldout;
 
 		[MenuItem("Window/Scene Editor")]
 		static void OpenEditor()
@@ -75,6 +98,7 @@ namespace Delaunay
 
 		void Update()
 		{
+			// 在按下"play"时, 做一些清理.
 			if (Application.isPlaying != isPlaying)
 			{
 				isPlaying = Application.isPlaying;
@@ -86,6 +110,7 @@ namespace Delaunay
 		{
 			if (EditorApplication.isPlaying) { return; }
 
+			// 绘制调试视图.
 			if (debugDraw != null)
 			{
 				debugDraw.DrawDelaunayMesh();
@@ -104,7 +129,7 @@ namespace Delaunay
 #if ANIMATED_DELAUNAY_MESH
 			}
 #endif
-
+			
 #if ANIMATED_DELAUNAY_MESH
 			if (!playingCreateObstacleAnimation)
 			{
@@ -115,6 +140,9 @@ namespace Delaunay
 #endif
 		}
 
+		/// <summary>
+		/// 绘制已种的顶点的控制器.
+		/// </summary>
 		void DrawVertexHandles()
 		{
 			bool repaint = false;
@@ -122,6 +150,8 @@ namespace Delaunay
 			for (int i = 0; i < editStates.Count; ++i)
 			{
 				if (!editStates[i]) { continue; }
+
+				// 改变已"种"的点位置.
 				Vector3 position = Handles.DoPositionHandle(plantedVertices[i], Quaternion.identity);
 				if (position != plantedVertices[i])
 				{
@@ -136,6 +166,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 绘制编辑命令.
+		/// </summary>
 		void DrawCommands()
 		{
 			if (delaunayMesh == null) { return; }
@@ -153,6 +186,9 @@ namespace Delaunay
 			GUILayout.EndArea();
 		}
 
+		/// <summary>
+		/// 绘制序列化命令.
+		/// </summary>
 		void DrawSerializeCommand()
 		{
 			if (GUILayout.Button("Load", EditorStyles.miniButtonLeft))
@@ -181,10 +217,15 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 绘制编辑命令.
+		/// </summary>
 		void DrawEditCommand()
 		{
 			Color oldColor = GUI.backgroundColor;
 			GUI.backgroundColor = planting ? Color.green : Color.red;
+
+			// 是否开始"种"坐标点.
 			if (GUILayout.Button(planting ? "On" : "Off", EditorStyles.miniButtonLeft))
 			{
 				planting = !planting;
@@ -215,8 +256,8 @@ namespace Delaunay
 			if (plantedVertices.Count == 0) { return; }
 
 			GUILayout.BeginVertical("Box");
-			vertexFoldOut = EditorGUILayout.Foldout(vertexFoldOut, "Vertices");
-			if (vertexFoldOut)
+			vertexFoldout = EditorGUILayout.Foldout(vertexFoldout, "Vertices");
+			if (vertexFoldout)
 			{
 				vertexEditorScrollViewPosition = GUILayout.BeginScrollView(vertexEditorScrollViewPosition);
 				for (int i = 0; i < plantedVertices.Count; ++i)
@@ -230,6 +271,9 @@ namespace Delaunay
 			GUILayout.EndVertical();
 		}
 
+		/// <summary>
+		/// 编辑plantedVertices[index].
+		/// </summary>
 		void DrawVertexEditorAt(int index)
 		{
 			GUILayout.BeginHorizontal("Box");
@@ -237,20 +281,13 @@ namespace Delaunay
 			editStates[index] = GUILayout.Toggle(editStates[index], (index + 1).ToString());
 			
 			plantedVertices[index] = EditorGUILayout.Vector3Field("", plantedVertices[index], GUILayout.Height(16));
-			
-			//if (GUILayout.Button("Up", EditorStyles.miniButtonLeft))
-			//{
-			//	cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] + new Vector3(0, kTrimStep, 0)));
-			//}
-
-			//if (GUILayout.Button("Down", EditorStyles.miniButtonRight))
-			//{
-			//	cmdSequence.Push(new MoveVertexCommand(plantedVertices, index, plantedVertices[index] - new Vector3(0, kTrimStep, 0)));
-			//}
 
 			GUILayout.EndHorizontal();
 		}
 
+		/// <summary>
+		/// 加载网格.
+		/// </summary>
 		void LoadMesh()
 		{
 			string path = EditorUtility.OpenFilePanel("", EditorConstants.kOutputFolder, "dm");
@@ -264,6 +301,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 保存网格.
+		/// </summary>
 		void SaveMesh()
 		{
 			string path = EditorUtility.SaveFilePanel("", EditorConstants.kOutputFolder, "delaunay", "dm");
@@ -273,6 +313,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 清除网格.
+		/// </summary>
 		void ClearMesh()
 		{
 			if (delaunayMesh != null)
@@ -284,6 +327,9 @@ namespace Delaunay
 			cmdSequence.Clear();
 		}
 
+		/// <summary>
+		/// 清除所有.
+		/// </summary>
 		void ClearAll()
 		{
 			if (delaunayMesh != null)
@@ -295,6 +341,9 @@ namespace Delaunay
 			cmdSequence.Clear();
 		}
 
+		/// <summary>
+		/// 绘制多边形情况.
+		/// </summary>
 		void DrawStats()
 		{
 			if (delaunayMesh == null) { return; }
@@ -370,6 +419,9 @@ namespace Delaunay
 			return true;
 		}
 
+		/// <summary>
+		/// 处理输入.
+		/// </summary>
 		void OnInput()
 		{
 			if (Event.current.type == EventType.KeyUp)
@@ -378,6 +430,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 处理键盘输入.
+		/// </summary>
 		void OnKeyboardInput(KeyCode keyCode, EventModifiers modifiers)
 		{
 			bool repaint = false;

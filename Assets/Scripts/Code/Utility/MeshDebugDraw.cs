@@ -14,14 +14,39 @@ namespace Delaunay
 	[RequireComponent(typeof(Camera))]
 	public class MeshDebugDraw : MonoBehaviour
 	{
+		/// <summary>
+		/// 绘制时的偏移量.
+		/// </summary>
 		public Vector3 offset = Vector3.up;
 
+		/// <summary>
+		/// 不可行走区域的颜色.
+		/// </summary>
 		public Color blockFaceColor = new Color(1, 0, 0, 90 / 255f);
+
+		/// <summary>
+		/// 可行走区域的颜色.
+		/// </summary>
 		public Color walkableFaceColor = new Color(128 / 255f, 128 / 255f, 128 / 255f, 11 / 255f);
+
+		/// <summary>
+		/// 网格边的颜色.
+		/// </summary>
 		public Color edgeColor = new Color(0, 205 / 255f, 1, 126 / 255f);
 
+		/// <summary>
+		/// 空闲的格子的颜色.
+		/// </summary>
 		public Color freeTileFaceColor = new Color(77 / 255f, 64 / 255f, 176 / 255f, 11 / 255f);
+
+		/// <summary>
+		/// 使用中的格子的颜色.
+		/// </summary>
 		public Color usedTileFaceColor = new Color(159 / 255f, 53 / 255f, 53 / 255f, 11 / 255f);
+
+		/// <summary>
+		/// 格子的边的颜色.
+		/// </summary>
 		public Color tileEdgeColor = new Color(0, 0, 1, 22 / 255f);
 
 		public DebugDrawMask drawMask = (DebugDrawMask)(-1);

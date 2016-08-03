@@ -9,11 +9,24 @@ namespace Delaunay
 	{
 		public DelaunayMesh delaunayMesh;
 
+		/// <summary>
+		/// 场景的宽度.
+		/// </summary>
 		public float Width { get { return delaunayMesh.Width; } }
+
+		/// <summary>
+		/// 场景的高度.
+		/// </summary>
 		public float Height { get { return delaunayMesh.Height; } }
 
+		/// <summary>
+		/// 场景的原点.
+		/// </summary>
 		public Vector3 Origin { get { return delaunayMesh.Origin; } }
 
+		/// <summary>
+		/// 由point向下发射射线, 返回与场景的collider的碰撞点.
+		/// </summary>
 		public Vector3 PhysicsHeightTest(Vector3 point)
 		{
 			point.y = 25f;
@@ -31,10 +44,8 @@ namespace Delaunay
 		{
 			delaunayMesh = new DelaunayMesh(new Vector3(-10, 0, -10), 20f, 20f);
 
-			string dm = Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm").Replace('\\', '/');
-			print("Load dm file: " + dm);
-
-			delaunayMesh.Load(Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm"));
+			string path = Path.Combine(EditorConstants.kOutputFolder, "delaunay.dm").Replace('\\', '/');
+			delaunayMesh.Load(path);
 		}
 
 		void OnDisable()
@@ -59,21 +70,6 @@ namespace Delaunay
 
 			GUILayout.EndVertical();
 			GUILayout.EndArea();
-		}
-
-		bool MousePositionToStage(out Vector3 point)
-		{
-			RaycastHit hit;
-			point = Vector3.zero;
-			if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100))
-			{
-				Debug.LogError("Raycast failed");
-				return false;
-			}
-
-			point = hit.point;
-
-			return true;
 		}
 	}
 }

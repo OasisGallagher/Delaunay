@@ -18,6 +18,9 @@ namespace Delaunay
 		public int Flag;
 		public HalfEdge Portal;
 
+		/// <summary>
+		/// 重置寻路使用的数据.
+		/// </summary>
 		public void ClearPathfinding()
 		{
 			G = H = float.PositiveInfinity;
@@ -69,7 +72,7 @@ namespace Delaunay
 						continue;
 					}
 
-					if (!container.Contains(portal.Face))
+					if (!container.IsVisited(portal.Face))
 					{
 						container.Push(portal.Face);
 					}
