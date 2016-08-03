@@ -4,17 +4,45 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 直线, 线段的相交状态.
+	/// </summary>
 	public enum CrossState
 	{
+		/// <summary>
+		/// 平行.
+		/// </summary>
 		Parallel,
+
+		/// <summary>
+		/// 完全重合.
+		/// </summary>
 		FullyOverlaps,
+
+		/// <summary>
+		/// 部分重合.
+		/// </summary>
 		PartiallyOverlaps,
+
+		/// <summary>
+		/// 相交, 且交点在线段上.
+		/// </summary>
 		CrossOnSegment,
+
+		/// <summary>
+		/// 相交, 且交点在线段的延长线上.
+		/// </summary>
 		CrossOnExtLine,
 	}
 
+	/// <summary>
+	/// 极角比较器.
+	/// </summary>
 	public class PolarAngleComparer : IComparer<Vertex>
 	{
+		/// <summary>
+		/// 构造以pivot为原点, benchmark为正方向的极角比较器. 
+		/// </summary>
 		public PolarAngleComparer(Vector3 pivot, Vector3 benchmark)
 		{
 			this.pivot = pivot;
@@ -41,7 +69,14 @@ namespace Delaunay
 			return -(int)Mathf.Sign(cr);
 		}
 
+		/// <summary>
+		/// 原点.
+		/// </summary>
 		Vector3 pivot;
+
+		/// <summary>
+		/// 正方向向量.
+		/// </summary>
 		Vector3 benchmark;
 	}
 
@@ -101,22 +136,18 @@ namespace Delaunay
 
 	public static class MathUtility
 	{
+		/// <summary>
+		/// 浮点数相等比较.
+		/// </summary>
+		/// <todo>使用1e-6f在判断点在指向上时会有精度上的问题</todo>
 		public static bool Approximately(float a, float b = 0f)
 		{
-			//Debug.Log("FIX ME");
 			return Mathf.Abs(a - b) < 1e-5f;
 		}
 
-		public static Vector3 Centroid(Vector3[] a)
-		{
-			return Centroid(a[0], a[1], a[2]);
-		}
-
-		public static Vector3 Centroid(Vector3 a, Vector3 b, Vector3 c)
-		{
-			return (a + b + c) / 3f;
-		}
-
+		/// <summary>
+		/// 计算三角形(a, b, c)的外接圆心.
+		/// </summary>
 		public static Vector3 Circumcentre(Vector3 a, Vector3 b, Vector3 c)
 		{
 			float t1 = a.x * a.x + a.z * a.z;
@@ -130,23 +161,32 @@ namespace Delaunay
 			return new Vector3(x, (a.y + b.y + c.y) / 3f, z);
 		}
 
+		/// <summary>
+		/// 计算三角形(a, b, c)的内切圆圆心.
+		/// </summary>
+		/// <returns></returns>
 		public static Vector3 Incentre(Vector3 a, Vector3 b, Vector3 c)
 		{
 			Vector3 dt1 = b - a;
 			Vector3 dt2 = c - b;
 			Vector3 dt3 = c - a;
 
+			// p1和p2为两条角平分线.
 			Vector3 p1 = dt1.normalized * dt3.magnitude;
 			p1 = a + (p1 + dt3) / 2f;
 
 			Vector3 p2 = dt2.normalized * dt1.magnitude;
 			p2 = b + (p2 - dt1) / 2f;
 
+			// 计算角平分线的交点.
 			Vector3 center = Vector3.zero;
 			GetLineCrossPoint(out center, a, p1, b, p2);
 			return center;
 		}
 
+		/// <summary>
+		/// 将三角形"放大", 即将每条边, 向其垂线方向平移并调整长度, 形成新的相似三角形.
+		/// </summary>
 		public static void Shink(Vector3[] triangle, float value)
 		{
 			float r = GetInscribeCircleRadius(triangle[0], triangle[1], triangle[2]);
@@ -154,11 +194,17 @@ namespace Delaunay
 
 			Vector3 center = Incentre(triangle[0], triangle[1], triangle[2]);
 
+			// 将三角形的每个顶点, 沿内切圆圆心到该顶点的向量, 平移.
+			// 此时value = value_old / r, r = (center - triangle[i]).magnitude.
+			// 所以下面直接乘以value即可.
 			triangle[0] = triangle[0] + (center - triangle[0]) * value;
 			triangle[1] = triangle[1] + (center - triangle[1]) * value;
 			triangle[2] = triangle[2] + (center - triangle[2]) * value;
 		}
 
+		/// <summary>
+		/// 三角形(va, vb, vc)的内切圆圆心.
+		/// </summary>
 		public static float GetInscribeCircleRadius(Vector3 va, Vector3 vb, Vector3 vc)
 		{
 			float la = (va - vb).magnitude2();
@@ -167,6 +213,12 @@ namespace Delaunay
 			return Mathf.Sqrt((la + lb - lc) * (la - lb + lc) * (-la + lb + lc) / (la + lb + lc)) / 2f;
 		}
 
+		/// <summary>
+		/// 计算线段(p->pd, q->qd)的相交情况.
+		/// <para>如果交点o存在, 那么它必然在p->pd或其延长线上. 此时:</para> 
+		/// <para>o = p + answer.x * (pd - p) = q + answer.y * (qd - q)</para>
+		/// </summary>
+		/// <see cref="http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect"/>
 		public static CrossState SegmentCross(out Vector2 answer, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
 		{
 			Vector3 r = pd - p;
@@ -175,32 +227,41 @@ namespace Delaunay
 
 			answer = Vector2.zero;
 
+			// 二者平行或共线.
 			if (MathUtility.Approximately(0, crs))
 			{
 				bool onSeg1 = PointOnSegment(p, q, qd);
 				bool onSeg2 = PointOnSegment(pd, q, qd);
 				bool onSeg3 = PointOnSegment(q, p, pd);
 				bool onSeg4 = PointOnSegment(qd, p, pd);
+
+				// 二者完全重叠.
 				if ((onSeg1 && onSeg2) || (onSeg3 && onSeg4))
 				{
 					return CrossState.FullyOverlaps;
 				}
 
+				// 二者部分重叠.
 				if ((onSeg1 || onSeg2) && (onSeg3 || onSeg4))
 				{
 					return CrossState.PartiallyOverlaps;
 				}
 
+				// 二者平行.
 				return CrossState.Parallel;
 			}
 
 			float t = (q - p).cross2(s);
 			answer.Set(t / crs, (q - p).cross2(r) / crs);
 
+			// 二者相交.
 			return (InRange(answer.x) && InRange(answer.y))
 			   ? CrossState.CrossOnSegment : CrossState.CrossOnExtLine;
 		}
 
+		/// <summary>
+		/// 计算直线(p->pd)和(q->qd)的相交情况.
+		/// </summary>
 		public static CrossState GetLineCrossPoint(out Vector3 point, Vector3 p, Vector3 pd, Vector3 q, Vector3 qd)
 		{
 			point = Vector3.zero;
@@ -208,21 +269,29 @@ namespace Delaunay
 			Vector2 segCrossAnswer = Vector2.zero;
 			CrossState crossState = SegmentCross(out segCrossAnswer, p, pd, q, qd);
 
+			// 平行或重合.
 			if (crossState == CrossState.Parallel || crossState == CrossState.FullyOverlaps)
 			{
 				return crossState;
 			}
 
+			// 交点存在, 记录在point中.
 			point = p + segCrossAnswer.x * (pd - p);
 			return crossState;
 		}
 
+		/// <summary>
+		/// 点point是否在线段(segSrc->segDest)上.
+		/// </summary>
 		public static bool PointOnSegment(Vector3 point, Vector3 segSrc, Vector3 segDest)
 		{
 			if (!DiagonalRectContains(point, segSrc, segDest)) { return false; }
 			return MathUtility.Approximately(0, point.cross2(segDest, segSrc));
 		}
 
+		/// <summary>
+		/// 点point是否在由tl作为左上角, rb作为右下角的与坐标轴平行的矩形内(含在边上).
+		/// </summary>
 		public static bool DiagonalRectContains(Vector3 point, Vector3 tl, Vector3 rb)
 		{
 			float xMin = tl.x, xMax = rb.x;
@@ -239,6 +308,10 @@ namespace Delaunay
 			return f >= a && f <= b;
 		}
 
+		/// <summary>
+		/// 点point是否在由positions描述的凸多边形内.
+		/// </summary>
+		/// <param name="onEdge">当点在边上时的返回结果.</param>
 		public static bool PolygonContains(IList<Vector3> positions, Vector3 point, bool onEdge = true)
 		{
 			for (int i = 1; i <= positions.Count; ++i)
@@ -259,11 +332,17 @@ namespace Delaunay
 			return true;
 		}
 		
+		/// <summary>
+		/// 点point到线段(segSrc->segDest)的最短距离.
+		/// </summary>
 		public static float MinDistance2Segment(Vector3 point, Vector3 segSrc, Vector3 segDest)
 		{
+			// 如果点到线段的垂足在线段上, 那么最短距离为该垂线的长度.
+			// 否则, 为点到两端点的距离的最小值.
 			Vector3 ray = segDest - segSrc;
 			float ratio = (point - segSrc).dot2(ray) / ray.sqrMagnitude2();
 
+			// 判断垂足是否在线段上.
 			if (ratio < 0f)
 			{
 				ratio = 0f;
@@ -276,6 +355,9 @@ namespace Delaunay
 			return (segSrc + ratio * ray - point).magnitude2();
 		}
 
+		/// <summary>
+		/// 以pivot为轴, 将src逆时针旋转radian弧度.
+		/// </summary>
 		public static Vector3 Rotate(Vector3 src, float radian, Vector3 pivot)
 		{
 			src -= pivot;
@@ -285,6 +367,11 @@ namespace Delaunay
 			return answer + pivot;
 		}
 
+		/// <summary>
+		/// 点point是否在由circle为圆心, radius为半径的圆内.
+		/// </summary>
+		/// <param name="onCircle">当点在圆上的时返回结果.</param>
+		/// <returns></returns>
 		public static bool PointInCircle(Vector3 point, Vector3 center, float radius, bool onCircle = false)
 		{
 			radius *= radius;
@@ -297,12 +384,15 @@ namespace Delaunay
 			return lengthSquared < radius;
 		}
 
-		public static bool PointInCircumCircle(Vector3 a, Vector3 b, Vector3 c, Vector3 v)
+		/// <summary>
+		/// 判断点(point)是否在三角形(a, b, c)的外接圆内.
+		/// </summary>
+		/// <see cref="https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcircle_equations"/>
+		public static bool PointInCircumCircle(Vector3 a, Vector3 b, Vector3 c, Vector3 point)
 		{
-			// https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcircle_equations
 			Vector3 ba = a - b;
 			Vector3 bc = c - b;
-			Vector3 bv = v - b;
+			Vector3 bv = point - b;
 
 			float sqrBa = ba.x * ba.x + ba.z * ba.z;
 			float sqrBc = bc.x * bc.x + bc.z * bc.z;
@@ -323,6 +413,9 @@ namespace Delaunay
 			return det > 0;
 		}
 
+		/// <summary>
+		/// 计算直线(p->dir)与平面(a, b, c)的交点.
+		/// </summary>
 		public static Vector3 LineCrossPlane(Vector3 a, Vector3 b, Vector3 c, Vector3 p, Vector3 dir)
 		{
 			Vector3 normal = Vector3.Cross(b - a, c - a);
@@ -332,6 +425,10 @@ namespace Delaunay
 			return p + dir * d / t;
 		}
 
+		/// <summary>
+		/// 计算点(point)到以center为圆心, radius为半径的圆的交点.
+		/// </summary>
+		/// <param name="clockwise">该交点有两个, 如果该值为true, 表示, (point, center, 交点)三者为顺时针方向.</param>
 		public static Vector3 GetTangent(Vector3 center, float radius, Vector3 point, bool clockwise)
 		{
 			float dist = (center - point).magnitude2();
