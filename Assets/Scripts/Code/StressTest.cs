@@ -10,16 +10,17 @@ namespace Delaunay
 		class TestCase
 		{
 			public float repathRemaining;
-			public Obstacle territory;
 			public PlayerComponent player;
 		}
 
 		Stage stage;
-		List<TestCase> testCases = new List<TestCase>();
+		List<TestCase> testCases;
 
 		void Awake()
 		{
 			stage = GetComponent<Stage>();
+			testCases = new List<TestCase>(); 
+
 			UpdatePlayerCount(playerCount);
 		}
 
@@ -30,9 +31,8 @@ namespace Delaunay
 
 		void Update()
 		{
-			for (int i = 0; i < testCases.Count; ++i)
+			foreach (TestCase test in testCases)
 			{
-				TestCase test = testCases[i];
 				test.repathRemaining -= Time.deltaTime;
 
 				if (test.repathRemaining <= 0)
@@ -40,9 +40,8 @@ namespace Delaunay
 					Vector3 dest = GetRandomPosition(test.player.Radius);
 					Vector3 src = test.player.transform.position;
 
-					//test.territory.Mesh.ForEach(t => { t.Walkable = true; });
-
-					test.player.GetComponent<Steering>().SetPath(stage.delaunayMesh.FindPath(src, dest, test.player.Radius));
+					List<Vector3> path = stage.delaunayMesh.FindPath(src, dest, test.player.Radius);
+					test.player.GetComponent<Steering>().SetPath(path);
 
 					test.repathRemaining = Random.Range(1f, 5f);
 				}
@@ -78,17 +77,12 @@ namespace Delaunay
 				Vector3 position = GetRandomPosition(pc.Radius);
 				pc.transform.position = position;
 
-				//Vector3[] circleVertices = CalculateCircleVertices(position, pc.Radius);
-				Obstacle obstacle = null;// stage.delaunayMesh.AddObstacle(circleVertices);
-				testCases.Add(new TestCase { player = pc, territory = obstacle, repathRemaining = 0 });
+				testCases.Add(new TestCase { player = pc, repathRemaining = 0 });
 			}
 		}
 
 		void OnPlayerMove(PlayerComponent player, Vector3 oldPosition, Vector3 newPosition)
 		{
-			//int index = testCases.FindIndex(item => { return item.player == player; });
-			//stage.delaunayMesh.RemoveObstacle(testCases[index].territory.ID);
-			//testCases[index].territory = stage.delaunayMesh.AddObstacle(CalculateCircleVertices(newPosition, player.Radius));
 		}
 
 		Vector3 GetRandomPosition(float radius)

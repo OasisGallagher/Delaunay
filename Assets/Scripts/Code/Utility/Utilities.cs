@@ -80,6 +80,9 @@ namespace Delaunay
 		Vector3 benchmark;
 	}
 
+	/// <summary>
+	/// 二元组.
+	/// </summary>
 	public struct Tuple2<T1, T2>
 	{
 		public Tuple2(T1 first, T2 second)
@@ -444,6 +447,9 @@ namespace Delaunay
 			return MathUtility.Rotate(point, r, Vector3.zero) + center;
 		}
 
+		/// <summary>
+		/// 计算圆(center1, radius1)和圆(center2, radius2)的内公切线的切点.
+		/// </summary>
 		public static Tuple2<Vector3, Vector3> GetInnerTangent(Vector3 center1, float radius1, Vector3 center2, float radius2, bool closewise)
 		{
 			float dist = (center1 - center2).magnitude2();
@@ -467,6 +473,9 @@ namespace Delaunay
 			);
 		}
 
+		/// <summary>
+		/// 计算圆(center1, radius1)和圆(center2, radius2)的外公切线的切点.
+		/// </summary>
 		public static Tuple2<Vector3, Vector3> GetOutterTangent(Vector3 center1, float radius1, Vector3 center2, float radius2, bool clockwise)
 		{
 			if (MathUtility.Approximately(radius1, radius2))
@@ -502,26 +511,20 @@ namespace Delaunay
 			);
 		}
 
-		public static void Shuffle<T>(IList<T> container)
-		{
-			for (int i = 0; i < container.Count; ++i)
-			{
-				int j = UnityEngine.Random.Range(i, container.Count);
-				if (j != i)
-				{
-					T temp = container[i];
-					container[i] = container[j];
-					container[j] = temp;
-				}
-			}
-		}
-
+		/// <summary>
+		/// 获取不重复的随机数.
+		/// </summary>
 		public static uint GetUniqueRandomInteger()
 		{
+			if (uniqueRandomIntegerGenerator == null)
+			{
+				uniqueRandomIntegerGenerator = new RandomSequenceOfUnique((uint)Time.realtimeSinceStartup, (uint)Time.realtimeSinceStartup + 1);
+			}
+
 			return uniqueRandomIntegerGenerator.next();
 		}
 
-		static RandomSequenceOfUnique uniqueRandomIntegerGenerator = new RandomSequenceOfUnique((uint)Time.realtimeSinceStartup, (uint)Time.realtimeSinceStartup + 1);
+		static RandomSequenceOfUnique uniqueRandomIntegerGenerator;
 
 		// http://preshing.com/20121224/how-to-generate-a-sequence-of-unique-random-integers/
 		class RandomSequenceOfUnique

@@ -128,7 +128,6 @@ namespace Delaunay
 			{
 				if (current == null) { throw new ArgumentNullException("Invalid cycle"); }
 				answer.Add(current);
-				Utility.Verify(answer.Count < EditorConstants.kDebugInvalidCycle);
 			}
 
 			return answer;

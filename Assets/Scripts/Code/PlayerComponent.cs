@@ -4,7 +4,14 @@ namespace Delaunay
 {
 	public class PlayerComponent : MonoBehaviour
 	{
+		/// <summary>
+		/// ÒÆ¶¯ËÙ¶È.
+		/// </summary>
 		public float Speed = 8f;
+
+		/// <summary>
+		/// °ë¾¶.
+		/// </summary>
 		public float Radius
 		{
 			get { return radius; }
