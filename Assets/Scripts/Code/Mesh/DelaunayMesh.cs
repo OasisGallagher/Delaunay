@@ -7,15 +7,39 @@ namespace Delaunay
 {
 	public class DelaunayMesh : IPathTerrain
 	{
-		const float kGetNearestMaxDistance = 8;
-		const int kGetNearestDistanceSampleCount = 10;
-		const int kGetNearestRadianSampleCount = 8;
+		/// <summary>
+		/// raycast的步进值.
+		/// </summary>
 		const float kRaycastSearchStep = 0.1f;
+		
+		/// <summary>
+		/// 寻找安全点时的最大半径.
+		/// </summary>
+		const float kGetNearestMaxDistance = 8;
 
+		/// <summary>
+		/// 寻找安全点时的弧度步进值.
+		/// </summary>
+		const int kGetNearestRadianSampleCount = 8;
+
+		/// <summary>
+		/// 寻找安全点时的半径进值.
+		/// </summary>
+		const int kGetNearestDistanceSampleCount = 10;
+
+		/// <summary>
+		/// 边框, 表示地图的边缘.
+		/// </summary>
 		List<Vector3> superBorder;
 		
+		/// <summary>
+		/// 管理器(不包含边框, 因此可以只清理管理器). 
+		/// </summary>
 		protected GeomManager geomManager;
 
+		/// <summary>
+		/// 初始化网格, 起点为origin, 宽度为width, 高度为height.
+		/// </summary>
 		public DelaunayMesh(Vector3 origin, float width, float height)
 		{
 			Width = width;
@@ -26,6 +50,9 @@ namespace Delaunay
 			superBorder = new List<Vector3>();
 		}
 
+		/// <summary>
+		/// 加入边框(边框唯一).
+		/// </summary>
 		public void AddSuperBorder(IEnumerable<Vector3> vertices)
 		{
 			Utility.Verify(!HasSuperBorder);
@@ -33,14 +60,20 @@ namespace Delaunay
 			CreateSuperBorder(superBorder);
 		}
 
+		/// <summary>
+		/// 加入障碍物.
+		/// </summary>
 		public Obstacle AddObstacle(IEnumerable<Vector3> vertices)
 		{
 			List<HalfEdge> polygonBoundingEdges = AddShape(vertices, true);
 			Obstacle obstacle = geomManager.CreateObstacle(polygonBoundingEdges);
-			MarkObstacle(obstacle);
+			obstacle.Mesh.ForEach(triangle => { triangle.Walkable = false; });
 			return obstacle;
 		}
 
+		/// <summary>
+		/// 移除ID为obstacleID的障碍物.
+		/// </summary>
 		public void RemoveObstacle(int obstacleID)
 		{
 			Obstacle obstacle = geomManager.GetObstacle(obstacleID);
@@ -48,6 +81,9 @@ namespace Delaunay
 			geomManager.ReleaseObstacle(obstacle);
 		}
 
+		/// <summary>
+		/// 加入边集, close表示是否自动闭合.
+		/// </summary>
 		public BorderSet AddBorderSet(IEnumerable<Vector3> vertices, bool close)
 		{
 			List<HalfEdge> polygonBoundingEdges = AddShape(vertices, close);
@@ -55,6 +91,9 @@ namespace Delaunay
 			return borderSet;
 		}
 
+		/// <summary>
+		/// 移除ID为obstacleID的边集.
+		/// </summary>
 		public void RemoveBorderSet(int borderSetID)
 		{
 			BorderSet borderSet = geomManager.GetBorderSet(borderSetID);
@@ -62,29 +101,44 @@ namespace Delaunay
 			geomManager.ReleaseBorderSet(borderSet);
 		}
 
+		/// <summary>
+		/// 清除网格, 不清理边框.
+		/// </summary>
 		public void ClearMesh()
 		{
 			geomManager.Clear();
 			CreateSuperBorder(superBorder);
 		}
 
+		/// <summary>
+		/// 清除网格和边框.
+		/// </summary>
 		public void ClearAll()
 		{
 			geomManager.Clear();
 			superBorder.Clear();
 		}
 
+		/// <summary>
+		/// 加载网格.
+		/// </summary>
 		public void Load(string path)
 		{
 			geomManager.Clear();
 			MeshSerializer.Load(path, geomManager, superBorder);
 		}
 
+		/// <summary>
+		/// 保存网格.
+		/// </summary>
 		public void Save(string path)
 		{
 			MeshSerializer.Save(path, geomManager, superBorder);
 		}
 
+		/// <summary>
+		/// 计算半径为radius的物体从start移动到dest的路径.
+		/// </summary>
 		public List<Vector3> FindPath(Vector3 start, Vector3 dest, float radius)
 		{
 			Tuple2<int, Triangle> findResult = geomManager.FindVertexContainedTriangle(start);
@@ -109,6 +163,9 @@ namespace Delaunay
 			return Pathfinding.FindPath(facet1, start, findResult.Second, dest, radius);
 		}
 
+		/// <summary>
+		/// 查找离position最近的, 可以容纳半径为radius的物体的安全点.
+		/// </summary>
 		public Vector3 GetNearestPoint(Vector3 position, float radius)
 		{
 			if (!IsValidPosition(position, radius) && !SearchValidPosition(ref position, radius, kGetNearestMaxDistance, kGetNearestDistanceSampleCount, kGetNearestRadianSampleCount))
@@ -120,6 +177,9 @@ namespace Delaunay
 			return position;
 		}
 
+		/// <summary>
+		/// 将半径为radius的物体, 从from移动到to, 可达的最远位置.
+		/// </summary>
 		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
 		{
 			if (!IsValidPosition(from, radius))
@@ -131,9 +191,14 @@ namespace Delaunay
 			return RaycastFrom(from, to, radius);
 		}
 
+		/// <summary>
+		/// 半径为radius的物体, 在position是否安全.
+		/// </summary>
 		public bool IsValidPosition(Vector3 position, float radius)
 		{
 			Tuple2<int, Triangle> containedInfo = geomManager.FindVertexContainedTriangle(position);
+
+			// 是否在网格上.
 			if (containedInfo.Second == null || !containedInfo.Second.Walkable)
 			{
 				return false;
@@ -142,6 +207,9 @@ namespace Delaunay
 			return IsValidMeshPosition(containedInfo, position, radius);
 		}
 
+		/// <summary>
+		/// 获取position位置的场景高度.
+		/// </summary>
 		public float GetTerrainHeight(Vector3 position)
 		{
 			return position.y;
@@ -151,46 +219,80 @@ namespace Delaunay
 			 */
 		}
 
+		/// <summary>
+		/// 场景宽度.
+		/// </summary>
 		public float Width { get; private set; }
+
+		/// <summary>
+		/// 场景高度.
+		/// </summary>
 		public float Height { get; private set; }
 
+		/// <summary>
+		/// 场景原点.
+		/// </summary>
 		public Vector3 Origin { get; private set; }
 
+		/// <summary>
+		/// 是否已存在边框.
+		/// </summary>
 		public bool HasSuperBorder
 		{
 			get { return superBorder.Count > 0; }
 		}
 
+		/// <summary>
+		/// 组成边框的点.
+		/// </summary>
 		public IEnumerable<Vector3> BorderVertices
 		{
 			get { return superBorder; }
 		}
 
+		/// <summary>
+		/// 所以的点.
+		/// </summary>
 		public List<Vertex> AllVertices
 		{
 			get { return geomManager.AllVertices; }
 		}
 
+		/// <summary>
+		/// 所有的边.
+		/// </summary>
 		public List<HalfEdge> AllEdges
 		{
 			get { return geomManager.AllEdges; }
 		}
 
+		/// <summary>
+		/// 所有的三角形.
+		/// </summary>
 		public List<Triangle> AllTriangles
 		{
 			get { return geomManager.AllTriangles; }
 		}
 
+		/// <summary>
+		/// 所有的障碍物.
+		/// </summary>
 		public List<Obstacle> AllObstacles
 		{
 			get { return geomManager.AllObstacles; }
 		}
 
+		/// <summary>
+		/// 格子地图.
+		/// </summary>
 		public TiledMap Map
 		{
 			get { return geomManager.Map; }
 		}
 
+		/// <summary>
+		/// 加入一个多边形, close表示是否自动闭合.
+		/// </summary>
 		protected List<HalfEdge> AddShape(IEnumerable<Vector3> container, bool close)
 		{
 			IEnumerator<Vector3> e = container.GetEnumerator();
@@ -208,6 +310,7 @@ namespace Delaunay
 				prevVertex = currentVertex;
 			}
 
+			// 自动闭合.
 			if (close)
 			{
 				polygonBoundingEdges.AddRange(AddConstrainedEdge(prevVertex, firstVertex));
@@ -255,11 +358,6 @@ namespace Delaunay
 			return OnConstrainedEdgeCrossEdges(ref src, dest, crossResult.First);
 		}
 
-		protected void MarkObstacle(Obstacle obstacle)
-		{
-			obstacle.Mesh.ForEach(triangle => { triangle.Walkable = false; });
-		}
-
 		protected bool Append(Vertex v)
 		{
 			Tuple2<int, Triangle> answer = geomManager.FindVertexContainedTriangle(v.Position);
@@ -272,7 +370,7 @@ namespace Delaunay
 			}
 			else
 			{
-				HalfEdge hitEdge = answer.Second.GetEdgeByDirection(answer.First);
+				HalfEdge hitEdge = answer.Second.GetEdgeByIndex(answer.First);
 				InsertOnEdge(v, answer.Second, hitEdge);
 			}
 
@@ -298,7 +396,7 @@ namespace Delaunay
 			}
 			else
 			{
-				HalfEdge edge = containedInfo.Second.GetEdgeByDirection(containedInfo.First);
+				HalfEdge edge = containedInfo.Second.GetEdgeByIndex(containedInfo.First);
 				border = RaycastFromEdge(edge, from, to, radius);
 			}
 
@@ -411,7 +509,7 @@ namespace Delaunay
 			}
 			else
 			{
-				edges.Add(containedInfo.Second.GetEdgeByDirection(containedInfo.First));
+				edges.Add(containedInfo.Second.GetEdgeByIndex(containedInfo.First));
 				edges.Add(edges.back().Pair);
 			}
 
@@ -746,9 +844,9 @@ namespace Delaunay
 			Utility.Verify(cv.Face == bc);
 			Utility.Verify(cv.Pair.Face == ca);
 
-			FlipIfNeeded(ab.Edge);
-			FlipIfNeeded(bc.Edge);
-			FlipIfNeeded(ca.Edge);
+			FlipTriangles(ab.Edge);
+			FlipTriangles(bc.Edge);
+			FlipTriangles(ca.Edge);
 		}
 
 		void InsertOnEdge(Vertex v, Triangle old, HalfEdge hitEdge)
@@ -821,17 +919,20 @@ namespace Delaunay
 			Utility.Verify(v2.Face == oposite2);
 			Utility.Verify(v2.Pair.Face == split2);
 
-			FlipIfNeeded(split1.Edge);
-			FlipIfNeeded(split2.Edge);
+			FlipTriangles(split1.Edge);
+			FlipTriangles(split2.Edge);
 
 			if (other != null)
 			{
-				FlipIfNeeded(oposite1.Edge);
-				FlipIfNeeded(oposite2.Edge);
+				FlipTriangles(oposite1.Edge);
+				FlipTriangles(oposite2.Edge);
 			}
 		}
 
-		void FlipIfNeeded(HalfEdge halfEdge)
+		/// <summary>
+		/// 检查halfEdge两侧的三角形是否满足delaunay性质. 如果不满足, 进行翻转.
+		/// </summary>
+		void FlipTriangles(HalfEdge halfEdge)
 		{
 			Stack<HalfEdge> stack = new Stack<HalfEdge>();
 			stack.Push(halfEdge);
@@ -839,6 +940,8 @@ namespace Delaunay
 			for (; stack.Count != 0; )
 			{
 				halfEdge = stack.Pop();
+
+				// 如果该边是约束边, 不翻转.
 				if (halfEdge.Constrained || halfEdge.Pair.Constrained) { continue; }
 
 				Triangle x = halfEdge.Face;
@@ -848,29 +951,36 @@ namespace Delaunay
 
 				Utility.Verify(x.Walkable && y.Walkable, "Can not flip unwalkable triangle");
 
+				// 检查是否满足delaunay性质.
 				if (!MathUtility.PointInCircumCircle(x.A.Position, x.B.Position, x.C.Position, halfEdge.Pair.Next.Dest.Position))
 				{
 					continue;
 				}
 
+				// 创建新的边.
 				HalfEdge ab = geomManager.CreateEdge(halfEdge.Next.Dest, halfEdge.Pair.Next.Dest);
 
 				HalfEdge bEdges0 = halfEdge.Pair.Next.Next;
 				HalfEdge bEdges1 = halfEdge.Next;
 				HalfEdge bEdges2 = ab;
 
+				// 去掉映射.
+				// 注意这里不删除三角形, 而是通过设置边, 将旧三角形改造为新的.
 				geomManager.UnrasterizeTriangle(x);
 				geomManager.UnrasterizeTriangle(y);
 
+				// 连接新的边.
 				x.Edge = halfEdge.Next.Next.CycleLink(halfEdge.Pair.Next, ab.Pair);
 				y.Edge = bEdges0.CycleLink(bEdges1, bEdges2);
 
+				// 映射新三角形.
 				geomManager.RasterizeTriangle(x);
 				geomManager.RasterizeTriangle(y);
 
 				x.BoundingEdges.ForEach(item => { item.Face = x; });
 				y.BoundingEdges.ForEach(item => { item.Face = y; });
 
+				// 翻转之后, 检查这2个三角形的另外2条边, 是否满足delaunay性质.
 				if (GuardedPushStack(stack, halfEdge.Pair.Next.Next)
 					&& GuardedPushStack(stack, halfEdge.Next)
 					&& GuardedPushStack(stack, halfEdge.Pair.Next)
@@ -879,6 +989,8 @@ namespace Delaunay
 				}
 
 				halfEdge.Face = halfEdge.Pair.Face = null;
+
+				// 该边已不存在, 将他删除.
 				geomManager.ReleaseEdge(halfEdge);
 			}
 		}

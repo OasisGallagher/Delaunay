@@ -7,6 +7,9 @@ using System.IO;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 边.
+	/// </summary>
 	public class HalfEdge
 	{
 		public static IDGenerator HalfEdgeIDGenerator = new IDGenerator();
@@ -19,44 +22,57 @@ namespace Delaunay
 		public int ID { get; set; }
 
 		/// <summary>
-		/// Vertex at the end of the half-edge.
+		/// 边的终点.
 		/// </summary>
 		public Vertex Dest { get; set; }
 
 		/// <summary>
-		/// Next half-edge around the face.
+		/// 下一条边.
 		/// </summary>
 		public HalfEdge Next { get; set; }
 
+		/// <summary>
+		/// 上一条边.
+		/// </summary>
 		public HalfEdge Prev
 		{
 			get { return Pair.Next; }
 		}
 
 		/// <summary>
-		/// Oppositely oriented adjacent half-edge.
+		/// 边的"另一半".
 		/// </summary>
 		public HalfEdge Pair;
 
 		/// <summary>
-		/// Face the half-edge borders.
+		/// 边所包围的三角形.
 		/// </summary>
 		public Triangle Face { get; set; }
 
-		public Vector3 Center { get { return (Src.Position + Dest.Position) / 2f; } }
-
+		/// <summary>
+		/// 是否为约束边.
+		/// </summary>
 		public bool Constrained { get; set; }
 
+		/// <summary>
+		/// 边的起点.
+		/// </summary>
 		public Vertex Src
 		{
 			get { return Pair.Dest; }
 		}
 
+		/// <summary>
+		/// 通过边的Next构成的环.
+		/// </summary>
 		public List<HalfEdge> Cycle
 		{
 			get { return GetEdgeCycle(); }
 		}
 
+		/// <summary>
+		/// 环形连接list内的边.
+		/// </summary>
 		public HalfEdge CycleLink(params HalfEdge[] list)
 		{
 			Utility.Verify(list != null && list.Length > 0);
@@ -72,6 +88,9 @@ namespace Delaunay
 			return this;
 		}
 
+		/// <summary>
+		/// 序列化边.
+		/// </summary>
 		public void WriteBinary(BinaryWriter writer)
 		{
 			writer.Write(ID);
@@ -81,6 +100,9 @@ namespace Delaunay
 			writer.Write(Constrained);
 		}
 
+		/// <summary>
+		/// 反序列化边.
+		/// </summary>
 		public void ReadBinary(BinaryReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
 		{
 			container[ID] = this;
@@ -113,7 +135,7 @@ namespace Delaunay
 
 			Constrained = reader.ReadBoolean();
 
-			// Face is updated by Triangle.
+			// Face字段由Triangle来更新.
 		}
 
 		public override string ToString()

@@ -2,6 +2,9 @@
 
 namespace Delaunay
 {
+	/// <summary>
+	/// ID生成器.
+	/// </summary>
 	public class IDGenerator
 	{
 		public int Value

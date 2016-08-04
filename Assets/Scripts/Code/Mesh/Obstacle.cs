@@ -3,6 +3,9 @@ using System.IO;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 障碍物.
+	/// </summary>
 	public class Obstacle
 	{
 		public int ID { get; private set; }
@@ -14,6 +17,9 @@ namespace Delaunay
 			ID = ObstacleIDGenerator.Value;
 		}
 
+		/// <summary>
+		/// 障碍物的包围边.
+		/// </summary>
 		public List<HalfEdge> BoundingEdges
 		{
 			get { return boundingEdges; }
@@ -24,8 +30,14 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 组成该障碍物三角网格.
+		/// </summary>
 		public List<Triangle> Mesh { get { return mesh; } }
 
+		/// <summary>
+		/// 序列化障碍物.
+		/// </summary>
 		public void WriteBinary(BinaryWriter writer)
 		{
 			writer.Write(ID);
@@ -36,6 +48,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 反序列化障碍物.
+		/// </summary>
 		public void ReadBinary(BinaryReader reader, IDictionary<int, HalfEdge> container)
 		{
 			ID = reader.ReadInt32();
@@ -52,6 +67,9 @@ namespace Delaunay
 			BoundingEdges = bounding;
 		}
 
+		/// <summary>
+		/// 计算edges包围的几何图形的三角网格.
+		/// </summary>
 		List<Triangle> CalculateMeshTriangles(List<HalfEdge> edges)
 		{
 			List<Triangle> answer = new List<Triangle>();

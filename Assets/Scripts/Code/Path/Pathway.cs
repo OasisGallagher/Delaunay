@@ -3,9 +3,15 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 路径.
+	/// </summary>
 	[RequireComponent(typeof(LineRenderer))]
 	public class Pathway : MonoBehaviour
 	{
+		/// <summary>
+		/// 路径点.
+		/// </summary>
 		public Vector3[] Points
 		{
 			get { return points; }
@@ -16,14 +22,22 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 路径总长度.
+		/// </summary>
 		public float Length
 		{
 			get { return totalLength; }
 		}
 
+		/// <summary>
+		/// 获取长度为length处的点坐标.
+		/// </summary>
 		public Vector3 DistanceToPoint(float distance)
 		{
 			Utility.Assert(distance > 0f);
+
+			// 超出路径.
 			if (distance >= totalLength)
 			{
 				return points.back();
@@ -37,6 +51,7 @@ namespace Delaunay
 			{
 				if (lengths[i] >= remaining)
 				{
+					// 插值.
 					ans = Vector3.Lerp(points[i - 1], points[i], remaining / lengths[i]);
 					break;
 				}
@@ -64,18 +79,15 @@ namespace Delaunay
 			if (points == null)
 			{
 				lengths = null;
-				normals = null;
 				return;
 			}
 
 			lengths = new float[points.Length];
-			normals = new Vector3[points.Length];
 
 			for (int i = 1; i < points.Length; ++i)
 			{
-				normals[i] = points[i] - points[i - 1];
-				lengths[i] = normals[i].magnitude2();
-				normals[i] /= lengths[i];
+				Vector3 diff = points[i] - points[i - 1];
+				lengths[i] = diff.magnitude2();
 				totalLength += lengths[i];
 			}
 
@@ -86,12 +98,24 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 渲染路径.
+		/// </summary>
 		LineRenderer pathRenderer;
 
+		/// <summary>
+		/// 路径点.
+		/// </summary>
 		Vector3[] points = null;
-		Vector3[] normals = null;
 
+		/// <summary>
+		/// lengths[i]表示points[i-1]到points[i]的长度.
+		/// </summary>
 		float[] lengths = null;
+
+		/// <summary>
+		/// 路径总长度.
+		/// </summary>
 		float totalLength = 0f;
 	}
 }

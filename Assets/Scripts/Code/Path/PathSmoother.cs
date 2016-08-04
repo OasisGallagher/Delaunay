@@ -3,8 +3,16 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 路径平滑.
+	/// </summary>
 	public static class PathSmoother
 	{
+		/// <summary>
+		/// 平滑start到dest的路径. 
+		/// <para>路径经过edges中的边.</para>
+		/// <para>物体半径为radius.</para>
+		/// </summary>
 		public static List<Vector3> Smooth(Vector3 start, Vector3 dest, List<HalfEdge> edges, float radius)
 		{
 			List<Vector3> portals = new List<Vector3>(edges.Count * 2 + 4) { start, start };
@@ -24,7 +32,8 @@ namespace Delaunay
 	}
 
 	/// <summary>
-	/// http://www.koffeebird.com/2014/05/towards-modified-simple-stupid-funnel.html
+	/// 带半径的路径平滑.
+	/// <para>http://www.koffeebird.com/2014/05/towards-modified-simple-stupid-funnel.html</para>
 	/// </summary>
 	public static class NonPointObjectFunnel
 	{
@@ -316,7 +325,8 @@ namespace Delaunay
 	}
 
 	///<summary>
-	// http://gamedev.stackexchange.com/questions/68302/how-does-the-simple-stupid-funnel-algorithm-work
+	/// 不带半径的路径平滑.
+	/// <para>http://gamedev.stackexchange.com/questions/68302/how-does-the-simple-stupid-funnel-algorithm-work</para>
 	///</summary>
 	public static class PointObjectFunnel
 	{

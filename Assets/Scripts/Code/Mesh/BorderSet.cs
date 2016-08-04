@@ -3,6 +3,10 @@ using System.IO;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 边集. 
+	/// <para>与Obstacle的区别是: 边集为边的集合, 不一定封闭, 且不将封闭区域标记为不可行走.</para>
+	/// </summary>
 	public class BorderSet
 	{
 		public int ID { get; private set; }
@@ -14,8 +18,14 @@ namespace Delaunay
 			ID = BorderSetIDGenerator.Value;
 		}
 
+		/// <summary>
+		/// 边集中的成员.
+		/// </summary>
 		public List<HalfEdge> BoundingEdges { get; set; }
 
+		/// <summary>
+		/// 序列化边.
+		/// </summary>
 		public void WriteBinary(BinaryWriter writer)
 		{
 			writer.Write(ID);
@@ -26,6 +36,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 反序列化边.
+		/// </summary>
 		public void ReadBinary(BinaryReader reader, IDictionary<int, HalfEdge> container)
 		{
 			ID = reader.ReadInt32();

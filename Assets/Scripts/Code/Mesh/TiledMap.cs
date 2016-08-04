@@ -4,9 +4,16 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 格子.
+	/// </summary>
 	public class Tile
 	{
+		/// <summary>
+		/// 包含该格子中点的三角形.
+		/// </summary>
 		public Triangle Face;
+
 		public override string ToString()
 		{
 			if (Face != null) { return Face.ToString(); }
@@ -14,12 +21,18 @@ namespace Delaunay
 		}
 	}
 
+	/// <summary>
+	/// 矩形区域.
+	/// </summary>
 	public struct Region
 	{
 		public int xMin, xMax;
 		public int zMin, zMax;
 	}
 
+	/// <summary>
+	/// 矩形区域, 由若干个格子组成.
+	/// </summary>
 	public struct TiledMapRegion
 	{
 		Region region;
@@ -31,11 +44,17 @@ namespace Delaunay
 			z = region.zMax;
 		}
 
+		/// <summary>
+		/// 当前遍历的格子的索引.
+		/// </summary>
 		public Tuple2<int, int> Current
 		{
 			get { return new Tuple2<int, int>(x, z); }
 		}
 
+		/// <summary>
+		/// 逐行遍历该区域内的格子.
+		/// </summary>
 		public bool MoveNext()
 		{
 			if (z++ >= region.zMax)
@@ -50,21 +69,33 @@ namespace Delaunay
 
 	public class TiledMap
 	{
+		/// <summary>
+		/// 方格的尺寸.
+		/// </summary>
 		public float TileSize
 		{
 			get { return tileSize; }
 		}
 
+		/// <summary>
+		/// 行数.
+		/// </summary>
 		public int RowCount
 		{
 			get { return rowCount; }
 		}
 
+		/// <summary>
+		/// 列数.
+		/// </summary>
 		public int ColumnCount
 		{
 			get { return columnCount; }
 		}
 
+		/// <summary>
+		/// 起点.
+		/// </summary>
 		public Vector3 Origin
 		{
 			get { return origin; }
@@ -85,6 +116,9 @@ namespace Delaunay
 			InitTiles(tileSize, rowCount, columnCount);
 		}
 
+		/// <summary>
+		/// 获取第x行, 第z列的格子.
+		/// </summary>
 		public Tile this[int x, int z]
 		{
 			get
@@ -97,6 +131,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 获取坐标position所处的格子.
+		/// </summary>
 		public Tile this[Vector3 position]
 		{
 			get
@@ -115,11 +152,17 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 获取格子的中心点坐标.
+		/// </summary>
 		public Vector3 GetTileCenter(int x, int z)
 		{
 			return origin + new Vector3((x + 0.5f) * tileSize, 0f, (z + 0.5f) * tileSize);
 		}
 
+		/// <summary>
+		/// 获取指定坐标区域的格子.
+		/// </summary>
 		public TiledMapRegion GetTiles(float xMin, float xMax, float zMin, float zMax)
 		{
 			xMin -= origin.x; xMax -= origin.x;

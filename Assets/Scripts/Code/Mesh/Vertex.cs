@@ -3,6 +3,9 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 顶点.
+	/// </summary>
 	public class Vertex
 	{
 		public static IDGenerator VertexIDGenerator = new IDGenerator();
@@ -39,12 +42,18 @@ namespace Delaunay
 			return base.GetHashCode();
 		}
 
+		/// <summary>
+		/// 序列化顶点.
+		/// </summary>
 		public void WriteBinary(BinaryWriter writer)
 		{
 			writer.Write(ID);
 			writer.write(Position);
 		}
 
+		/// <summary>
+		/// 反序列化顶点.
+		/// </summary>
 		public void ReadBinary(BinaryReader reader)
 		{
 			ID = reader.ReadInt32();

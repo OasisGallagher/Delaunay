@@ -5,14 +5,34 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 点, 边, 三角形, 障碍物, 边集的管理器.
+	/// </summary>
 	public class GeomManager
 	{
+		/// <summary>
+		/// 场景上的格子, 用来加速查找.
+		/// </summary>
 		TiledMap tiledMap = null;
 
+		/// <summary>
+		/// 障碍物列表.
+		/// </summary>
 		List<Obstacle> obstacleContainer = new List<Obstacle>();
+
+		/// <summary>
+		/// 边集列表.
+		/// </summary>
 		List<BorderSet> borderSetContainer = new List<BorderSet>();
+
+		/// <summary>
+		/// 每个顶点, 对应从它出发的所有边.
+		/// </summary>
 		SortedDictionary<Vertex, List<HalfEdge>> halfEdgeContainer = new SortedDictionary<Vertex, List<HalfEdge>>(EditorConstants.kVertexComparer);
 
+		/// <summary>
+		/// 初始化管理器, 地图起点为origin, 宽度为width, 高度为height.
+		/// </summary>
 		public GeomManager(Vector3 origin, float width, float height)
 		{
 			tiledMap = new TiledMap(origin, 1f, Mathf.CeilToInt(height), Mathf.CeilToInt(width));
@@ -28,6 +48,9 @@ namespace Delaunay
 			return ans;
 		}
 
+		/// <summary>
+		/// 创建一个位置在position的顶点.
+		/// </summary>
 		public Vertex CreateVertex(BinaryReader reader)
 		{
 			Vertex ans = new Vertex(Vector3.zero);
@@ -38,10 +61,14 @@ namespace Delaunay
 			return ans;
 		}
 
+		/// <summary>
+		/// 创建从src到dest的边, 如果它已经存在, 直接返回它.
+		/// </summary>
 		public HalfEdge CreateEdge(Vertex src, Vertex dest)
 		{
 			HalfEdge self = GetRays(src).Find(item => { return item.Dest == dest; });
 
+			// 如果该边不存在, 进行创建.
 			if (self == null)
 			{
 				self = new HalfEdge();
@@ -57,13 +84,16 @@ namespace Delaunay
 				dest.Edge = other;
 				*/
 
-				_AddEdge(self);
-				_AddEdge(other);
+				AddUnserializedEdge(self);
+				AddUnserializedEdge(other);
 			}
 
 			return self;
 		}
 
+		/// <summary>
+		/// 从reader中创建/查找边, 并初始化.
+		/// </summary>
 		public HalfEdge CreateEdge(BinaryReader reader, List<Vertex> vertices, IDictionary<int, HalfEdge> container)
 		{
 			HalfEdge answer = null;
@@ -79,17 +109,26 @@ namespace Delaunay
 			return answer;
 		}
 
+		/// <summary>
+		/// 释放edge及edge.Pair.
+		/// </summary>
 		public void ReleaseEdge(HalfEdge edge)
 		{
-			RemoveEdge(edge.Pair);
-			RemoveEdge(edge);
+			ReleaseHalfEdge(edge.Pair);
+			ReleaseHalfEdge(edge);
 		}
 
+		/// <summary>
+		/// 创建一个空的triangle.
+		/// </summary>
 		public Triangle CreateTriangle()
 		{
 			return new Triangle();
 		}
 
+		/// <summary>
+		/// 创建triangle, 并从reader中初始化.
+		/// </summary>
 		public Triangle CreateTriangle(BinaryReader reader, IDictionary<int, HalfEdge> container)
 		{
 			Triangle answer = CreateTriangle();
@@ -101,6 +140,9 @@ namespace Delaunay
 			return answer;
 		}
 
+		/// <summary>
+		/// 创建边ab, bc, ca, 及三角形, 如果该三角形已经存在, 直接返回它.
+		/// </summary>
 		public Triangle CreateTriangle(Vertex a, Vertex b, Vertex c)
 		{
 			HalfEdge ab = CreateEdge(a, b);
@@ -126,6 +168,9 @@ namespace Delaunay
 			return answer;
 		}
 
+		/// <summary>
+		/// 释放triangle.
+		/// </summary>
 		public void ReleaseTriangle(Triangle triangle)
 		{
 			UnrasterizeTriangle(triangle);
@@ -145,6 +190,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 创建由boundingEdges包围的障碍物.
+		/// </summary>
 		public Obstacle CreateObstacle(List<HalfEdge> boundingEdges)
 		{
 			Obstacle answer = new Obstacle();
@@ -153,6 +201,9 @@ namespace Delaunay
 			return answer;
 		}
 
+		/// <summary>
+		/// 从reader创建并初始化障碍物.
+		/// </summary>
 		public Obstacle CreateObstacle(BinaryReader reader, IDictionary<int, HalfEdge> container)
 		{
 			Obstacle answer = new Obstacle();
@@ -161,16 +212,25 @@ namespace Delaunay
 			return answer;
 		}
 
+		/// <summary>
+		/// 获取指定ID为障碍物.
+		/// </summary>
 		public Obstacle GetObstacle(int ID)
 		{
 			return obstacleContainer.Find(item => { return item.ID == ID; });
 		}
 
+		/// <summary>
+		/// 释放障碍物.
+		/// </summary>
 		public void ReleaseObstacle(Obstacle obstacle)
 		{
 			obstacleContainer.Remove(obstacle);
 		}
 
+		/// <summary>
+		/// 创建由boundingEdges包围的边集.
+		/// </summary>
 		public BorderSet CreateBorderSet(List<HalfEdge> boundingEdges)
 		{
 			BorderSet answer = new BorderSet();
@@ -179,6 +239,9 @@ namespace Delaunay
 			return answer;
 		}
 
+		/// <summary>
+		/// 从reader创建并初始化边集.
+		/// </summary>
 		public BorderSet CreateBorderSet(BinaryReader reader, IDictionary<int, HalfEdge> container)
 		{
 			BorderSet answer = new BorderSet();
@@ -187,28 +250,43 @@ namespace Delaunay
 			return answer;
 		}
 
+		/// <summary>
+		/// 获取指定ID的边集.
+		/// </summary>
 		public BorderSet GetBorderSet(int ID)
 		{
 			return borderSetContainer.Find(item => { return item.ID == ID; });
 		}
 
+		/// <summary>
+		/// 释放边集.
+		/// </summary>
 		public void ReleaseBorderSet(BorderSet borderSet)
 		{
 			borderSetContainer.Remove(borderSet);
 		}
 
+		/// <summary>
+		/// 查找包含position的三角形.
+		/// <para>返回:</para>
+		/// <para>i&lt;0, face: position与face的第-(i+1)个顶点重合.</para>
+		/// <para>i==0, face: position在face内.</para>
+		/// <para>i&gt;0, face: position在face的第i条边上.</para>
+		/// </summary>
 		public Tuple2<int, Triangle> FindVertexContainedTriangle(Vector3 position)
 		{
 			Tuple2<int, Triangle> answer = new Tuple2<int, Triangle>();
 
 			Tile startTile = tiledMap[position];
 			
+			// 查找开始的三角形, 如果未找到, 从任意(这里去第1个)三角形开始.
 			Triangle face = startTile != null ? startTile.Face : null;
 
 			face = face ?? AllTriangles[0];
 
 			for (; face != null; )
 			{
+				// 顶点重合.
 				int index = face.VertexIndex(position);
 				if (index >= 0)
 				{
@@ -216,6 +294,7 @@ namespace Delaunay
 					return answer;
 				}
 
+				// 在边上或者在三角形内.
 				int iedge = face.GetPointDirection(position);
 				if (iedge >= 0)
 				{
@@ -223,22 +302,15 @@ namespace Delaunay
 					return answer;
 				}
 
-				face = face.GetEdgeByDirection(iedge).Pair.Face;
+				face = face.GetEdgeByIndex(iedge).Pair.Face;
 			}
 
 			return answer;
 		}
 
-		public void RemoveEdge(HalfEdge edge)
-		{
-			List<HalfEdge> list = halfEdgeContainer[edge.Src];
-			Utility.Verify(list.Remove(edge));
-			if (list.Count == 0)
-			{
-				halfEdgeContainer.Remove(edge.Src);
-			}
-		}
-
+		/// <summary>
+		/// 将triangle映射到TiledMap上.
+		/// </summary>
 		public void RasterizeTriangle(Triangle triangle)
 		{
 			Vector3[] list = new Vector3[] { triangle.A.Position, triangle.B.Position, triangle.C.Position };
@@ -256,6 +328,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 将triangle的映射从TiledMap上去掉.
+		/// </summary>
 		public void UnrasterizeTriangle(Triangle triangle)
 		{
 			TiledMapRegion tmr = FindTriangleBoundingRectOverlappedTiles(triangle);
@@ -269,6 +344,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 清空管理器.
+		/// </summary>
 		public void Clear()
 		{
 			AllTriangles.ForEach(triangle =>
@@ -285,6 +363,9 @@ namespace Delaunay
 			Obstacle.ObstacleIDGenerator.Current = 0;
 		}
 
+		/// <summary>
+		/// 查找位置在position的点.
+		/// </summary>
 		public Vertex FindVertex(Vector3 position)
 		{
 			List<Vertex> vertices = AllVertices;
@@ -309,6 +390,9 @@ namespace Delaunay
 			return null;
 		}
 
+		/// <summary>
+		/// 查找从vertex出发的边.
+		/// </summary>
 		public List<HalfEdge> GetRays(Vertex vertex)
 		{
 			List<HalfEdge> answer = null;
@@ -316,11 +400,17 @@ namespace Delaunay
 			return answer ?? new List<HalfEdge>();
 		}
 
+		/// <summary>
+		/// 所有的点.
+		/// </summary>
 		public List<Vertex> AllVertices
 		{
 			get { return new List<Vertex>(halfEdgeContainer.Keys); }
 		}
 
+		/// <summary>
+		/// 所有的边.
+		/// </summary>
 		public List<HalfEdge> AllEdges
 		{
 			get
@@ -336,6 +426,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 所有的三角形.
+		/// </summary>
 		public List<Triangle> AllTriangles
 		{
 			get
@@ -345,25 +438,46 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 所有的障碍物.
+		/// </summary>
 		public List<Obstacle> AllObstacles
 		{
 			get { return obstacleContainer; }
 		}
 
+		/// <summary>
+		/// 所有的边集.
+		/// </summary>
 		public List<BorderSet> AllBorderSets
 		{
 			get { return borderSetContainer; }
 		}
 
+		/// <summary>
+		/// 格子地图.
+		/// </summary>
 		public TiledMap Map
 		{
 			get { return tiledMap; }
 		}
 
 		/// <summary>
-		/// Only use for Merging!
+		/// 向管理器加入一条反序列化后的边.
+		/// <para>仅供反序列化时使用!</para>
 		/// </summary>
-		public void _AddEdge(HalfEdge edge)
+		public void AddUnserializedEdge(HalfEdge edge)
+		{
+			AddEdge(edge);
+		}
+
+		void AddVertex(Vertex vertex)
+		{
+			Utility.Verify(!halfEdgeContainer.ContainsKey(vertex));
+			halfEdgeContainer.Add(vertex, new List<HalfEdge>());
+		}
+
+		void AddEdge(HalfEdge edge)
 		{
 			List<HalfEdge> list = null;
 			Utility.Verify(edge.Pair != null, "Invalid Edge, ID = " + edge.ID);
@@ -376,10 +490,14 @@ namespace Delaunay
 			list.Add(edge);
 		}
 
-		void AddVertex(Vertex vertex)
+		void ReleaseHalfEdge(HalfEdge edge)
 		{
-			Utility.Verify(!halfEdgeContainer.ContainsKey(vertex));
-			halfEdgeContainer.Add(vertex, new List<HalfEdge>());
+			List<HalfEdge> list = halfEdgeContainer[edge.Src];
+			Utility.Verify(list.Remove(edge));
+			if (list.Count == 0)
+			{
+				halfEdgeContainer.Remove(edge.Src);
+			}
 		}
 
 		List<Triangle> CollectTriangles()
@@ -422,6 +540,9 @@ namespace Delaunay
 			return answer;
 		}
 
+		/// <summary>
+		/// 查找与triangle的外接矩形相交的格子.
+		/// </summary>
 		TiledMapRegion FindTriangleBoundingRectOverlappedTiles(Triangle triangle)
 		{
 			float xMin = Mathf.Min(triangle.A.Position.x, triangle.B.Position.x, triangle.C.Position.x);

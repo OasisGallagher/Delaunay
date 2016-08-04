@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Delaunay
 {
 	/// <summary>
-	/// 用数组模拟的链表.
+	/// 用数组模拟的链表(无论插入或删除, 都不影响其它节点的索引).
 	/// </summary>
 	public class ArrayLinkedList<T>
 	{
@@ -54,6 +54,9 @@ namespace Delaunay
 			int currentIndex;
 		}
 
+		/// <summary>
+		/// 构造大小为size的链表.
+		/// </summary>
 		public ArrayLinkedList(int size)
 		{
 			container = new ListNode[size];

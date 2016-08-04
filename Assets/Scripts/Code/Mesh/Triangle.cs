@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace Delaunay
 {
+	/// <summary>
+	/// 三角形.
+	/// </summary>
 	public class Triangle : PathfindingNode
 	{
 		public static IDGenerator TriangleIDGenerator = new IDGenerator();
@@ -17,7 +20,7 @@ namespace Delaunay
 		public int ID { get; private set; }
 
 		/// <summary>
-		/// One of the half-edges bordering the face.
+		/// 三角形的一条包围边.
 		/// </summary>
 		public HalfEdge Edge
 		{
@@ -30,8 +33,14 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 三角形是否可行走.
+		/// </summary>
 		public bool Walkable { get; set; }
 
+		/// <summary>
+		/// 三角形的包围边.
+		/// </summary>
 		public List<HalfEdge> BoundingEdges
 		{
 			get
@@ -40,6 +49,8 @@ namespace Delaunay
 				if (AB == null) { return answer; }
 
 				answer.Add(AB);
+
+				// TODO: 判断 ???
 				if (BC != AB) { answer.Add(BC); }
 				if (CA != AB) { answer.Add(CA); }
 
@@ -59,6 +70,9 @@ namespace Delaunay
 		public Vertex B { get { return AB.Dest; } }
 		public Vertex C { get { return AB.Next.Dest; } }
 
+		/// <summary>
+		/// 获取可以经过a, b边的物体的最大半径(a, b必须有交点).
+		/// </summary>
 		public float GetWidth(HalfEdge a, HalfEdge b)
 		{
 			Vertex v = GetIntersectVertex(a, b);
@@ -84,6 +98,9 @@ namespace Delaunay
 			return float.NaN;
 		}
 
+		/// <summary>
+		/// 获取顶点from"正对"的边.
+		/// </summary>
 		public HalfEdge GetOpposite(Vertex from)
 		{
 			foreach (HalfEdge edge in BoundingEdges)
@@ -98,6 +115,9 @@ namespace Delaunay
 			return null;
 		}
 
+		/// <summary>
+		/// 获取边from"正对"的顶点.
+		/// </summary>
 		public Vertex GetOpposite(HalfEdge from)
 		{
 			if (AB.ID == from.ID) { return C; }
@@ -107,18 +127,31 @@ namespace Delaunay
 			return null;
 		}
 
-		public HalfEdge GetEdgeByDirection(int direction)
+		/// <summary>
+		/// 获取第i条边, [1, 3].
+		/// </summary>
+		public HalfEdge GetEdgeByIndex(int index)
 		{
-			direction = Mathf.Abs(direction);
-			Utility.Verify(direction >= 1 && direction <= 3);
-			return (direction == 1) ? AB : (direction == 2 ? BC : CA);
+			index = Mathf.Abs(index);
+			Utility.Verify(index >= 1 && index <= 3);
+			return (index == 1) ? AB : (index == 2 ? BC : CA);
 		}
 
+		/// <summary>
+		/// 点p是否在三角形内, 如果在边上, 返回onEdge的值.
+		/// </summary>
 		public bool Contains(Vector3 p, bool onEdge = true)
 		{
 			return MathUtility.PolygonContains(new Vector3[] { A.Position, B.Position, C.Position }, p, onEdge);
 		}
 
+		/// <summary>
+		/// 获取点point所在的位置在三角形的方位.
+		/// <para>返回:</para>
+		/// <para>[-3, -1]: 在索引为(-i)的边上.</para>
+		/// <para>0: 在三角形内.</para>
+		/// <para>[1, 3]: 在索引为i的边的顺时针方向.</para>
+		/// </summary>
 		public int GetPointDirection(Vector3 point)
 		{
 			float t0 = point.cross2(B.Position, A.Position);
@@ -159,12 +192,9 @@ namespace Delaunay
 			return "Triangle_" + ID + "_" + A.ToString() + " => " + B.ToString() + " => " + C.ToString();
 		}
 
-		public Vertex GetVertexByIndex(int index)
-		{
-			Utility.Verify(index >= 1 && index <= 3);
-			return (index == 1) ? A : (index == 2 ? B : C);
-		}
-
+		/// <summary>
+		/// 获取位置为position的顶点的索引. [0, 2].
+		/// </summary>
 		public int VertexIndex(Vector3 position)
 		{
 			if (A.Position.equals2(position)) { return 0; }
@@ -174,11 +204,17 @@ namespace Delaunay
 			return -1;
 		}
 
+		/// <summary>
+		/// 三角形是否包含位置为position的顶点.
+		/// </summary>
 		public bool HasVertex(Vector3 position)
 		{
 			return VertexIndex(position) >= 0;
 		}
 
+		/// <summary>
+		/// 获取ea和eb的交点.
+		/// </summary>
 		Vertex GetIntersectVertex(HalfEdge ea, HalfEdge eb)
 		{
 			if (ea.Src == eb.Dest) { return ea.Src; }
@@ -187,6 +223,9 @@ namespace Delaunay
 			return null;
 		}
 
+		/// <summary>
+		/// 计算可以经过a, b边的物体的最大半径(a, b必须有交点).
+		/// </summary>
 		float CalculateWidth(HalfEdge ea, HalfEdge eb)
 		{
 			Vertex vc = GetIntersectVertex(ea, eb);
@@ -249,6 +288,9 @@ namespace Delaunay
 			return SearchWidth(c, t2, e3, d);
 		}
 
+		/// <summary>
+		/// 序列化三角形.
+		/// </summary>
 		public void WriteBinary(BinaryWriter writer)
 		{
 			writer.Write(ID);
@@ -256,6 +298,9 @@ namespace Delaunay
 			writer.Write(Walkable);
 		}
 
+		/// <summary>
+		/// 反序列化三角形.
+		/// </summary>
 		public void ReadBinary(BinaryReader reader, IDictionary<int, HalfEdge> container)
 		{
 			ID = reader.ReadInt32();
@@ -268,6 +313,12 @@ namespace Delaunay
 		}
 
 		#region PathfindingNode
+
+		/// <summary>
+		/// 获取该三角形的包围边满足:
+		/// <para>1. 该边和其Pair都是非约束的.</para>
+		/// <para>2. 该边对面是可行走三角形.</para>
+		/// </summary>
 		public override HalfEdge[] AdjacencyPortals
 		{
 			get { return GetAdjacencyPortals(); }

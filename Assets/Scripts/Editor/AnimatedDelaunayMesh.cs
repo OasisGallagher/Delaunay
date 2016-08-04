@@ -60,7 +60,7 @@ namespace Delaunay
 			}
 
 			Obstacle obstacle = geomManager.CreateObstacle(polygonBoundingEdges);
-			MarkObstacle(obstacle);
+			obstacle.Mesh.ForEach(triangle => { triangle.Walkable = false; });
 
 			if (onCreate != null)
 			{
