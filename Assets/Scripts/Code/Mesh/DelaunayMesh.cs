@@ -13,27 +13,27 @@ namespace Delaunay
 		const float kRaycastSearchStep = 0.1f;
 		
 		/// <summary>
-		/// 寻找安全点时的最大半径.
+		/// 寻找有效点时的最大半径.
 		/// </summary>
 		const float kGetNearestMaxDistance = 8;
 
 		/// <summary>
-		/// 寻找安全点时的弧度步进值.
+		/// 寻找有效点时的弧度步进值.
 		/// </summary>
 		const int kGetNearestRadianSampleCount = 8;
 
 		/// <summary>
-		/// 寻找安全点时的半径进值.
+		/// 寻找有效点时的半径进值.
 		/// </summary>
 		const int kGetNearestDistanceSampleCount = 10;
 
 		/// <summary>
-		/// 边框, 表示地图的边缘.
+		/// 边框顶点, 表示地图的边缘.
 		/// </summary>
 		List<Vector3> superBorder;
 		
 		/// <summary>
-		/// 管理器(不包含边框, 因此可以只清理管理器). 
+		/// 管理器. 
 		/// </summary>
 		protected GeomManager geomManager;
 
@@ -149,7 +149,7 @@ namespace Delaunay
 			}
 
 			Utility.Verify(findResult.Second != null, "Invalid start point");
-			Triangle facet1 = findResult.Second;
+			Triangle triangle1 = findResult.Second;
 
 			findResult = geomManager.FindVertexContainedTriangle(dest);
 			if (findResult.Second != null && !findResult.Second.Walkable)
@@ -160,11 +160,11 @@ namespace Delaunay
 
 			Utility.Verify(findResult.Second != null, "Invalid dest point");
 
-			return Pathfinding.FindPath(facet1, start, findResult.Second, dest, radius);
+			return Pathfinding.FindPath(triangle1, start, findResult.Second, dest, radius);
 		}
 
 		/// <summary>
-		/// 查找离position最近的, 可以容纳半径为radius的物体的安全点.
+		/// 查找离position最近的, 可以容纳半径为radius的物体的有效点.
 		/// </summary>
 		public Vector3 GetNearestPoint(Vector3 position, float radius)
 		{
@@ -178,10 +178,11 @@ namespace Delaunay
 		}
 
 		/// <summary>
-		/// 将半径为radius的物体, 从from移动到to, 可达的最远位置.
+		/// 获取将半径为radius的物体, 从from移动到to, 可达的最远位置.
 		/// </summary>
 		public Vector3 Raycast(Vector3 from, Vector3 to, float radius)
 		{
+			// 当前正处在无效的位置.
 			if (!IsValidPosition(from, radius))
 			{
 				Debug.Log("Stuck at " + from);
@@ -192,7 +193,7 @@ namespace Delaunay
 		}
 
 		/// <summary>
-		/// 半径为radius的物体, 在position是否安全.
+		/// 半径为radius的物体, 在position是否有效.
 		/// </summary>
 		public bool IsValidPosition(Vector3 position, float radius)
 		{
@@ -298,11 +299,13 @@ namespace Delaunay
 			IEnumerator<Vector3> e = container.GetEnumerator();
 			List<HalfEdge> polygonBoundingEdges = new List<HalfEdge>();
 
+			// 空的container.
 			if (!e.MoveNext()) { return polygonBoundingEdges; }
 
 			Vertex prevVertex = geomManager.CreateVertex(e.Current);
 			Vertex firstVertex = prevVertex;
 
+			// 创建边和节点, 并收集包围边.
 			for (; e.MoveNext(); )
 			{
 				Vertex currentVertex = geomManager.CreateVertex(e.Current);
@@ -319,33 +322,51 @@ namespace Delaunay
 			return polygonBoundingEdges;
 		}
 
+		/// <summary>
+		/// 加入一条从src到dest的约束边.
+		/// <para>返回构造的约束边.</para>
+		/// </summary>
 		protected List<HalfEdge> AddConstrainedEdge(Vertex src, Vertex dest)
 		{
+			// 加入顶点.
 			Append(src);
 			Append(dest);
 
 			List<HalfEdge> answer = new List<HalfEdge>();
 
-			const int maxLoopCount = 4096;
-			for (int i = 0; src != dest; )
+			// 加入并收集约束边.
+			// 在加入约束边src->dest的过程中, 可能遇到一个点v, v在src->dest上.
+			// 因此, 约束边变为src->v, v->dest.
+			// 此时, src替换为v, 继续迭代, 直到到达dest.
+			for (; src != dest; )
 			{
 				answer.Add(AddConstrainedEdgeAt(ref src, dest));
-				Utility.Verify(++i < maxLoopCount, "Max loop count exceed");
 			}
 
 			return answer;
 		}
 
+		/// <summary>
+		/// 添加src到dest的约束边.
+		/// <para>如果之间遇到顶点v在该边上, 构造边src->v, 并更新src为v.</para>
+		/// <para>如果之间没有其他顶点, 那么构造边src->dest, 更新src为dest.</para>
+		/// <para>返回构造的约束边.</para>
+		/// </summary>
 		protected HalfEdge AddConstrainedEdgeAt(ref Vertex src, Vertex dest)
 		{
+			// 寻找以src为起点的, 且与src->dest相交的边.
 			Tuple2<HalfEdge, CrossState> crossResult = new Tuple2<HalfEdge, CrossState>(null, CrossState.Parallel);
 			foreach (HalfEdge ray in geomManager.GetRays(src))
 			{
-				if (FindCrossedEdge(out crossResult, ray, src.Position, dest.Position)) { break; }
+				if (FindCrossedEdge(out crossResult, ray, src.Position, dest.Position))
+				{
+					break;
+				}
 			}
 
 			Utility.Verify(crossResult.Second != CrossState.Parallel);
 
+			// 找到的边与src->dest完全重合.
 			if (crossResult.Second == CrossState.FullyOverlaps)
 			{
 				crossResult.First.Constrained = true;
@@ -355,19 +376,27 @@ namespace Delaunay
 
 			Utility.Verify(crossResult.Second == CrossState.CrossOnSegment);
 
+			// 处理相交边.
 			return OnConstrainedEdgeCrossEdges(ref src, dest, crossResult.First);
 		}
 
+		/// <summary>
+		/// 向网格内加入点.
+		/// </summary>
 		protected bool Append(Vertex v)
 		{
+			// 查找包含点v的位置的三角形.
 			Tuple2<int, Triangle> answer = geomManager.FindVertexContainedTriangle(v.Position);
 
+			// 与顶点重合, 表示该点已经存在.
 			if (answer.First < 0) { return false; }
 
+			// 点在三角形内.
 			if (answer.First == 0)
 			{
-				InsertToFacet(v, answer.Second);
+				InsertToTriangle(v, answer.Second);
 			}
+			// 点在边上.
 			else
 			{
 				HalfEdge hitEdge = answer.Second.GetEdgeByIndex(answer.First);
@@ -377,12 +406,17 @@ namespace Delaunay
 			return true;
 		}
 
+		/// <summary>
+		/// 获取将半径为radius的物体, 从from移动到to, 可达的最远位置.
+		/// </summary>
 		Vector3 RaycastFrom(Vector3 from, Vector3 to, float radius)
 		{
+			// 查找包含from的三角形. 
 			Tuple2<int, Triangle> containedInfo = geomManager.FindVertexContainedTriangle(from);
 
 			Utility.Verify(containedInfo.Second != null, "can not locate position " + from);
 
+			// TODO: 点重合.
 			if (containedInfo.First < 0)	// [-1, -2, -3]
 			{
 				Debug.LogError("Unhandled case. radius = " + radius);
@@ -390,19 +424,25 @@ namespace Delaunay
 			}
 
 			Vector3 border = Vector3.zero;
+			// 点在三角形内, 那么检查三角形的包围边.
 			if (containedInfo.First == 0)
 			{
 				border = RaycastWithEdges(containedInfo.Second.BoundingEdges, from, to, radius);
 			}
+			// 点在边上, 那么从该边开始检查.
 			else
 			{
 				HalfEdge edge = containedInfo.Second.GetEdgeByIndex(containedInfo.First);
 				border = RaycastFromEdge(edge, from, to, radius);
 			}
-
+			
+			// 迭代查找从from到border的最远位置.
 			return SearchRaycastPosition(from, border, radius, kRaycastSearchStep);
 		}
 
+		/// <summary>
+		/// 从from开始, 向to的方向, 每步前进step距离, 查找半径为radius的物体可达的最远位置.
+		/// </summary>
 		Vector3 SearchRaycastPosition(Vector3 from, Vector3 to, float radius, float step)
 		{
 			Vector3 dir = from - to;
@@ -422,31 +462,42 @@ namespace Delaunay
 			return from;
 		}
 
+		/// <summary>
+		/// from在edge上, 查找半径为radius的物体从from到to可达的最远位置.
+		/// </summary>
 		Vector3 RaycastFromEdge(HalfEdge edge, Vector3 from, Vector3 to, float radius)
 		{
+			// 起点==终点, 或者edge为约束边.
 			if (from.equals2(to) || edge.Constrained || edge.Pair.Constrained)
 			{
 				return from;
 			}
 
+			// from位置无效.
 			if (!IsValidPosition(from, radius))
 			{
 				return from;
 			}
 
+			// 根据from->to的方向, 确定下一个要访问的三角形是edge.Face还是edge.Pair.Face.
 			if ((to - from).cross2(edge.Dest.Position - edge.Src.Position) > 0)
 			{
 				edge = edge.Pair;
 			}
 
+			// 不存在后续的三角形.
 			if (edge.Face == null)
 			{
 				return from;
 			}
 
+			// 检查另外两条边.
 			return RaycastWithEdges(new HalfEdge[] { edge.Next, edge.Next.Next }, from, to, radius);
 		}
 
+		/// <summary>
+		/// 从edges开始检查, 获取将半径为radius的物体, 从from移动到to, 可达的最远位置. 
+		/// </summary>
 		Vector3 RaycastWithEdges(IEnumerable<HalfEdge> edges, Vector3 from, Vector3 to, float radius)
 		{
 			if (from.equals2(to))
@@ -457,12 +508,15 @@ namespace Delaunay
 			Vector2 segCrossAnswer = Vector2.zero;
 			foreach (HalfEdge edge in edges)
 			{
+				// 检查相交.
 				CrossState crossState = MathUtility.SegmentCross(out segCrossAnswer, from, to, edge.Src.Position, edge.Dest.Position);
 
 				Utility.Verify(crossState == CrossState.CrossOnSegment || crossState == CrossState.CrossOnExtLine);
 
+				// 交点不在线段上.
 				if (segCrossAnswer.x < 0 || segCrossAnswer.x > 1) { continue; }
 
+				// 如果交点在线段上, 那么表示该交点为当前最远位置. 再继续从这条边开始检查.
 				if (crossState == CrossState.CrossOnSegment)
 				{
 					Vector3 cross = from + segCrossAnswer.x * (to - from);
@@ -474,6 +528,9 @@ namespace Delaunay
 			return to;
 		}
 
+		/// <summary>
+		/// 从position开始, 半径为maxDist的圆内, 查找有效的位置.
+		/// </summary>
 		bool SearchValidPosition(ref Vector3 position, float radius, float maxDist, int distSampleCount, int circularSampleCount)
 		{
 			float radianStep = Mathf.PI * 2f / circularSampleCount;
@@ -496,17 +553,25 @@ namespace Delaunay
 			return false;
 		}
 
+		/// <summary>
+		/// 半径为radius的物体在position位置, 是否有效.
+		/// <para>containedInfo表示position所处的三角形信息.</para>
+		/// </summary>
 		bool IsValidMeshPosition(Tuple2<int, Triangle> containedInfo, Vector3 position, float radius)
 		{
 			List<HalfEdge> edges = new List<HalfEdge>();
+
+			// 与顶点重合, 必然是无效的位置.
 			if (containedInfo.First < 0) { return false; }
 
+			// 在三角形内, 检查它的边.
 			if (containedInfo.First == 0)
 			{
 				edges.Add(containedInfo.Second.AB);
 				edges.Add(containedInfo.Second.BC);
 				edges.Add(containedInfo.Second.CA);
 			}
+			// 在边上, 检查另外两条边.
 			else
 			{
 				edges.Add(containedInfo.Second.GetEdgeByIndex(containedInfo.First));
@@ -516,19 +581,21 @@ namespace Delaunay
 			for (; edges.Count != 0; )
 			{
 				HalfEdge current = edges.popBack();
+
+				// 圆心为position, 半径为radius的圆, 是否包含这条边的端点.
 				if (MathUtility.PointInCircle(current.Src.Position, position, radius)
 					|| MathUtility.PointInCircle(current.Dest.Position, position, radius))
 				{
 					return false;
 				}
 
-				// Line cross circle.
+				// 该圆是否与这条边相交.
 				if (MathUtility.MinDistance2Segment(position, current.Src.Position, current.Dest.Position) >= radius)
 				{
 					continue;
 				}
 
-				// Cross constrained edge.
+				// 如果圆与边相交, 检查是不是该边是否为约束边.
 				if (current.Constrained || current.Pair.Constrained)
 				{
 					return false;
@@ -536,6 +603,7 @@ namespace Delaunay
 
 				if (current.Pair.Face == null) { continue; }
 
+				// 继续检查边的另一侧三角形的另外两条边.
 				edges.Add(current.Pair.Next);
 				edges.Add(current.Pair.Next.Next);
 			}
@@ -543,6 +611,9 @@ namespace Delaunay
 			return true;
 		}
 
+		/// <summary>
+		/// 寻找极角排序的标尺, 即相对的0度角方向.
+		/// </summary>
 		Vertex FindBenchmark(List<Vertex> vertices, List<Triangle> triangles)
 		{
 			BitArray bits = new BitArray(vertices.Count);
@@ -568,14 +639,19 @@ namespace Delaunay
 			return null;
 		}
 
+		/// <summary>
+		/// 构造src到dest的约束边. crossedEdge为第一条相交边.
+		/// </summary>
 		HalfEdge OnConstrainedEdgeCrossEdges(ref Vertex src, Vertex dest, HalfEdge crossedEdge)
 		{
 			List<Vertex> upper = new List<Vertex>();
 			List<Vertex> lower = new List<Vertex>();
 			List<HalfEdge> edges = new List<HalfEdge>();
 
+			// 收集相交的非约束边.
 			Vertex newSrc = CollectCrossedUnconstrainedEdges(edges, lower, upper, src, dest, crossedEdge);
 
+			// 清理非约束边两侧的三角形.
 			for (int i = 0; i < edges.Count; ++i)
 			{
 				HalfEdge edge = edges[i];
@@ -590,9 +666,11 @@ namespace Delaunay
 				}
 			}
 
+			// 对清理过后的区域三角形化(该区域不一定是多边形).
 			CreateTriangles(PolygonTriangulation.Triangulate(lower, dest, src));
 			CreateTriangles(PolygonTriangulation.Triangulate(upper, src, dest));
 
+			// 标记约束边.
 			HalfEdge constrainedEdge = geomManager.GetRays(src).Find(edge => { return edge.Dest == dest; });
 			Utility.Verify(constrainedEdge != null);
 			constrainedEdge.Constrained = true;
@@ -601,50 +679,21 @@ namespace Delaunay
 			return constrainedEdge;
 		}
 
-		Vector3 CollectCrossedUnconstrainedEdges(List<HalfEdge> answer, Vector3 src, Vector3 dest, float radius)
-		{
-			Vector3 srcDest = dest - src;
-
-			HalfEdge first = null;
-
-			for (; !first.Face.Contains(dest); )
-			{
-				Utility.Verify(!first.Constrained, "Crossed constrained edge");
-				answer.Add(first);
-
-				HalfEdge opposedTriangle = first.Pair;
-
-				Utility.Verify(opposedTriangle != null);
-
-				Vertex opposedVertex = opposedTriangle.Next.Dest;
-				if ((opposedVertex.Position - src).cross2(srcDest) < 0)
-				{
-					first = opposedTriangle.Next;
-				}
-				else
-				{
-					first = opposedTriangle.Next.Next;
-				}
-
-				if (MathUtility.PointOnSegment(opposedVertex.Position, src, dest))
-				{
-					answer.Add(opposedTriangle);
-					src = opposedVertex.Position;
-					break;
-				}
-			}
-
-			return src;
-		}
-
+		/// <summary>
+		/// 收集与src到dest相交的约束边.
+		/// </summary>
 		Vertex CollectCrossedUnconstrainedEdges(List<HalfEdge> answer, List<Vertex> lowerVertices, List<Vertex> upperVertices, Vertex src, Vertex dest, HalfEdge start)
 		{
+			// src->dest向量.
 			Vector3 srcDest = dest.Position - src.Position;
 
 			Vertex current = src;
+
+			// 遍历到dest所在的三角形为止.
 			for (; !start.Face.Contains(dest.Position); )
 			{
 				Utility.Verify(!start.Constrained, "Crossed constrained edge");
+				// 收集相交的边.
 				answer.Add(start);
 
 				HalfEdge opposedTriangle = start.Face.GetOpposite(current);
@@ -686,6 +735,9 @@ namespace Delaunay
 			return src;
 		}
 
+		/// <summary>
+		///创建边框.
+		/// </summary>
 		void CreateSuperBorder(IEnumerable<Vector3> vertices)
 		{
 			if (!HasSuperBorder) { return; }
@@ -706,6 +758,9 @@ namespace Delaunay
 			RemoveSuperTriangle(superTriangle);
 		}
 
+		/// <summary>
+		/// 移除boundingEdges组成的多边形.
+		/// </summary>
 		void RemoveShape(IEnumerable<HalfEdge> boundingEdges)
 		{
 			List<Vertex> boundingVertices = new List<Vertex>();
@@ -719,6 +774,7 @@ namespace Delaunay
 			List<Triangle> triangles = new List<Triangle>();
 			List<Vertex> vertices = new List<Vertex>();
 
+			// 收集多边形的顶点, 以及与该顶点相关的边.
 			Vertex benchmark = null;
 			foreach (HalfEdge edge in boundingEdges)
 			{
@@ -733,6 +789,7 @@ namespace Delaunay
 					vertices.Add(ray.Dest);
 				}
 
+				// 构造多边形.
 				vertices.Sort(new PolarAngleComparer(edge.Src.Position,
 					(benchmark ?? FindBenchmark(vertices, triangles)).Position));
 
@@ -746,10 +803,14 @@ namespace Delaunay
 			}
 
 			triangles.ForEach(t => { geomManager.ReleaseTriangle(t); });
-
+			
+			// 将该多边形区域三角形化.
 			CreateTriangles(PolygonTriangulation.Triangulate(polygon));
 		}
 
+		/// <summary>
+		/// 创建vertices中的vertices.Count/3个的三角形.
+		/// </summary>
 		void CreateTriangles(List<Vertex> vertices)
 		{
 			for (int i = 0; i < vertices.Count; i += 3)
@@ -758,6 +819,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 查找ray的环中, 与src->dest的边相交的边.
+		/// </summary>
 		bool FindCrossedEdge(out Tuple2<HalfEdge, CrossState> answer, HalfEdge ray, Vector3 src, Vector3 dest)
 		{
 			List<HalfEdge> cycle = ray.Cycle;
@@ -789,6 +853,9 @@ namespace Delaunay
 			return false;
 		}
 
+		/// <summary>
+		/// 创建用于步进法生成delaunay三角划分的超级三角形.
+		/// </summary>
 		void SetUpSuperTriangle(Vector3[] super)
 		{
 			geomManager.CreateTriangle(
@@ -798,39 +865,50 @@ namespace Delaunay
 			);
 		}
 
+		/// <summary>
+		/// 移除超级三角形.
+		/// </summary>
 		void RemoveSuperTriangle(Vector3[] super)
 		{
-			geomManager.AllTriangles.ForEach(facet =>
+			geomManager.AllTriangles.ForEach(triangle =>
 			{
-				if (facet.HasVertex(super[0]) || facet.HasVertex(super[1]) || facet.HasVertex(super[2]))
+				if (triangle.HasVertex(super[0]) || triangle.HasVertex(super[1]) || triangle.HasVertex(super[2]))
 				{
-					geomManager.ReleaseTriangle(facet);
+					geomManager.ReleaseTriangle(triangle);
 				}
 			});
 		}
 
-		void InsertToFacet(Vertex v, Triangle old)
+		/// <summary>
+		/// 将点插入到三角形中.
+		/// </summary>
+		void InsertToTriangle(Vertex v, Triangle old)
 		{
 			Triangle ab = geomManager.CreateTriangle();
 			Triangle bc = geomManager.CreateTriangle();
 			Triangle ca = geomManager.CreateTriangle();
 
+			// 分别构造连接v和old的三个顶点的边, 将old一分为三.
 			HalfEdge av = geomManager.CreateEdge(old.A, v);
 			HalfEdge bv = geomManager.CreateEdge(old.B, v);
 			HalfEdge cv = geomManager.CreateEdge(old.C, v);
 
 			HalfEdge AB = old.AB, BC = old.BC, CA = old.CA;
 
+			// 更新Face.
 			AB.Face = bv.Face = av.Pair.Face = ab;
 			BC.Face = cv.Face = bv.Pair.Face = bc;
 			CA.Face = av.Face = cv.Pair.Face = ca;
 
+			// 释放旧三角形.
 			geomManager.ReleaseTriangle(old);
 
+			// 连接边.
 			ab.Edge = AB.CycleLink(bv, av.Pair);
 			bc.Edge = BC.CycleLink(cv, bv.Pair);
 			ca.Edge = CA.CycleLink(av, cv.Pair);
 
+			// 映射到格子地图上.
 			geomManager.RasterizeTriangle(ab);
 			geomManager.RasterizeTriangle(bc);
 			geomManager.RasterizeTriangle(ca);
@@ -844,13 +922,18 @@ namespace Delaunay
 			Utility.Verify(cv.Face == bc);
 			Utility.Verify(cv.Pair.Face == ca);
 
+			// 维护delaunay特性.
 			FlipTriangles(ab.Edge);
 			FlipTriangles(bc.Edge);
 			FlipTriangles(ca.Edge);
 		}
 
+		/// <summary>
+		/// 将点插入到old的边上.
+		/// </summary>
 		void InsertOnEdge(Vertex v, Triangle old, HalfEdge hitEdge)
 		{
+			// 连接v和v所在的边正对的顶点, 将old一分为二.
 			Triangle split1 = geomManager.CreateTriangle();
 			Triangle split2 = geomManager.CreateTriangle();
 
@@ -866,14 +949,18 @@ namespace Delaunay
 			HalfEdge sp2Edge1 = v2.Pair;
 			HalfEdge sp2Edge2 = ov.Pair;
 
+			// 更新Face.
 			sp1Edge0.Face = ov.Face = v1.Face = split1;
 			sp2Edge0.Face = sp2Edge1.Face = sp2Edge2.Face = split2;
 
+			// 释放旧三角形.
 			geomManager.ReleaseTriangle(old);
 
+			// 连接边.
 			split1.Edge = sp1Edge0.CycleLink(ov, v1);
 			split2.Edge = sp2Edge0.CycleLink(sp2Edge1, sp2Edge2);
 
+			// 将新三角形映射到格子地图上.
 			geomManager.RasterizeTriangle(split1);
 			geomManager.RasterizeTriangle(split2);
 
@@ -885,6 +972,7 @@ namespace Delaunay
 			Triangle oposite1 = null;
 			Triangle oposite2 = null;
 
+			// 分割另一侧的三角形.
 			if (other != null)
 			{
 				Vertex p = hitEdge.Pair.Next.Dest;
@@ -919,6 +1007,7 @@ namespace Delaunay
 			Utility.Verify(v2.Face == oposite2);
 			Utility.Verify(v2.Pair.Face == split2);
 
+			// 维护delaunay特性.
 			FlipTriangles(split1.Edge);
 			FlipTriangles(split2.Edge);
 
@@ -995,6 +1084,9 @@ namespace Delaunay
 			}
 		}
 
+		/// <summary>
+		/// 入栈.
+		/// </summary>
 		bool GuardedPushStack(Stack<HalfEdge> stack, HalfEdge item)
 		{
 			if (stack.Count < EditorConstants.kMaxStackCapacity)

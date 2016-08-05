@@ -4,7 +4,7 @@ using UnityEditor;
 namespace Delaunay
 {
 	[CustomEditor(typeof(MeshDebugDraw))]
-	public class MeshDebugDrawEditor : Editor
+	public class MeshDebugDrawInspector : Editor
 	{
 		public override void OnInspectorGUI()
 		{

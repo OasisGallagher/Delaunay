@@ -4,7 +4,7 @@ using UnityEditor;
 namespace Delaunay
 {
 	[CustomEditor(typeof(PlayerComponent))]
-	public class PlayerComponentEditor : Editor
+	public class PlayerComponentInspector : Editor
 	{
 		public override void OnInspectorGUI()
 		{
