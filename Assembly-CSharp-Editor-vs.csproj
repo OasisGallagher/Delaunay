@@ -46,12 +46,10 @@
 	</Reference>
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\Scripts\Editor\AnimatedDelaunayMesh.cs" />
-     <Compile Include="Assets\Scripts\Editor\CustomInspectors\MeshDebugDrawInspector.cs" />
+     <Compile Include="Assets\Scripts\Editor\CustomInspectors\MeshViewerInspector.cs" />
      <Compile Include="Assets\Scripts\Editor\CustomInspectors\PlayerComponentInspector.cs" />
      <Compile Include="Assets\Scripts\Editor\EditCommand.cs" />
-     <Compile Include="Assets\Scripts\Editor\EditorCoroutineRunner.cs" />
-     <Compile Include="Assets\Scripts\Editor\EditorDebugDraw.cs" />
+     <Compile Include="Assets\Scripts\Editor\EditorMeshViewer.cs" />
      <Compile Include="Assets\Scripts\Editor\SceneEditor.cs" />
  <Reference Include="SyntaxTree.VisualStudio.Unity.Bridge">
  <HintPath>E:/GitHub/Delaunay/Assets/UnityVS/Editor/SyntaxTree.VisualStudio.Unity.Bridge.dll</HintPath>
@@ -59,11 +57,11 @@
  <Reference Include="SyntaxTree.VisualStudio.Unity.Messaging">
  <HintPath>E:/GitHub/Delaunay/Assets/UnityVS/Editor/SyntaxTree.VisualStudio.Unity.Messaging.dll</HintPath>
  </Reference>
- <Reference Include="UnityVS.VersionSpecific">
- <HintPath>E:/GitHub/Delaunay/Assets/UnityVS/Editor/UnityVS.VersionSpecific.dll</HintPath>
- </Reference>
  <Reference Include="UnityEditor.Graphs">
  <HintPath>D:/Program Files/Unity/Editor/Data/Managed/UnityEditor.Graphs.dll</HintPath>
+ </Reference>
+ <Reference Include="UnityVS.VersionSpecific">
+ <HintPath>E:/GitHub/Delaunay/Assets/UnityVS/Editor/UnityVS.VersionSpecific.dll</HintPath>
  </Reference>
   </ItemGroup>
   <ItemGroup>

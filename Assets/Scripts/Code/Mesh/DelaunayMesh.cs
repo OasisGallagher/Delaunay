@@ -35,7 +35,7 @@ namespace Delaunay
 		/// <summary>
 		/// 管理器. 
 		/// </summary>
-		protected GeomManager geomManager;
+		GeomManager geomManager;
 
 		/// <summary>
 		/// 初始化网格, 起点为origin, 宽度为width, 高度为height.
@@ -294,7 +294,7 @@ namespace Delaunay
 		/// <summary>
 		/// 加入一个多边形, close表示是否自动闭合.
 		/// </summary>
-		protected List<HalfEdge> AddShape(IEnumerable<Vector3> container, bool close)
+		List<HalfEdge> AddShape(IEnumerable<Vector3> container, bool close)
 		{
 			IEnumerator<Vector3> e = container.GetEnumerator();
 			List<HalfEdge> polygonBoundingEdges = new List<HalfEdge>();
@@ -326,7 +326,7 @@ namespace Delaunay
 		/// 加入一条从src到dest的约束边.
 		/// <para>返回构造的约束边.</para>
 		/// </summary>
-		protected List<HalfEdge> AddConstrainedEdge(Vertex src, Vertex dest)
+		List<HalfEdge> AddConstrainedEdge(Vertex src, Vertex dest)
 		{
 			// 加入顶点.
 			Append(src);
@@ -352,7 +352,7 @@ namespace Delaunay
 		/// <para>如果之间没有其他顶点, 那么构造边src->dest, 更新src为dest.</para>
 		/// <para>返回构造的约束边.</para>
 		/// </summary>
-		protected HalfEdge AddConstrainedEdgeAt(ref Vertex src, Vertex dest)
+		HalfEdge AddConstrainedEdgeAt(ref Vertex src, Vertex dest)
 		{
 			// 寻找以src为起点的, 且与src->dest相交的边.
 			Tuple2<HalfEdge, CrossState> crossResult = new Tuple2<HalfEdge, CrossState>(null, CrossState.Parallel);
@@ -383,7 +383,7 @@ namespace Delaunay
 		/// <summary>
 		/// 向网格内加入点.
 		/// </summary>
-		protected bool Append(Vertex v)
+		bool Append(Vertex v)
 		{
 			// 查找包含点v的位置的三角形.
 			Tuple2<int, Triangle> answer = geomManager.FindVertexContainedTriangle(v.Position);
@@ -416,8 +416,8 @@ namespace Delaunay
 
 			Utility.Verify(containedInfo.Second != null, "can not locate position " + from);
 
-			// TODO: 点重合.
-			if (containedInfo.First < 0)	// [-1, -2, -3]
+			// 点重合.
+			if (containedInfo.First < 0)
 			{
 				Debug.LogError("Unhandled case. radius = " + radius);
 				return from;
@@ -485,7 +485,7 @@ namespace Delaunay
 				edge = edge.Pair;
 			}
 
-			// 不存在后续的三角形.
+			// 不存在另一边的三角形.
 			if (edge.Face == null)
 			{
 				return from;

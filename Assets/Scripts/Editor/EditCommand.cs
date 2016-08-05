@@ -235,44 +235,4 @@ namespace Delaunay
 			refVertices.AddRange(savedVertices);
 		}
 	}
-
-	/// <summary>
-	/// 创建障碍物, 创建过程以动画的形势展示.
-	/// </summary>
-	public class CreateObstacleAnimatedCommand : IEditCommand
-	{
-		AnimatedDelaunayMesh mesh;
-		List<Vector3> refVertices;
-		List<Vector3> savedVertices;
-		Action<Obstacle> onCreate;
-
-		int obstacleID;
-
-		public CreateObstacleAnimatedCommand(List<Vector3> vertices, AnimatedDelaunayMesh mesh, Action<Obstacle> onCreate)
-		{
-			this.mesh = mesh;
-			this.refVertices = vertices;
-			this.savedVertices = new List<Vector3>(vertices);
-			this.onCreate = onCreate;
-		}
-
-		public void PlayForward()
-		{
-			mesh.AnimatedAddObstacle(savedVertices, (obstacle) =>
-			{
-				if (obstacle != null) { obstacleID = obstacle.ID; }
-				if (onCreate != null) { onCreate(obstacle); }
-			});
-
-			refVertices.Clear();
-		}
-
-		public void PlayReverse()
-		{
-			Utility.Verify(obstacleID >= 0);
-			mesh.RemoveObstacle(obstacleID);
-			refVertices.Clear();
-			refVertices.AddRange(savedVertices);
-		}
-	}
 }

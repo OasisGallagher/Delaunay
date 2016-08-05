@@ -4,15 +4,15 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public class EditorDebugDraw
+	public class EditorMeshViewer
 	{
 		DelaunayMesh mesh;
-		public EditorDebugDraw(DelaunayMesh mesh)
+		public EditorMeshViewer(DelaunayMesh mesh)
 		{
 			this.mesh = mesh;
 		}
 
-		DebugDrawMask drawMask = (DebugDrawMask)(-1);
+		MeshViewerMask viewerMask = (MeshViewerMask)(-1);
 		Color blockFaceColor = new Color(1, 0, 0, 90 / 255f);
 		Color walkableFaceColor = new Color(128 / 255f, 128 / 255f, 128 / 255f, 11 / 255f);
 		Color edgeColor = new Color(0, 205 / 255f, 1, 126 / 255f);
@@ -24,7 +24,7 @@ namespace Delaunay
 		public void OnGUI()
 		{
 			EditorGUILayout.BeginVertical("Box");
-			drawMask = (DebugDrawMask)EditorGUILayout.EnumMaskField("Draw mask", drawMask);
+			viewerMask = (MeshViewerMask)EditorGUILayout.EnumMaskField("View mask", viewerMask);
 			blockFaceColor = EditorGUILayout.ColorField("Block face color", blockFaceColor);
 			walkableFaceColor = EditorGUILayout.ColorField("Walkable face color", walkableFaceColor);
 			edgeColor = EditorGUILayout.ColorField("Edge color", edgeColor);
@@ -48,7 +48,7 @@ namespace Delaunay
 
 		public void DrawDelaunayMesh()
 		{
-			if ((drawMask & DebugDrawMask.DebugDrawTriangles) != 0)
+			if ((viewerMask & MeshViewerMask.TriangleViewer) != 0)
 			{
 				mesh.AllTriangles.ForEach(face =>
 				{
@@ -65,7 +65,7 @@ namespace Delaunay
 				});
 			}
 
-			if ((drawMask & DebugDrawMask.DebugDrawEdges) != 0)
+			if ((viewerMask & MeshViewerMask.EdgeViewer) != 0)
 			{
 				Color handlesOldColor = Handles.color;
 				
@@ -84,7 +84,7 @@ namespace Delaunay
 				Handles.color = handlesOldColor;
 			}
 
-			if ((drawMask & DebugDrawMask.DebugDrawTiles) != 0)
+			if ((viewerMask & MeshViewerMask.TileViewer) != 0)
 			{
 				TiledMap map = mesh.Map;
 
@@ -109,7 +109,7 @@ namespace Delaunay
 				}
 			}
 
-			if ((drawMask & DebugDrawMask.DebugDrawSuperBorder) != 0)
+			if ((viewerMask & MeshViewerMask.SuperBorderViewer) != 0)
 			{
 				IEnumerator<Vector3> e = mesh.BorderVertices.GetEnumerator();
 				Vector3 prev = Vector3.zero, first = Vector3.zero;

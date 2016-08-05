@@ -3,16 +3,19 @@ using UnityEngine;
 
 namespace Delaunay
 {
-	public enum DebugDrawMask
+	public enum MeshViewerMask
 	{
-		DebugDrawTriangles = 1,
-		DebugDrawEdges = 2,
-		DebugDrawTiles = 4,
-		DebugDrawSuperBorder = 8,
+		TriangleViewer = 1,
+		EdgeViewer = 2,
+		TileViewer = 4,
+		SuperBorderViewer = 8,
 	}
 
+	/// <summary>
+	/// 网格视图.
+	/// </summary>
 	[RequireComponent(typeof(Camera))]
-	public class MeshDebugDraw : MonoBehaviour
+	public class MeshViewer : MonoBehaviour
 	{
 		/// <summary>
 		/// 绘制时的偏移量.
@@ -49,7 +52,7 @@ namespace Delaunay
 		/// </summary>
 		public Color tileEdgeColor = new Color(0, 0, 1, 22 / 255f);
 
-		public DebugDrawMask drawMask = (DebugDrawMask)(-1);
+		public MeshViewerMask viewerMask = (MeshViewerMask)(-1);
 
 		const float kShrink = 0.1f;
 
@@ -76,7 +79,7 @@ namespace Delaunay
 
 			simpleMaterial.SetPass(0);
 
-			if ((drawMask & DebugDrawMask.DebugDrawTriangles) != 0)
+			if ((viewerMask & MeshViewerMask.TriangleViewer) != 0)
 			{
 				GL.Begin(GL.TRIANGLES);
 				Vector3[] shinkedTriangle = new Vector3[3];
@@ -95,7 +98,7 @@ namespace Delaunay
 				GL.End();
 			}
 
-			if ((drawMask & DebugDrawMask.DebugDrawEdges) != 0)
+			if ((viewerMask & MeshViewerMask.EdgeViewer) != 0)
 			{
 				GL.Begin(GL.LINES);
 				GL.Color(edgeColor);
@@ -112,7 +115,7 @@ namespace Delaunay
 				GL.End();
 			}
 
-			if ((drawMask & DebugDrawMask.DebugDrawTiles) != 0)
+			if ((viewerMask & MeshViewerMask.TileViewer) != 0)
 			{
 				TiledMap map = targetMesh.Map;
 				float width = (map.ColumnCount * map.TileSize);
@@ -156,7 +159,7 @@ namespace Delaunay
 				GL.End();
 			}
 
-			if ((drawMask & DebugDrawMask.DebugDrawSuperBorder) != 0)
+			if ((viewerMask & MeshViewerMask.SuperBorderViewer) != 0)
 			{
 				Vector3? first = null;
 

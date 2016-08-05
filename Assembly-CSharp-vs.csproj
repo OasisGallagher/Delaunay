@@ -69,7 +69,7 @@
      <Compile Include="Assets\Scripts\Code\Utility\ArrayLinkedList.cs" />
      <Compile Include="Assets\Scripts\Code\Utility\EditorConstants.cs" />
      <Compile Include="Assets\Scripts\Code\Utility\Extentions.cs" />
-     <Compile Include="Assets\Scripts\Code\Utility\MeshDebugDraw.cs" />
+     <Compile Include="Assets\Scripts\Code\Utility\MeshViewer.cs" />
      <Compile Include="Assets\Scripts\Code\Utility\Utilities.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

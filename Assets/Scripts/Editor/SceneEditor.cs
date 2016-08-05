@@ -10,11 +10,11 @@ namespace Delaunay
 	public class SceneEditor : EditorWindow
 	{
 		/// <summary>
-		/// 一次性最多可"种"的坐标点个数.
+		/// 一次最多可"种"的坐标点个数.
 		/// </summary>
 		const int kMaxVertices = 32;
 
-		EditorDebugDraw debugDraw;
+		EditorMeshViewer editorMeshViewer;
 
 		/// <summary>
 		/// 是否开启"种点".
@@ -31,12 +31,11 @@ namespace Delaunay
 		/// </summary>
 		BitArray editStates;
 
-#if ANIMATED_DELAUNAY_MESH
-		AnimatedDelaunayMesh delaunayMesh;
-		bool playingCreateObstacleAnimation = false;
-#else
+		/// <summary>
+		/// 网格.
+		/// </summary>
 		DelaunayMesh delaunayMesh;
-#endif
+
 		/// <summary>
 		/// 编辑命令序列.
 		/// </summary>
@@ -45,7 +44,7 @@ namespace Delaunay
 		/// <summary>
 		/// 是否编辑调试视图.
 		/// </summary>
-		bool editDebugDraw = true;
+		bool editMeshViewer = true;
 
 		/// <summary>
 		/// 是否在play.
@@ -68,13 +67,9 @@ namespace Delaunay
 			plantedVertices = new List<Vector3>(kMaxVertices);
 			editStates = new BitArray(kMaxVertices);
 
-#if ANIMATED_DELAUNAY_MESH
-			delaunayMesh = new AnimatedDelaunayMesh(new Vector3(-10f, 0, -10f), 20f, 20f);
-			delaunayMesh.Transition = 0.5f;
-#else
 			delaunayMesh = new DelaunayMesh(new Vector3(-10f, 0, -10f), 20f, 20f);
-#endif
-			debugDraw = new EditorDebugDraw(delaunayMesh);
+
+			editorMeshViewer = new EditorMeshViewer(delaunayMesh);
 
 			cmdSequence = new EditCommandSequence();
 		}
@@ -111,33 +106,19 @@ namespace Delaunay
 			if (EditorApplication.isPlaying) { return; }
 
 			// 绘制调试视图.
-			if (debugDraw != null)
+			if (editorMeshViewer != null)
 			{
-				debugDraw.DrawDelaunayMesh();
-				debugDraw.DrawPolyLine(plantedVertices, HasSuperBorder ? Color.blue : Color.red);
+				editorMeshViewer.DrawDelaunayMesh();
+				editorMeshViewer.DrawPolyLine(plantedVertices, HasSuperBorder ? Color.blue : Color.red);
 			}
 
 			DrawVertexHandles();
 
 			DrawStats();
 
-#if ANIMATED_DELAUNAY_MESH
-			if (!playingCreateObstacleAnimation)
-			{
-#endif
-				DrawCommands();
-#if ANIMATED_DELAUNAY_MESH
-			}
-#endif
-			
-#if ANIMATED_DELAUNAY_MESH
-			if (!playingCreateObstacleAnimation)
-			{
-#endif
-				OnInput();
-#if ANIMATED_DELAUNAY_MESH
-			}
-#endif
+			DrawCommands();
+
+			OnInput();
 		}
 
 		/// <summary>
@@ -364,21 +345,14 @@ namespace Delaunay
 			if (EditorApplication.isPlaying) { return; }
 
 			GUILayout.BeginVertical("Box");
-			editDebugDraw = EditorGUILayout.Foldout(editDebugDraw, "DebugDraw editor");
-			if (editDebugDraw && debugDraw != null)
+			editMeshViewer = EditorGUILayout.Foldout(editMeshViewer, "MeshViewer editor");
+			if (editMeshViewer && editorMeshViewer != null)
 			{
-				debugDraw.OnGUI();
+				editorMeshViewer.OnGUI();
 			}
 			GUILayout.EndVertical();
 
 			GUILayout.BeginVertical("Box");
-
-#if ANIMATED_DELAUNAY_MESH
-			GUILayout.BeginVertical("Box");
-			GUILayout.Label("Transition: " + delaunayMesh.Transition, EditorStyles.boldLabel);
-			delaunayMesh.Transition = GUILayout.HorizontalSlider(delaunayMesh.Transition, 0f, 1f);
-			GUILayout.EndVertical();
-#endif
 
 			DrawVertexEditor();
 			
@@ -525,25 +499,7 @@ namespace Delaunay
 			}
 			else
 			{
-#if ANIMATED_DELAUNAY_MESH
-				playingCreateObstacleAnimation = true;
-
-				cmdSequence.Push(new CreateObstacleAnimatedCommand(vertices, delaunayMesh, (obstacle) =>
-				{
-					playingCreateObstacleAnimation = false;
-
-					if (obstacle != null)
-					{
-						SceneView.RepaintAll();
-					}
-					else
-					{
-						Debug.LogError("Failed to create obstacle");
-					}
-				}));
-#else
 				cmdSequence.Push(new CreateObstacleCommand(vertices, delaunayMesh));
-#endif
 			}
 		}
 
