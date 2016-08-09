@@ -436,30 +436,8 @@ namespace Delaunay
 				border = RaycastFromEdge(edge, from, to, radius);
 			}
 			
-			// 迭代查找从from到border的最远位置.
-			return SearchRaycastPosition(from, border, radius, kRaycastSearchStep);
-		}
-
-		/// <summary>
-		/// 从from开始, 向to的方向, 每步前进step距离, 查找半径为radius的物体可达的最远位置.
-		/// </summary>
-		Vector3 SearchRaycastPosition(Vector3 from, Vector3 to, float radius, float step)
-		{
-			Vector3 dir = from - to;
-			float dist = dir.magnitude2();
-			dir.Normalize();
-
-			int count = Mathf.FloorToInt(dist / step);
-			for (int i = 0; i < count; ++i)
-			{
-				Vector3 position = i * step * dir + to;
-				if (IsValidPosition(position, radius))
-				{
-					return position;
-				}
-			}
-
-			return from;
+			// border为最远可达的位置, 且该位置不一定有效. 反向, 从border开始查找.
+			return SearchRaycastPosition(border, from, radius, kRaycastSearchStep);
 		}
 
 		/// <summary>
@@ -526,6 +504,28 @@ namespace Delaunay
 			}
 
 			return to;
+		}
+
+		/// <summary>
+		/// 从from开始, 向to的方向, 每步前进step距离, 查找半径为radius的物体可达的最远位置.
+		/// </summary>
+		Vector3 SearchRaycastPosition(Vector3 from, Vector3 to, float radius, float step)
+		{
+			Vector3 dir = to - from;
+			float dist = dir.magnitude2();
+			dir.Normalize();
+
+			int count = Mathf.FloorToInt(dist / step);
+			for (int i = 0; i < count; ++i)
+			{
+				Vector3 position = i * step * dir + from;
+				if (IsValidPosition(position, radius))
+				{
+					return position;
+				}
+			}
+
+			return from;
 		}
 
 		/// <summary>
