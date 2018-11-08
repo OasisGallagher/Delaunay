@@ -458,14 +458,14 @@ namespace Delaunay
 
 		/// <summary>
 		/// 计算直线(p->dir)与平面(a, b, c)的交点.
+		/// https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
 		/// </summary>
 		public static Vector3 LineCrossPlane(Vector3 a, Vector3 b, Vector3 c, Vector3 p, Vector3 dir)
 		{
 			Vector3 normal = Vector3.Cross(b - a, c - a);
-			float t = Vector3.Dot(dir, normal);
-			float d = Vector3.Dot(a - p, normal);
+			float d = Vector3.Dot(a - dir, normal) / Vector3.Dot(dir - p, normal);
 			Utility.Verify(!MathUtility.Approximately(0, t), "the line and plane are parallel");
-			return p + dir * d / t;
+			return d * (dir - p) + dir;
 		}
 
 		/// <summary>
